@@ -20,6 +20,7 @@ import app.toque.core.machine.RootShell
 import app.toque.core.machine.Snapshot
 import app.toque.core.time.ZoneLookup
 import app.toque.core.update.Release
+import app.toque.foyer.Foyer
 import app.toque.recipes.LidlSync
 import app.toque.recipes.OnlineSync
 import app.toque.ui.Icon
@@ -38,6 +39,10 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private lateinit var bowlText: TextView
     private lateinit var linkText: TextView
     private lateinit var timeText: TextView
+    private lateinit var foyerText: TextView
+    private lateinit var foyerCode: TextView
+    private lateinit var foyerButtons: LinearLayout
+    private var foyerUnsub: (() -> Unit)? = null
     private var settingTime = false
     private var mode = a.prefs.mode
     private var syncing = false
@@ -94,6 +99,20 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         safety.addView(Ui.text(c, tr("Les réglages qui se suivent sans geste à faire entre eux partent ensemble d'un seul appui sur Lancer : la lame passe directement à la vitesse et à la température suivantes."),
             15f, Ui.TEXT3).apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = 6))
         safety.addView(toggle(tr("Sons"), a.prefs.sound) { a.prefs.sound = it }, Ui.lp(t = 10))
+
+        // ---- Foyer (appli du foyer) : liaison durable, recettes partagées, état du robot
+        val foyer = section(right, tr("Foyer"), Icon.Kind.LINK)
+        foyerText = Ui.text(c, "", 16f, Ui.TEXT2).apply { setLineSpacing(0f, 1.15f) }
+        foyer.addView(foyerText)
+        foyerCode = Ui.text(c, "", 54f, Ui.TEXT, Ui.LIGHT).apply { letterSpacing = 0.12f }
+        foyer.addView(foyerCode, Ui.lp(t = 8))
+        foyerButtons = Ui.horizontal(c)
+        foyer.addView(foyerButtons, Ui.lp(t = 12))
+        foyer.addView(toggle(tr("Lien avec Foyer"), a.prefs.foyerEnabled) {
+            a.prefs.foyerEnabled = it
+            Foyer.of(a.app).syncNow()
+        }, Ui.lp(t = 10))
+        renderFoyer()
 
         // ---- Langue (titre bilingue : trouvable quelle que soit la langue affichée)
         val language = section(right, "Langue · Language", Icon.Kind.INFO)
@@ -373,6 +392,37 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         }.start()
     }
 
+    private fun renderFoyer() {
+        val foyer = Foyer.of(a.app)
+        val p = a.prefs
+        foyerButtons.removeAllViews()
+        if (!p.foyerEnabled) {
+            foyerText.text = tr("Lien coupé : le robot ne reçoit plus les recettes du foyer et ne dit plus rien à Foyer.")
+            foyerCode.visibility = View.GONE
+            return
+        }
+        if (foyer.linked) {
+            val last = if (p.foyerLastSyncMs > 0) java.text.SimpleDateFormat(tr("dd/MM à HH:mm"), I18n.locale).format(java.util.Date(p.foyerLastSyncMs)) else ""
+            foyerText.text = tr("Relié à « %s ». Les recettes partagées du foyer arrivent toutes seules, et Foyer te prévient quand un plat est prêt.", p.foyerHousehold) +
+                (if (last.isNotEmpty()) "\n" + tr("Dernière synchro le %s", last) else "") +
+                (if (p.foyerLastResult.isNotEmpty()) "\n" + p.foyerLastResult else "")
+            foyerCode.visibility = View.GONE
+            foyerButtons.addView(Ui.button(c, tr("Synchroniser"), Ui.Style.SECONDARY, Icon.Kind.SYNC, height = 52) { foyer.syncNow() },
+                Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
+            foyerButtons.addView(Ui.button(c, tr("Relier à un autre foyer"), Ui.Style.GHOST, height = 52) {
+                a.confirm(tr("Relier à un autre foyer ?"), tr("Le robot oublie ce lien et affiche un nouveau code. Pense à le délier aussi dans Foyer."),
+                    tr("Nouveau code")) { foyer.forget() }
+            })
+        } else {
+            val code = p.foyerCode
+            foyerText.text = if (code.isEmpty()) tr("Connexion à Foyer…") +
+                (if (p.foyerLastResult.isNotEmpty()) "\n" + p.foyerLastResult else "")
+            else tr("Dans Foyer, sur ton téléphone : Réglages › Monsieur Cuisine. Sur le même Wi-Fi, il suffit de toucher « Relier » ; sinon, tape ce code :")
+            foyerCode.visibility = if (code.isEmpty()) View.GONE else View.VISIBLE
+            foyerCode.text = if (code.length == 6) code.substring(0, 3) + " " + code.substring(3) else code
+        }
+    }
+
     private fun refreshSync() {
         val last = a.prefs.lastSyncResult
         syncText.text = (if (last.isEmpty()) tr("Jamais synchronisé") else tr("Dernière synchro le %s", last)) +
@@ -479,7 +529,17 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         a.toast(message, Ui.WARN)
     }
 
+    override fun onHide() {
+        foyerUnsub?.invoke()
+        foyerUnsub = null
+        Foyer.of(a.app).showing(false)
+    }
+
     override fun onShow() {
+        foyerUnsub?.invoke()
+        foyerUnsub = Foyer.of(a.app).onChange { renderFoyer() }
+        Foyer.of(a.app).showing(true)
+        renderFoyer()
         mode = a.prefs.mode
         renderModes()
         if (!syncing) refreshSync()

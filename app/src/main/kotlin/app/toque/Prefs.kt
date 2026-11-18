@@ -189,4 +189,63 @@ class Prefs(context: Context) {
         set(v) {
             p.edit().putInt("guidedStep", v).commit()
         }
+
+    // ---- Foyer (appli du foyer) : liaison durable et dernière synchro des recettes partagées.
+
+    var foyerEnabled: Boolean
+        get() = p.getBoolean("foyerEnabled", true)
+        set(v) {
+            p.edit().putBoolean("foyerEnabled", v).commit()
+        }
+
+    /** Nom du foyer auquel le robot est relié ("" : pas relié). */
+    var foyerHousehold: String
+        get() = p.getString("foyerHousehold", "") ?: ""
+        set(v) {
+            p.edit().putString("foyerHousehold", v).commit()
+        }
+
+    var foyerRobotName: String
+        get() = p.getString("foyerRobotName", "") ?: ""
+        set(v) {
+            p.edit().putString("foyerRobotName", v).commit()
+        }
+
+    /** Code de liaison affiché tant que le robot n'est pas relié, et sa fin de validité. */
+    var foyerCode: String
+        get() = p.getString("foyerCode", "") ?: ""
+        set(v) {
+            p.edit().putString("foyerCode", v).commit()
+        }
+
+    var foyerCodeUntil: Long
+        get() = p.getLong("foyerCodeUntil", 0)
+        set(v) {
+            p.edit().putLong("foyerCodeUntil", v).commit()
+        }
+
+    var foyerEtag: String
+        get() = p.getString("foyerEtag", "") ?: ""
+        set(v) {
+            p.edit().putString("foyerEtag", v).commit()
+        }
+
+    var foyerLastSyncMs: Long
+        get() = p.getLong("foyerLastSyncMs", 0)
+        set(v) {
+            p.edit().putLong("foyerLastSyncMs", v).commit()
+        }
+
+    var foyerLastResult: String
+        get() = p.getString("foyerLastResult", "") ?: ""
+        set(v) {
+            p.edit().putString("foyerLastResult", v).commit()
+        }
+
+    /** Repas prévus dans Foyer (JSON), pour l'accueil. */
+    var foyerPlans: String
+        get() = p.getString("foyerPlans", "[]") ?: "[]"
+        set(v) {
+            p.edit().putString("foyerPlans", v).commit()
+        }
 }

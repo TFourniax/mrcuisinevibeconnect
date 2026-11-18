@@ -6,6 +6,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.toque.core.i18n.tr
+import app.toque.foyer.Foyer
 import app.toque.core.machine.Accessory
 import app.toque.core.machine.EventType
 import app.toque.core.machine.JobKind
@@ -106,6 +107,8 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
 
     private fun next() {
         if (index >= recipe.steps.size - 1) {
+            Foyer.of(a.app).cooked(recipe.id)
+            Foyer.of(a.app).guided(null, 0)
             a.prefs.guidedRecipe = ""
             a.chime(1)
             a.toast(tr("Bon appétit !"), Ui.OK)
@@ -121,7 +124,13 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         render()
     }
 
+    override fun onHide() {
+        // Une étape lancée d'ici continue sans l'écran : Foyer garde la recette en tête jusqu'à la fin.
+        if (launchedStep < 0) Foyer.of(a.app).guided(null, 0)
+    }
+
     private fun render() {
+        Foyer.of(a.app).guided(recipe, index)
         val n = recipe.steps.size
         segments.removeAllViews()
         for (i in 0 until n) {
