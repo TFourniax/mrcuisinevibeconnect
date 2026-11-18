@@ -161,11 +161,14 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     private var turboBtn: HoldButton? = null
     private var reviewBtn: View? = null
     private var panelState: TextView? = null
+    /** Temps restant en très grand pendant la cuisson : lisible depuis l'autre bout de la cuisine. */
+    private var bigTime: TextView? = null
 
     private fun buildPanel() {
         panel.removeAllViews()
         turboBtn = null
         reviewBtn = null
+        bigTime = null
         val m = recipe.steps[index].machine
         if (m == null) {
             val box = Ui.vertical(c, Gravity.CENTER)
@@ -226,6 +229,11 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             panel.addView(Ui.text(c, tr("Puis, enchaînés automatiquement :") + "\n" + list, 15f, Ui.TEXT2)
                 .apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = 10))
         }
+        bigTime = Ui.text(c, "", 78f, Ui.TEXT, Ui.THIN).apply {
+            fontFeatureSettings = "tnum"
+            visibility = View.GONE
+        }
+        panel.addView(bigTime, Ui.lp(t = 8))
         panelState = Ui.text(c, "", 16f, Ui.WARN).apply { setLineSpacing(0f, 1.1f) }
         panel.addView(panelState, Ui.lp(t = 12))
         panel.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
@@ -354,6 +362,11 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             startBtn.visibility = if (mine && s.state != JobState.FINISHED && s.state != JobState.ABORTED) View.GONE else View.VISIBLE
             if (s.busy && !mine) Ui.setButtonEnabled(startBtn, false)
             else if (reviewBtn == null && m.violations().isEmpty()) Ui.setButtonEnabled(startBtn, !s.busy)
+        }
+        bigTime?.let { t ->
+            val counting = mine && (s.state == JobState.RUNNING || s.state == JobState.STARTING || s.state == JobState.PAUSED)
+            t.visibility = if (counting) View.VISIBLE else View.GONE
+            if (counting) t.text = Ui.clock(s.remainingMs)
         }
         if (!mine && ps != null) {
             if (index in done) {

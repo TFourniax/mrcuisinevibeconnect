@@ -18,22 +18,27 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 
-/** Thème sombre et utilitaires de mise en page, à l'échelle d'un écran de référence 1024×600. */
+/** Thème sombre (couleurs de Foyer) et utilitaires de mise en page, à l'échelle d'un écran de référence 1024×600. */
 object Ui {
-    const val BG = 0xFF0B0C0E.toInt()
-    const val SURFACE = 0xFF15171B.toInt()
-    const val SURFACE2 = 0xFF1E2127.toInt()
-    const val SURFACE3 = 0xFF272B32.toInt()
-    const val STROKE = 0xFF2C3038.toInt()
-    const val TEXT = 0xFFF3F4F6.toInt()
-    const val TEXT2 = 0xFF9BA1AA.toInt()
-    const val TEXT3 = 0xFF666C75.toInt()
-    const val ACCENT = 0xFFFF8A3D.toInt()
-    const val ACCENT_DIM = 0x33FF8A3D
-    const val COOL = 0xFF5CC8FF.toInt()
-    const val OK = 0xFF3DDC97.toInt()
-    const val WARN = 0xFFFFC14D.toInt()
-    const val DANGER = 0xFFFF5A5F.toInt()
+    // Palette de Foyer en mode sombre (tons chauds, accent terre cuite) : le robot et le
+    // téléphone se ressemblent.
+    const val BG = 0xFF130E0B.toInt()
+    const val SURFACE = 0xFF1F1915.toInt()
+    const val SURFACE2 = 0xFF2B2521.toInt()
+    const val SURFACE3 = 0xFF362B24.toInt()
+    const val STROKE = 0xFF38312D.toInt()
+    const val TEXT = 0xFFF1EEE7.toInt()
+    const val TEXT2 = 0xFFB0AAA1.toInt()
+    const val TEXT3 = 0xFF7E766E.toInt()
+    const val ACCENT = 0xFFE79363.toInt()
+    const val ACCENT_DIM = 0x29E79363
+    /** Texte posé sur l'accent. */
+    const val ON_ACCENT = 0xFF1E130E.toInt()
+    const val COOL = 0xFF7FB8D9.toInt()
+    const val OK = 0xFF60BB83.toInt()
+    const val WARN = 0xFFE8B85C.toInt()
+    const val WARN_DIM = 0x33E8B85C
+    const val DANGER = 0xFFEA6B60.toInt()
     const val SCRIM = 0xCC000000.toInt()
 
     val LIGHT: Typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
@@ -131,7 +136,7 @@ object Ui {
     fun button(c: Context, label: String, style: Style = Style.SECONDARY, icon: Icon.Kind? = null,
                height: Int = 64, textSize: Float = 20f, onClick: (View) -> Unit): LinearLayout {
         val (bg, fg) = when (style) {
-            Style.PRIMARY -> ACCENT to 0xFF1A0E05.toInt()
+            Style.PRIMARY -> ACCENT to ON_ACCENT
             Style.SECONDARY -> SURFACE3 to TEXT
             Style.DANGER -> DANGER to Color.WHITE
             Style.GHOST -> Color.TRANSPARENT to TEXT2
@@ -173,7 +178,7 @@ object Ui {
 
     /** Puce sélectionnable (filtres, choix). */
     fun toggleChip(c: Context, label: String, selected: Boolean, onClick: () -> Unit): TextView {
-        val t = text(c, label, 17f, if (selected) 0xFF1A0E05.toInt() else TEXT, MEDIUM)
+        val t = text(c, label, 17f, if (selected) ON_ACCENT else TEXT, MEDIUM)
         t.setPadding(u(18), u(10), u(18), u(10))
         t.background = pressable(if (selected) round(ACCENT, 40f) else round(SURFACE2, 40f, STROKE, 1f), 40f)
         t.isClickable = true

@@ -56,6 +56,8 @@ class Foyer private constructor(private val app: ToqueApp) {
     val tracker = StatusTracker({ System.currentTimeMillis() })
     private var lastQueued: StatusReport? = null
     @Volatile private var visible = 0
+    /** Depuis quand le code est affiché ou quelqu'un a touché le robot (interrogations rapprochées 10 min). */
+    @Volatile private var attentionSince = 0L
     private val listeners = ArrayList<() -> Unit>()
 
     // Fil « toque-foyer » uniquement.
@@ -95,7 +97,15 @@ class Foyer private constructor(private val app: ToqueApp) {
     /** Un écran montre le code de liaison : on interroge Foyer plus souvent (toutes les 20 s). */
     fun showing(on: Boolean) {
         visible = (visible + if (on) 1 else -1).coerceAtLeast(0)
+        if (on) attentionSince = System.currentTimeMillis()
         if (on && !linked) syncNow()
+    }
+
+    /** Tant qu'il n'est pas relié : toutes les 20 s pendant 10 min d'attention, puis toutes les 2 min (5 min code caché). */
+    private fun helloDelay(): Long = when {
+        visible > 0 && System.currentTimeMillis() - attentionSince < 10 * 60_000L -> 20_000L
+        visible > 0 -> 2 * 60_000L
+        else -> 5 * 60_000L
     }
 
     /** Synchro tout de suite (accueil affiché, bouton « Synchroniser »). */
@@ -109,7 +119,10 @@ class Foyer private constructor(private val app: ToqueApp) {
         if (System.currentTimeMillis() - prefs.foyerLastSyncMs > 60_000) syncNow()
     }
 
-    fun interaction() = tracker.interaction()
+    fun interaction() {
+        tracker.interaction()
+        if (!linked) attentionSince = System.currentTimeMillis()
+    }
 
     /** L'écran de cuisson guidée montre [index] de [recipe] (null : plus de recette suivie). */
     fun guided(recipe: Recipe?, index: Int) {
@@ -223,7 +236,7 @@ class Foyer private constructor(private val app: ToqueApp) {
                     prefs.foyerCode = code
                     changed()
                 }
-                if (visible > 0) 20_000L else 5 * 60_000L
+                helloDelay()
             }
             r.code == 429 -> 10 * 60_000L
             else -> {

@@ -23,6 +23,7 @@ import app.toque.Prefs
 import app.toque.core.i18n.I18n
 import app.toque.core.i18n.tr
 import app.toque.core.recipes.RecipeFilter
+import app.toque.core.recipes.RecipeSource
 import app.toque.core.recipes.SearchIndex
 import app.toque.ui.Icon
 import app.toque.ui.ImageLoader
@@ -35,10 +36,15 @@ import java.util.concurrent.Executors
  * Catalogue des recettes Lidl : recherche instantanée tolérante (accents, pluriels, fautes de
  * frappe), filtres, et recherche par ingrédients (séparés par des virgules).
  */
-class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, favorites: Boolean = false) : Screen(a) {
-    override val title = if (favorites) tr("Favoris") else tr("Recettes")
+class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, favorites: Boolean = false, source: RecipeSource? = null) : Screen(a) {
+    override val title = when {
+        favorites -> tr("Favoris")
+        source == RecipeSource.FOYER -> tr("Nos recettes")
+        source == RecipeSource.IMPORTED -> tr("Recettes Lidl")
+        else -> tr("Recettes")
+    }
 
-    private var filter = RecipeFilter(favoritesOnly = favorites)
+    private var filter = RecipeFilter(favoritesOnly = favorites, source = source)
     private var query = ""
     private var results: List<SearchIndex.Hit> = emptyList()
     private var generation = 0
@@ -137,6 +143,10 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
         }
         val base = RecipeFilter()
         chip(tr("Toutes"), filter == base, base)
+        if (a.app.recipes.countOf(app.toque.recipes.RecipeRepo.FOYER) > 0) {
+            chip(tr("Nos recettes"), filter.source == RecipeSource.FOYER, base.copy(source = RecipeSource.FOYER))
+            chip(tr("Lidl"), filter.source == RecipeSource.IMPORTED, base.copy(source = RecipeSource.IMPORTED))
+        }
         chip(tr("Favoris"), filter.favoritesOnly, base.copy(favoritesOnly = true))
         chip(tr("30 min max"), filter.maxMinutes == 30, base.copy(maxMinutes = 30))
         for (cat in a.app.recipes.index.categories.take(30)) chip(cat, filter.category == cat, base.copy(category = cat))
