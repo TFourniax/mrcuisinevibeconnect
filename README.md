@@ -2,11 +2,12 @@
 
 🇫🇷 **[Version française](README.fr.md)**
 
-> **macOS version.** This is a copy of [Wuki60/MrCuisineVibeConnect](https://github.com/Wuki60/MrCuisineVibeConnect)
-> whose install tools run on a **Mac**: shell scripts instead of PowerShell, and
-> [mtkclient](https://github.com/bkerler/mtkclient) instead of SP Flash Tool and its Windows driver.
-> The Toque app is unchanged and still updates from the original repository's releases. The macOS
-> install was done end to end on a real robot in November 2026; see [AGENTS.md](AGENTS.md).
+> **macOS version, linked to Foyer.** This is a copy of [Wuki60/MrCuisineVibeConnect](https://github.com/Wuki60/MrCuisineVibeConnect)
+> whose install tools run on a **Mac** (shell scripts instead of PowerShell,
+> [mtkclient](https://github.com/bkerler/mtkclient) instead of SP Flash Tool), and whose Toque is
+> linked to **Foyer**, our household app: shared recipes and planned meals on the robot, the
+> robot's state and notifications on the phones ([docs/FOYER.md](docs/FOYER.md)). Toque updates
+> from **this repository's** releases.
 
 **Toque** is a fast, modern replacement interface for the Lidl **Monsieur Cuisine Connect**
 kitchen robot (SKMC 1200). It runs on the robot's own tablet instead of the stock app and still
@@ -37,8 +38,13 @@ screen.
 
 ## Features
 
-- **Dark interface** designed for the robot's 7" screen and rotary knob, and smooth on its
-  original tablet (1 GB RAM, Android 6): no heavy libraries, downsampled images, recycled views.
+- **Linked to Foyer, once** ([docs/FOYER.md](docs/FOYER.md)): the household's shared recipes show
+  up by themselves, with the machine settings of each step when possible; the home screen shows
+  tonight's planned meal; Foyer shows what the robot is doing and tells the phones when a dish is
+  ready. The link is made once with a 6-digit code and never needs redoing.
+- **Dark interface in Foyer's colours**, designed for the robot's 7" screen and rotary knob, and
+  smooth on its original tablet (1 GB RAM, Android 6): no heavy libraries, downsampled images,
+  recycled views.
 - **Lidl recipes, straight from monsieur-cuisine.com.** Toque downloads the official Monsieur
   Cuisine connect recipes (about 1,700 in French, with each step's machine settings) from the
   site's public API, nightly or on demand: no account, no server to run, no need for the stock app.
@@ -59,8 +65,9 @@ screen.
 - **Made for a robot without Android buttons**: Toque opens at startup, and a **Back to Toque**
   button stays on top of the stock app when you open it.
 - **Updates from GitHub**: *Settings › Updates* checks this repository's
-  [Releases](https://github.com/Wuki60/MrCuisineVibeConnect/releases) and installs the new version
-  (silently on a rooted robot, then Toque restarts). Refused while a program is running.
+  [Releases](https://github.com/TFourniax/mrcuisinevibeconnect/releases) and installs the new
+  version (silently on a rooted robot, then Toque restarts), by itself at night unless switched
+  off. Refused while a program is running.
 
 ## Safety: what changes compared to the stock app
 
@@ -142,7 +149,9 @@ every language file.
 2. Commit and push to `main`.
 
 The [release workflow](.github/workflows/release.yml) runs the tests, builds the APK and publishes
-the `vX.Y.Z` release with it. Robots then find it in *Settings › Updates*.
+the `vX.Y.Z` release with it. Robots then install it by themselves at night, or from *Settings ›
+Updates*. Every push to a `claude/**` branch is built too ([build.yml](.github/workflows/build.yml)),
+the APK kept 14 days as an artifact.
 
 All builds are signed with the project key in `app/signature/` (public on purpose), so an APK built
 on any PC or by GitHub installs over the previous version. Only install APKs from this repository's
