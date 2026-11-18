@@ -6,8 +6,9 @@
 #
 # Steps, in order: status, prepare, backup, flash-twrp, root, flash-root, android, install, wifi.
 # 'update' switches an already installed robot to this repository's Toque over Wi-Fi (once; it then
-# updates itself). 'unroot' puts the original boot and recovery back. Lines starting with "HUMAN:" are actions only a
-# person can do (unscrewing, cables, power switch, a macOS prompt, a tap on the robot's screen).
+# updates itself). 'adb-off' closes ADB over Wi-Fi afterwards (recommended). 'unroot' puts the
+# original boot and recovery back. Lines starting with "HUMAN:" are actions only a person can do
+# (unscrewing, cables, power switch, a macOS prompt, a tap on the robot's screen).
 # A step that needs one stops and says so; run it again once the person is done.
 #
 # macOS port of toque-setup.ps1. SP Flash Tool and its Windows driver are replaced by mtkclient
@@ -24,7 +25,7 @@
 set -u
 set -o pipefail
 
-STEPS="status prepare backup flash-twrp root flash-root android install wifi update unroot"
+STEPS="status prepare backup flash-twrp root flash-root android install wifi update adb-off unroot"
 STEP=""
 WORK="$HOME/Toque"
 APK=""
@@ -610,7 +611,30 @@ step_update() {
   state_set robot-ip "$ip"
   state_set done-update "$(now)"
   ok "Toque installed: $(printf '%s' "$ver" | tr -s ' ' | sed 's/^ //'). From now on it updates itself at night."
+  say "Recommended once it works: 'adb-off' closes ADB over Wi-Fi (Toque no longer needs it)."
   human "On the robot: Toque > Settings > Foyer shows a 6-digit code. On the phone: Foyer > Settings > Monsieur Cuisine, tap 'Relier' (same Wi-Fi) or type the code. Once only."
+}
+
+# Closes ADB over Wi-Fi (port 5555) once the robot is set up: Toque updates itself, so nothing
+# needs it day to day, and a rooted device should not listen on the home network for nothing.
+# Opening it again needs the cable ('wifi').
+step_adb_off() {
+  local ip
+  ADB=$(find_adb) || fail "adb is missing: run 'prepare' once, or brew install android-platform-tools."
+  ip=${IP:-$(state_get robot-ip)}
+  [ -n "$ip" ] || fail "Robot IP unknown: pass --ip <robot IP>."
+  say "$("$ADB" connect "$ip:5555" 2>&1)"
+  [ "$("$ADB" -s "$ip:5555" shell "su -c 'id -u'" 2>&1 | tr -d '\r')" = 0 ] || fail "The robot does not answer as root over Wi-Fi: is ADB over Wi-Fi already closed?"
+  say "$("$ADB" -s "$ip:5555" shell "su -c 'setprop persist.adb.tcp.port 0'" 2>&1)"
+  say "$("$ADB" -s "$ip:5555" usb 2>&1)"
+  sleep 3
+  "$ADB" disconnect "$ip:5555" > /dev/null 2>&1
+  if "$ADB" connect "$ip:5555" 2>&1 | grep -q "connected to"; then
+    "$ADB" disconnect "$ip:5555" > /dev/null 2>&1
+    fail "ADB still answers on $ip:5555: restart the robot and run 'adb-off' again."
+  fi
+  state_set done-adb-off "$(now)"
+  ok "ADB over Wi-Fi closed. Toque keeps updating itself; to work on the robot again, use the cable and 'wifi'."
 }
 
 step_wifi() {
@@ -687,5 +711,6 @@ case "$STEP" in
   install) step_install ;;
   wifi) step_wifi ;;
   update) step_update ;;
+  adb-off) step_adb_off ;;
   unroot) step_unroot ;;
 esac

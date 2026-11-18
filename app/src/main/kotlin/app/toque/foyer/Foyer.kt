@@ -3,6 +3,8 @@ package app.toque.foyer
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.os.SystemClock
+import android.widget.Toast
 import android.util.Base64
 import app.toque.ToqueApp
 import app.toque.core.foyer.FoyerFeed
@@ -43,6 +45,9 @@ class Foyer private constructor(private val app: ToqueApp) {
     private val log = app.log
     private val worker = HandlerThread("toque-foyer").apply { start() }
     private val bg = Handler(worker.looper)
+    // Photos sur leur propre fil : un site lent ne retarde jamais un état ou une alerte.
+    private val photoWorker = HandlerThread("toque-foyer-photos").apply { start() }
+    private val photosBg = Handler(photoWorker.looper)
     private val main = Handler(Looper.getMainLooper())
     private val secretFile = File(app.filesDir, "foyer-secret")
     private val version = try {
@@ -53,7 +58,8 @@ class Foyer private constructor(private val app: ToqueApp) {
     private val userAgent = "Toque/$version (Android)"
 
     /** Suivi de l'état pour Foyer : fil principal uniquement. */
-    val tracker = StatusTracker({ System.currentTimeMillis() })
+    // Horloge monotone : une remise à l'heure du robot ne fausse ni les délais ni le temps restant.
+    val tracker = StatusTracker({ SystemClock.elapsedRealtime() })
     private var lastQueued: StatusReport? = null
     @Volatile private var visible = 0
     /** Depuis quand le code est affiché ou quelqu'un a touché le robot (interrogations rapprochées 10 min). */
@@ -106,6 +112,12 @@ class Foyer private constructor(private val app: ToqueApp) {
         visible > 0 && System.currentTimeMillis() - attentionSince < 10 * 60_000L -> 20_000L
         visible > 0 -> 2 * 60_000L
         else -> 5 * 60_000L
+    }
+
+    /** Relié : toutes les 5 min le jour, toutes les 30 min de 23 h à 6 h (personne ne cuisine). */
+    private fun idleDelay(): Long {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        return if (hour >= 23 || hour < 6) 30 * 60_000L else 5 * 60_000L
     }
 
     /** Synchro tout de suite (accueil affiché, bouton « Synchroniser »). */
@@ -187,18 +199,22 @@ class Foyer private constructor(private val app: ToqueApp) {
 
     // ------------------------------------------------------------------ réseau (fil toque-foyer)
 
+    /**
+     * Le secret du robot, créé une seule fois. S'il existe mais ne peut pas être lu, on s'arrête
+     * là (erreur, réessayée plus tard) : en créer un autre délierait le robot sans rien dire.
+     */
     private fun secret(): String {
-        try {
+        if (secretFile.exists()) {
             val existing = secretFile.readText().trim()
             if (existing.length >= 40) return existing
-        } catch (_: Exception) {
+            throw java.io.IOException("secret du robot illisible")
         }
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
         val fresh = Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
         val tmp = File(secretFile.path + ".part")
         tmp.writeText(fresh)
-        tmp.renameTo(secretFile)
+        if (!tmp.renameTo(secretFile)) throw java.io.IOException("secret du robot non enregistré")
         return fresh
     }
 
@@ -226,6 +242,9 @@ class Foyer private constructor(private val app: ToqueApp) {
                 prefs.foyerCodeUntil = 0
                 prefs.foyerEtag = ""
                 log.write("foyer", "relié à ${prefs.foyerHousehold}")
+                // À vérifier d'un coup d'œil : c'est bien notre foyer.
+                val household = prefs.foyerHousehold
+                main.post { Toast.makeText(app, tr("Relié au foyer « %s »", household), Toast.LENGTH_LONG).show() }
                 changed()
                 500L
             }
@@ -252,7 +271,7 @@ class Foyer private constructor(private val app: ToqueApp) {
         return when (r.code) {
             304 -> {
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
-                5 * 60_000L
+                idleDelay()
             }
             200 -> {
                 val feed = FoyerFeed.parse(r.body)
@@ -260,9 +279,11 @@ class Foyer private constructor(private val app: ToqueApp) {
                 // identique au précédent ne range rien de nouveau.
                 val hash = sha1(r.body)
                 if (hash != prefs.foyerFeedHash) {
-                    // Les photos qui n'ont pas pu être téléchargées sont retentées au prochain changement.
-                    apply(feed)
+                    val photos = apply(feed)
+                    // Enregistré avant les photos : une photo qui pose problème ne fait jamais tout recommencer.
                     prefs.foyerFeedHash = hash
+                    prefs.foyerEtag = r.etag.orEmpty()
+                    if (photos.isNotEmpty()) photosBg.post { fetchPhotos(photos) }
                 }
                 prefs.foyerEtag = r.etag.orEmpty()
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
@@ -274,7 +295,7 @@ class Foyer private constructor(private val app: ToqueApp) {
                     60_000L
                 } else {
                     quickSyncs = 0
-                    5 * 60_000L
+                    idleDelay()
                 }
             }
             401, 409 -> {
@@ -291,17 +312,25 @@ class Foyer private constructor(private val app: ToqueApp) {
         }
     }
 
+    /** Plus relié : les recettes et les repas du foyer quittent le robot (vendu, prêté, relié ailleurs). */
     private fun unlinked() {
         prefs.foyerHousehold = ""
         prefs.foyerEtag = ""
         prefs.foyerFeedHash = ""
         prefs.foyerCode = ""
         prefs.foyerCodeUntil = 0
+        prefs.foyerPlans = "[]"
+        prefs.foyerRobotName = ""
+        try {
+            app.recipes.removeAllExcept(emptySet(), origin = RecipeRepo.FOYER)
+        } catch (e: Exception) {
+            log.write("foyer", "recettes du foyer non effacées : $e")
+        }
         changed()
     }
 
-    /** Range les recettes reçues (celles retirées de Foyer disparaissent) et leurs photos. */
-    private fun apply(feed: FoyerFeed) {
+    /** Range les recettes reçues (celles retirées de Foyer disparaissent) ; rend les photos à télécharger. */
+    private fun apply(feed: FoyerFeed): Map<String, String> {
         val repo = app.recipes
         val photos = LinkedHashMap<String, String>()
         val recipes = feed.recipes.map { r ->
@@ -317,18 +346,26 @@ class Foyer private constructor(private val app: ToqueApp) {
         prefs.foyerPlans = FoyerFeed.encodePlans(feed.plans)
         if (feed.household.isNotBlank()) prefs.foyerHousehold = feed.household
         prefs.foyerRobotName = feed.robotName
+        return photos.filterKeys { repo.imageFile(it) == null }
+    }
+
+    /** Fil des photos : chacune 20 s au plus ; une image piégée (mémoire, format) est sautée, jamais fatale. */
+    private fun fetchPhotos(photos: Map<String, String>) {
+        val repo = app.recipes
         var failures = 0
+        var saved = 0
         for ((name, url) in photos) {
             if (repo.imageFile(name) != null) continue
             try {
                 Photos.save(FoyerHttp.download(url, userAgent), repo.imagesDir, name)
+                saved++
                 Thread.sleep(150)
-            } catch (e: Exception) {
-                log.write("foyer", "photo $url : ${e.message}")
+            } catch (t: Throwable) {
+                log.write("foyer", "photo ignorée : ${t.javaClass.simpleName} ${t.message.orEmpty()}")
                 if (++failures >= 5) break
             }
         }
-        if (photos.isNotEmpty()) repo.refresh()
+        if (saved > 0) repo.refresh()
     }
 
     private fun send() {
@@ -336,7 +373,7 @@ class Foyer private constructor(private val app: ToqueApp) {
         pending = null
         if (!linked) return
         try {
-            val res = FoyerHttp.call("POST", "/api/robot/status", secret(), userAgent, Json.write(r.toMap { iso(it) }))
+            val res = FoyerHttp.call("POST", "/api/robot/status", secret(), userAgent, Json.write(r.toMap(SystemClock.elapsedRealtime())))
             when {
                 res.code == 401 || res.code == 409 -> unlinked()
                 res.code == 429 || res.code >= 500 -> retry(r)

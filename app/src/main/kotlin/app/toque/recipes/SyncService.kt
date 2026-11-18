@@ -10,38 +10,48 @@ import android.os.SystemClock
 import app.toque.Prefs
 import app.toque.ToqueApp
 import app.toque.core.machine.RootShell
+import app.toque.core.update.Releases
 import app.toque.machine.MachineService
 import app.toque.ui.MainActivity
 import app.toque.update.Updater
 import java.util.Calendar
 
 /**
- * La nuit (03 h 30) : mise à jour de Toque si une nouvelle version est publiée (robot rooté,
- * machine à l'arrêt), puis synchro des recettes depuis monsieur-cuisine.com.
+ * La nuit (03 h 30) : regarde s'il existe une nouvelle version de Toque (l'accueil le dit ;
+ * installée seule seulement si l'option est choisie), puis synchronise les recettes Lidl.
  */
 @Suppress("DEPRECATION")
 class SyncService : IntentService("toque-synchro") {
     override fun onHandleIntent(intent: Intent?) {
         val app = ToqueApp.of(this)
-        if (app.prefs.autoUpdate) autoUpdate(app)
+        checkUpdate(app)
         if (!app.prefs.autoSync) return
         if (System.currentTimeMillis() - app.prefs.lastSyncMs < 6 * 3600_000L) return
         OnlineSync(this, app.prefs, app.recipes, app.log).sync()
     }
 
-    /** Installe la dernière version publiée, sans rien demander ; Toque redémarre ensuite tout seul. */
-    private fun autoUpdate(app: ToqueApp) {
+    /**
+     * Note la nouvelle version pour l'accueil. Avec l'option « la nuit », l'installe seule si elle
+     * est publiée depuis 2 jours (le temps de la retirer si elle pose problème), le robot rooté et
+     * la machine à l'arrêt ; Toque redémarre ensuite.
+     */
+    private fun checkUpdate(app: ToqueApp) {
         try {
-            if (app.machine.snapshot.busy || !RootShell.available()) return
             val updater = Updater(this)
             val release = updater.latest()
-            if (!updater.isNewer(release)) return
+            if (!updater.isNewer(release)) {
+                app.prefs.updateAvailable = ""
+                return
+            }
+            app.prefs.updateAvailable = release.version
+            if (!app.prefs.autoUpdate || !Releases.oldEnough(release, System.currentTimeMillis())) return
+            if (app.machine.snapshot.busy || !RootShell.available()) return
             val apk = updater.download(release) {}
             if (app.machine.snapshot.busy) return
             app.log.write("maj", "installation automatique de ${release.version}")
             updater.install(apk)
         } catch (e: Exception) {
-            app.log.write("maj", "mise à jour automatique impossible : ${e.message}")
+            app.log.write("maj", "vérification des mises à jour impossible : ${e.message}")
         }
     }
 

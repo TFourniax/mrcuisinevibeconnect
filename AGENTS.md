@@ -120,6 +120,7 @@ step, have the person switch it off. `ls /dev/cu.usbmodem*` lists nothing once i
 | 7 | `install` | agent | Installs Toque, allows it in Magisk, starts it. |
 | 8 | first run | person | Empty bowl: Settings › Machine › Real machine › Apply, badge **Ready**, manual cooking 10 s speed 2. |
 | 9 | `wifi` | agent | ADB over Wi-Fi (port 5555), so the cable can go and the cover go back on. |
+| — | `adb-off` | agent | Once the robot works (after `install`/`wifi` or `update`): closes ADB over Wi-Fi (root shell on the home network). Toque updates itself without it; to work on the robot again, cable and `wifi`. Recommend it. |
 | — | `update` | agent | Only for a robot already installed with a release of the original repository: downloads this repository's latest Toque and installs it over Wi-Fi (`--ip`, or the IP saved by `wifi`). Once: Toque then updates itself at night. Ends with the Foyer link (a code on the robot, a tap in Foyer). |
 
 Then: Toque › Settings › Lidl recipes › **Sync** (about 15 minutes the first time).
@@ -209,10 +210,11 @@ and without macFUSE the FUSE package stops mtkclient from starting
 ## After the install
 
 - Foyer (the household app): link the robot once, see [docs/FOYER.md](docs/FOYER.md). The robot
-  shows a 6-digit code on its home screen; the person taps "Relier" in Foyer › Réglages ›
-  Monsieur Cuisine on the phone.
+  shows a 6-digit code on its home screen; the person types it in Foyer › Réglages ›
+  Monsieur Cuisine on the phone, then taps "Relier".
 
-- Updates: Toque installs new releases of this repository by itself at night (Settings › Updates).
+- Updates: Toque sees new releases of this repository at night and shows them on its home screen
+  (one tap in Settings › Updates); unattended night installs are an opt-in setting.
 - Recipes: Settings › Lidl recipes › Sync (monsieur-cuisine.com, no account). Nightly re-sync.
 - Clock: set automatically (time zone from the Internet connection); Settings › Date and time.
 - To work on the robot later over Wi-Fi: `adb connect <robot IP>:5555`.

@@ -44,4 +44,13 @@ class UpdateTest {
         assertNull(r.apkUrl)
         assertEquals("", r.notes)
     }
+
+    @Test fun automaticInstallWaitsTwoDays() {
+        val r = Releases.parse("""{"tag_name":"v1.0.3","published_at":"2026-11-18T17:00:00Z","assets":[]}""")
+        assertEquals("2026-11-18T17:00:00Z", r.publishedAt)
+        val published = Releases.publishedMs(r.publishedAt)!!
+        assertFalse(Releases.oldEnough(r, published + 47 * 3_600_000L))
+        assertTrue(Releases.oldEnough(r, published + 49 * 3_600_000L))
+        assertFalse(Releases.oldEnough(r.copy(publishedAt = ""), published + 100 * 3_600_000L))
+    }
 }
