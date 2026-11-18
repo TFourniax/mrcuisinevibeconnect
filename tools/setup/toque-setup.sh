@@ -7,7 +7,8 @@
 # Steps, in order: status, prepare, backup, flash-twrp, root, flash-root, android, install, wifi.
 # 'update' switches an already installed robot to this repository's Toque over Wi-Fi (once; it then
 # updates itself). 'adb-off' closes ADB over Wi-Fi afterwards (recommended). 'unroot' puts the
-# original boot and recovery back. Lines starting with "HUMAN:" are actions only a person can do (unscrewing, cables, power switch, a macOS prompt, a tap on the robot's screen).
+# original boot and recovery back. Lines starting with "HUMAN:" are actions only a person can do
+# (unscrewing, cables, power switch, a macOS prompt, a tap on the robot's screen).
 # A step that needs one stops and says so; run it again once the person is done.
 #
 # macOS port of toque-setup.ps1. SP Flash Tool and its Windows driver are replaced by mtkclient
