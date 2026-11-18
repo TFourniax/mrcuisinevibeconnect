@@ -16,8 +16,8 @@ android {
         // Pour publier une mise à jour : augmenter les deux valeurs puis pousser sur GitHub
         // (la version est publiée automatiquement, voir .github/workflows/release.yml).
         // 1.0 : première version reliée à Foyer (au-dessus de toutes celles du dépôt d'origine).
-        versionCode = 100
-        versionName = "1.0.0"
+        versionCode = 101
+        versionName = "1.0.1"
     }
 
     signingConfigs {

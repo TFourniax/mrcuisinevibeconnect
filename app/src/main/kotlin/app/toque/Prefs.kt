@@ -255,4 +255,11 @@ class Prefs(context: Context) {
         set(v) {
             p.edit().putBoolean("autoUpdate", v).commit()
         }
+
+    /** Empreinte du dernier contenu reçu de Foyer : rien à ranger s'il n'a pas changé. */
+    var foyerFeedHash: String
+        get() = p.getString("foyerFeedHash", "") ?: ""
+        set(v) {
+            p.edit().putString("foyerFeedHash", v).commit()
+        }
 }

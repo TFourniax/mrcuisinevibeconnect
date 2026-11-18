@@ -256,7 +256,14 @@ class Foyer private constructor(private val app: ToqueApp) {
             }
             200 -> {
                 val feed = FoyerFeed.parse(r.body)
-                apply(feed)
+                // Le serveur ne répond pas toujours 304 (ETag réécrit en route) : un contenu
+                // identique au précédent ne range rien de nouveau.
+                val hash = sha1(r.body)
+                if (hash != prefs.foyerFeedHash) {
+                    // Les photos qui n'ont pas pu être téléchargées sont retentées au prochain changement.
+                    apply(feed)
+                    prefs.foyerFeedHash = hash
+                }
                 prefs.foyerEtag = r.etag.orEmpty()
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
                 prefs.foyerLastResult = tr("%d recettes du foyer", feed.recipes.size)
@@ -287,6 +294,7 @@ class Foyer private constructor(private val app: ToqueApp) {
     private fun unlinked() {
         prefs.foyerHousehold = ""
         prefs.foyerEtag = ""
+        prefs.foyerFeedHash = ""
         prefs.foyerCode = ""
         prefs.foyerCodeUntil = 0
         changed()
@@ -358,6 +366,9 @@ class Foyer private constructor(private val app: ToqueApp) {
         }
 
         fun of(app: ToqueApp): Foyer = start(app)
+
+        fun sha1(text: String): String =
+            MessageDigest.getInstance("SHA-1").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 
         fun photoName(url: String): String {
             val digest = MessageDigest.getInstance("SHA-1").digest(url.toByteArray(Charsets.UTF_8))
