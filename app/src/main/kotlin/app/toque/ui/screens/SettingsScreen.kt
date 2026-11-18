@@ -161,7 +161,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         updates.addView(updText)
         updButtons = Ui.horizontal(c)
         updates.addView(updButtons, Ui.lp(t = 12))
-        updates.addView(toggle(tr("Installer les mises à jour la nuit"), a.prefs.autoUpdate) { a.prefs.autoUpdate = it }, Ui.lp(t = 10))
+        updates.addView(toggle(tr("Installer seul les nouvelles versions la nuit (2 jours après leur sortie)"), a.prefs.autoUpdate) { a.prefs.autoUpdate = it }, Ui.lp(t = 10))
         Updater.onInstallError = { msg -> updateFailed(msg) }
         renderUpdate()
 
@@ -412,14 +412,14 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             foyerButtons.addView(Ui.button(c, tr("Synchroniser"), Ui.Style.SECONDARY, Icon.Kind.SYNC, height = 52) { foyer.syncNow() },
                 Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
             foyerButtons.addView(Ui.button(c, tr("Relier à un autre foyer"), Ui.Style.GHOST, height = 52) {
-                a.confirm(tr("Relier à un autre foyer ?"), tr("Le robot oublie ce lien et affiche un nouveau code. Pense à le délier aussi dans Foyer."),
+                a.confirm(tr("Relier à un autre foyer ?"), tr("Le robot efface les recettes du foyer, oublie ce lien et affiche un nouveau code. Pense à le délier aussi dans Foyer."),
                     tr("Nouveau code")) { foyer.forget() }
             })
         } else {
             val code = p.foyerCode
             foyerText.text = if (code.isEmpty()) tr("Connexion à Foyer…") +
                 (if (p.foyerLastResult.isNotEmpty()) "\n" + p.foyerLastResult else "")
-            else tr("Dans Foyer, sur ton téléphone : Réglages › Monsieur Cuisine. Sur le même Wi-Fi, il suffit de toucher « Relier » ; sinon, tape ce code :")
+            else tr("Dans Foyer, sur ton téléphone : Réglages › Monsieur Cuisine, puis tape ce code :")
             foyerCode.visibility = if (code.isEmpty()) View.GONE else View.VISIBLE
             foyerCode.text = if (code.length == 6) code.substring(0, 3) + " " + code.substring(3) else code
         }

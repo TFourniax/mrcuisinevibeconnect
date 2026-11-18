@@ -10,13 +10,20 @@ import java.io.IOException
 /** Photos de recettes réduites pour l'écran du robot (800 px de large au plus), en JPEG. */
 object Photos {
     const val MAX_WIDTH = 800
+    private const val MAX_HEIGHT = 1600
+    /** Au-delà, ou pour une image 20 fois plus haute que large (ou l'inverse), on refuse : un PNG de quelques Ko peut demander des centaines de Mo une fois décodé. */
+    private const val MAX_SOURCE_PIXELS = 40_000_000L
 
     fun save(bytes: ByteArray, dir: File, name: String) {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        if (bounds.outWidth <= 0) throw IOException(tr("image illisible"))
+        val w = bounds.outWidth
+        val h = bounds.outHeight
+        if (w <= 0 || h <= 0) throw IOException(tr("image illisible"))
+        if (w.toLong() * h > MAX_SOURCE_PIXELS || w > 20L * h || h > 20L * w) throw IOException(tr("image illisible"))
+        // Réduction choisie sur les deux côtés : l'image décodée tient en quelques Mo.
         var sample = 1
-        while (bounds.outWidth / (sample * 2) >= MAX_WIDTH) sample *= 2
+        while (w / (sample * 2) >= MAX_WIDTH || h / (sample * 2) >= MAX_HEIGHT) sample *= 2
         var bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
             ?: throw IOException(tr("image illisible"))
         if (bmp.width > MAX_WIDTH) {

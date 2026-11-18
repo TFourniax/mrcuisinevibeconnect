@@ -15,6 +15,7 @@ import app.toque.core.i18n.tr
 import app.toque.core.recipes.Recipe
 import app.toque.core.recipes.RecipeSource
 import app.toque.core.recipes.SearchIndex
+import app.toque.core.update.Releases
 import app.toque.foyer.Foyer
 import app.toque.recipes.RecipeRepo
 import app.toque.ui.Icon
@@ -42,6 +43,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
     private lateinit var cardsMore: TextView
     private lateinit var cards: LinearLayout
     private lateinit var lidlSub: TextView
+    private lateinit var updateLine: TextView
     private var unsubRecipes: (() -> Unit)? = null
     private var unsubFoyer: (() -> Unit)? = null
     private var clockView: TextView? = null
@@ -81,6 +83,12 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         search.isClickable = true
         search.setOnClickListener { a.push(RecipesScreen(a, focusSearch = true)) }
         left.addView(search, Ui.lp(Ui.MATCH, Ui.u(64), t = 12))
+        // Une nouvelle version, vue la nuit : elle s'installe d'un geste, devant le robot.
+        updateLine = Ui.ellipsize(Ui.text(c, "", 16f, Ui.ACCENT, Ui.MEDIUM))
+        updateLine.setPadding(Ui.u(8), Ui.u(10), Ui.u(8), 0)
+        updateLine.isClickable = true
+        updateLine.setOnClickListener { a.push(SettingsScreen(a)) }
+        left.addView(updateLine, Ui.lp())
         root.addView(left, LinearLayout.LayoutParams(0, Ui.MATCH, 0.42f).apply { rightMargin = Ui.u(20) })
 
         // ---- Colonne de droite : nos recettes, puis les outils
@@ -140,6 +148,11 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val title = if (guided.isEmpty()) null else repo.index.entries.firstOrNull { it.id == guided }?.title
         resumeCard.visibility = if (title != null) View.VISIBLE else View.GONE
         if (title != null) resumeText.text = tr("Reprendre « %s » — étape %d", title, a.prefs.guidedStep + 1)
+        val available = a.prefs.updateAvailable
+        val installed = try { a.packageManager.getPackageInfo(a.packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
+        val newer = available.isNotEmpty() && Releases.isNewer(available, installed)
+        updateLine.visibility = if (newer) View.VISIBLE else View.GONE
+        if (newer) updateLine.text = tr("Toque %s est disponible : l'installer depuis Réglages", available)
         val lidl = repo.countOf(RecipeRepo.LIDL)
         lidlSub.visibility = if (lidl > 0) View.VISIBLE else View.GONE
         lidlSub.text = tr("%d recettes", lidl)
@@ -297,7 +310,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         card.addView(Ui.text(c, shown, if (code.length == 6) 66f else 28f, Ui.TEXT, Ui.LIGHT).apply { letterSpacing = 0.08f }, Ui.lp(t = 10))
         val steps = listOf(
             tr("Sur ton téléphone : Foyer › Réglages › Monsieur Cuisine."),
-            tr("Sur le même Wi-Fi, touche « Relier ». Sinon, tape ce code."),
+            tr("Tape ce code, puis touche « Relier »."),
             tr("C'est tout : le lien reste, sans rien refaire."),
         )
         for ((i, s) in steps.withIndex()) card.addView(Ui.text(c, "${i + 1}. $s", 17f, Ui.TEXT2).apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = if (i == 0) 12 else 4))

@@ -249,9 +249,13 @@ class Prefs(context: Context) {
             p.edit().putString("foyerPlans", v).commit()
         }
 
-    /** Mises à jour de Toque installées toutes seules la nuit (robot rooté, machine à l'arrêt). */
+    /**
+     * Mises à jour installées toutes seules la nuit (robot rooté, machine à l'arrêt, version
+     * publiée depuis 2 jours). Coupé par défaut : une nouvelle version s'installe d'un geste,
+     * devant le robot, quand on a le temps de vérifier qu'elle marche.
+     */
     var autoUpdate: Boolean
-        get() = p.getBoolean("autoUpdate", true)
+        get() = p.getBoolean("autoUpdate", false)
         set(v) {
             p.edit().putBoolean("autoUpdate", v).commit()
         }
@@ -261,5 +265,12 @@ class Prefs(context: Context) {
         get() = p.getString("foyerFeedHash", "") ?: ""
         set(v) {
             p.edit().putString("foyerFeedHash", v).commit()
+        }
+
+    /** Dernière version publiée plus récente que celle installée ("" : aucune), vue la nuit. */
+    var updateAvailable: String
+        get() = p.getString("updateAvailable", "") ?: ""
+        set(v) {
+            p.edit().putString("updateAvailable", v).commit()
         }
 }

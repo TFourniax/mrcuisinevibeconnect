@@ -11,6 +11,8 @@ data class Release(
     val apkName: String?,
     val apkUrl: String?,
     val apkSize: Long,
+    /** Date de publication, ISO 8601 (vide si inconnue). */
+    val publishedAt: String = "",
 )
 
 /** Lecture de l'API GitHub « dernière version » et comparaison de numéros de version. */
@@ -35,6 +37,21 @@ object Releases {
 
     fun isNewer(candidate: String, installed: String): Boolean = compare(candidate, installed) > 0
 
+    /** « 2026-11-18T17:00:00Z » → ms (null si illisible). */
+    fun publishedMs(iso: String): Long? = try {
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+            .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+            .parse(iso.trim())?.time
+    } catch (_: Exception) {
+        null
+    }
+
+    /** Installation automatique : seulement une version publiée depuis au moins [hours] heures (le temps de la retirer si elle pose problème). */
+    fun oldEnough(r: Release, nowMs: Long, hours: Int = 48): Boolean {
+        val at = publishedMs(r.publishedAt) ?: return false
+        return nowMs - at >= hours * 3_600_000L
+    }
+
     private fun parts(v: String): List<Int> =
         versionOf(v).split('.').map { p -> p.takeWhile { it.isDigit() }.toIntOrNull() ?: 0 }
 
@@ -54,6 +71,7 @@ object Releases {
             apkName = apk?.get("name") as? String,
             apkUrl = apk?.get("browser_download_url") as? String,
             apkSize = (apk?.get("size") as? Number)?.toLong() ?: 0L,
+            publishedAt = (o["published_at"] as? String).orEmpty(),
         )
     }
 }

@@ -27,6 +27,7 @@ data class StatusReport(
     val stepText: String? = null,
     val tempC: Int? = null,
     val speed: Int? = null,
+    /** Fin de l'étape sur l'horloge du suivi (monotone sur le robot). */
     val endsAtMs: Long? = null,
     val alert: String? = null,
     val notify: Boolean = false,
@@ -47,10 +48,12 @@ data class StatusReport(
 
     fun worthSending(last: StatusReport?): Boolean = notify || !sameAs(last)
 
-    fun toMap(iso: (Long) -> String): Map<String, Any?> = linkedMapOf(
+    /** Pour Foyer, au moment de l'envoi [nowMs] (même horloge que [endsAtMs]) : le temps restant, pas une heure. */
+    fun toMap(nowMs: Long): Map<String, Any?> = linkedMapOf(
         "state" to state, "recipeId" to recipeId, "title" to title?.take(160), "stepIndex" to stepIndex,
         "stepCount" to stepCount, "stepText" to stepText?.take(300), "tempC" to tempC, "speed" to speed,
-        "endsAt" to endsAtMs?.let(iso), "alert" to alert?.take(160), "notify" to notify,
+        "remainingSeconds" to endsAtMs?.let { ((it - nowMs) / 1000).coerceIn(0L, 6L * 3600) },
+        "alert" to alert?.take(160), "notify" to notify,
     )
 }
 

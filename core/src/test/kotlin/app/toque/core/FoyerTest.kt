@@ -143,6 +143,13 @@ class FoyerTest {
         assertEquals("idle", tracker.current(Snapshot()).state)
     }
 
+    @Test fun theTimeLeftIsSentNotAClockTime() {
+        val m = StatusReport("cooking", endsAtMs = 1_300_000).toMap(1_000_000)
+        assertEquals(300L, m["remainingSeconds"])
+        assertFalse(m.containsKey("endsAt"))
+        assertEquals(0L, StatusReport("cooking", endsAtMs = 900_000).toMap(1_000_000)["remainingSeconds"])
+    }
+
     @Test fun reportsAreSentOnlyWhenSomethingChanges() {
         val a = StatusReport("cooking", endsAtMs = 100_000)
         assertFalse(a.copy(endsAtMs = 110_000).worthSending(a))

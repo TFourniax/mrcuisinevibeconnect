@@ -5,6 +5,9 @@ import android.util.Base64
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.URL
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
@@ -97,23 +100,47 @@ object FoyerHttp {
     }
 
     /**
-     * Une photo de recette : https seulement (une redirection vers http n'est pas suivie),
-     * 4 Mo au plus, et seulement du JPEG, du PNG ou du WebP reconnus à leurs premiers octets :
-     * rien d'autre n'arrive au décodeur d'images d'Android 6.
+     * Une photo de recette : https seulement, jamais une adresse du réseau local (le robot est
+     * chez toi), redirections vérifiées une à une (3 au plus), 20 s en tout, 4 Mo au plus, et
+     * seulement du JPEG, du PNG ou du WebP reconnus à leurs premiers octets : rien d'autre
+     * n'arrive au décodeur d'images d'Android 6.
      */
     fun download(url: String, userAgent: String): ByteArray {
-        val c = open(url)
-        try {
-            c.instanceFollowRedirects = true
-            c.setRequestProperty("User-Agent", userAgent)
-            if (c.responseCode != 200) throw IOException("réponse ${c.responseCode}")
-            if (c.url.protocol != "https") throw IOException("redirection hors https")
-            val bytes = c.inputStream.use { readAll(it, 4 * 1024 * 1024) }
-            if (!isImage(bytes)) throw IOException("pas une image JPEG, PNG ou WebP")
-            return bytes
-        } finally {
-            c.disconnect()
+        val deadline = System.currentTimeMillis() + 20_000
+        var target = URL(url)
+        repeat(4) {
+            if (target.protocol != "https") throw IOException("https uniquement")
+            if (InetAddress.getAllByName(target.host).any { isLocal(it) }) throw IOException("adresse locale refusée")
+            val c = open(target.toString())
+            try {
+                c.instanceFollowRedirects = false
+                c.connectTimeout = 8_000
+                c.readTimeout = 8_000
+                c.setRequestProperty("User-Agent", userAgent)
+                val code = c.responseCode
+                if (code in 300..399) {
+                    val next = c.getHeaderField("Location") ?: throw IOException("redirection sans adresse")
+                    target = URL(target, next)
+                    return@repeat
+                }
+                if (code != 200) throw IOException("réponse $code")
+                val bytes = c.inputStream.use { readAll(it, 4 * 1024 * 1024, deadline) }
+                if (!isImage(bytes)) throw IOException("pas une image JPEG, PNG ou WebP")
+                return bytes
+            } finally {
+                c.disconnect()
+            }
         }
+        throw IOException("trop de redirections")
+    }
+
+    /** Boucle locale, réseau privé, lien local, CGNAT, adresses IPv6 uniques locales. */
+    fun isLocal(a: InetAddress): Boolean {
+        if (a.isAnyLocalAddress || a.isLoopbackAddress || a.isLinkLocalAddress || a.isSiteLocalAddress || a.isMulticastAddress) return true
+        val b = a.address
+        if (a is Inet4Address) return (b[0].toInt() and 0xFF) == 100 && (b[1].toInt() and 0xC0) == 64
+        if (a is Inet6Address) return (b[0].toInt() and 0xFE) == 0xFC
+        return false
     }
 
     fun isImage(b: ByteArray): Boolean {
@@ -123,7 +150,7 @@ object FoyerHttp {
             (at(0, 0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50))
     }
 
-    private fun readAll(input: java.io.InputStream, max: Int): ByteArray {
+    private fun readAll(input: java.io.InputStream, max: Int, deadline: Long = Long.MAX_VALUE): ByteArray {
         val out = ByteArrayOutputStream()
         val buf = ByteArray(16 * 1024)
         while (true) {
@@ -131,6 +158,7 @@ object FoyerHttp {
             if (n < 0) break
             out.write(buf, 0, n)
             if (out.size() > max) throw IOException("réponse trop grande")
+            if (System.currentTimeMillis() > deadline) throw IOException("trop lent")
         }
         return out.toByteArray()
     }

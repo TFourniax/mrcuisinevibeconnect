@@ -66,8 +66,9 @@ screen.
   button stays on top of the stock app when you open it.
 - **Updates from GitHub**: *Settings › Updates* checks this repository's
   [Releases](https://github.com/TFourniax/mrcuisinevibeconnect/releases) and installs the new
-  version (silently on a rooted robot, then Toque restarts), by itself at night unless switched
-  off. Refused while a program is running.
+  version in one tap (silently on a rooted robot, then Toque restarts); new versions are spotted
+  at night and shown on the home screen, and can be installed unattended (opt-in, 2 days after
+  their release). Refused while a program is running.
 
 ## Safety: what changes compared to the stock app
 
@@ -149,8 +150,8 @@ every language file.
 2. Commit and push to `main`.
 
 The [release workflow](.github/workflows/release.yml) runs the tests, builds the APK and publishes
-the `vX.Y.Z` release with it. Robots then install it by themselves at night, or from *Settings ›
-Updates*. Every push to a `claude/**` branch is built too ([build.yml](.github/workflows/build.yml)),
+the `vX.Y.Z` release with it. Robots show it on their home screen the next morning (one tap in
+*Settings › Updates*, or unattended at night when chosen). Every push to a `claude/**` branch is built too ([build.yml](.github/workflows/build.yml)),
 the APK kept 14 days as an artifact.
 
 All builds are signed with the project key in `app/signature/` (public on purpose), so an APK built

@@ -210,10 +210,11 @@ and without macFUSE the FUSE package stops mtkclient from starting
 ## After the install
 
 - Foyer (the household app): link the robot once, see [docs/FOYER.md](docs/FOYER.md). The robot
-  shows a 6-digit code on its home screen; the person taps "Relier" in Foyer › Réglages ›
-  Monsieur Cuisine on the phone.
+  shows a 6-digit code on its home screen; the person types it in Foyer › Réglages ›
+  Monsieur Cuisine on the phone, then taps "Relier".
 
-- Updates: Toque installs new releases of this repository by itself at night (Settings › Updates).
+- Updates: Toque sees new releases of this repository at night and shows them on its home screen
+  (one tap in Settings › Updates); unattended night installs are an opt-in setting.
 - Recipes: Settings › Lidl recipes › Sync (monsieur-cuisine.com, no account). Nightly re-sync.
 - Clock: set automatically (time zone from the Internet connection); Settings › Date and time.
 - To work on the robot later over Wi-Fi: `adb connect <robot IP>:5555`.

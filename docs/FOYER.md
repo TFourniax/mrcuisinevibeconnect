@@ -17,23 +17,29 @@ the robot, with every safety rule of Toque.
 ## Linking, once
 
 1. On the robot, the home screen (or Settings › Foyer) shows a 6-digit code.
-2. On the phone, Foyer › Réglages › Monsieur Cuisine: on the same Wi-Fi, a card shows the same
-   code, tap "Relier"; otherwise type the code.
+2. On the phone, Foyer › Réglages › Monsieur Cuisine: type the code, tap "Relier". The robot then
+   shows "Relié au foyer « … »": check it is yours.
 
 That is all. The link has no expiry and survives restarts and updates. To undo it: Foyer ›
-Réglages › Monsieur Cuisine › Délier (the robot keeps the recipes it has and shows a new code), or
-on the robot Settings › Foyer › Link to another household.
+Réglages › Monsieur Cuisine › Délier, or on the robot Settings › Foyer › Link to another
+household. Either way the robot erases the household's recipes and meals and shows a new code.
 
 ## How it is secured
 
 - On its first start, Toque makes a 256-bit random secret and keeps it in its private files. Foyer
   stores only its SHA-256. Every call carries it as `Authorization: Bearer`, over HTTPS.
 - The 6-digit code is valid 10 minutes and only links a robot when a signed-in member (password
-  and authenticator code) enters it or taps the card; 10 tries per 10 minutes per member. The card
-  is offered only to a phone on the same home connection (same public IPv4 address, or same IPv6
-  /64), and it shows the code so it can be checked against the robot's screen.
+  and authenticator code) types it; 10 tries per 10 minutes per member. Foyer may say that a robot
+  waits on the same connection, never its code (someone sharing the public address, a guest or a
+  fake robot is never one tap away). At most 200 robots wait to be linked across the service.
 - A linked robot can read the household's shared recipes and planned meals, report its state and
-  mark a recipe as cooked. Nothing else: no private items, no other module, 60 calls a minute.
+  mark a recipe as cooked. Nothing else: no private items, no other module, 60 calls a minute,
+  and it can cause at most 12 notifications an hour (3 between 21:00 and 08:00).
+- Recipe photos come from the recipes' own sites. The robot only fetches them over https, never
+  from an address of the home network, 20 s and 4 MB at most each, on their own thread, and only
+  JPEG, PNG or WebP of a sane size reach Android 6's image decoder; a bad one is skipped.
+- The robot's secret is made once; if it cannot be read, the robot stops instead of making a new
+  one (which would unlink it silently).
 - Android 6 lacks the newer root certificates: connections to Foyer and to recipe photos also
   trust ISRG Root X1, DigiCert Global Root G2 and GTS Root R1, bundled in
   `app/src/main/assets/certs/foyer-roots.pem` (SHA-256 fingerprints listed in the file). Host
@@ -61,7 +67,7 @@ robot checks it again before running it.
 |---|---|
 | `POST /api/robot/hello` | `{ version }` → `{ status: "paired", household }` or `{ status: "pending", code, expiresAt }` |
 | `GET /api/robot/sync` | Recipes in the `toque-recettes-1` format (ids `foyer-<uuid>`), planned meals of the next 7 days, `pendingSteps`; `ETag` / 304 |
-| `POST /api/robot/status` | `{ state, recipeId, title, stepIndex, stepCount, stepText, tempC, speed, endsAt, alert, notify }` |
+| `POST /api/robot/status` | `{ state, recipeId, title, stepIndex, stepCount, stepText, tempC, speed, remainingSeconds, alert, notify }` (the end time is computed with the server's clock) |
 | `POST /api/robot/cooked` | `{ recipeId }` |
 
 401 means the robot is not (or no longer) linked: Toque shows a code again. The code is in
@@ -70,10 +76,20 @@ tracker, unit tested in `FoyerTest`).
 
 ## Updates
 
-Toque 1.0 updates from this repository's releases, by itself at night (03:30) on a rooted robot
-with the machine stopped (Settings › Updates › Install updates at night). A robot still on a
-release of the original repository is switched once from the Mac it was installed from:
+Toque checks this repository's releases every night (03:30). A new version shows on the home
+screen and installs in one tap from Settings › Updates, by someone at the robot who can check it
+works. Settings › Updates › "Install new versions by itself at night" installs them unattended
+instead, on a rooted robot with the machine stopped, and only versions published at least 2 days
+earlier (time to withdraw a bad one). Off by default.
+
+A robot still on a release of the original repository is switched once from the Mac it was
+installed from, then ADB over Wi-Fi can be closed (nothing needs it day to day):
 
 ```
 bash tools/setup/toque-setup.sh update --ip <robot IP>
+bash tools/setup/toque-setup.sh adb-off
 ```
+
+The release signing key is public in this repository (every build installs over the previous
+one): what protects the robot is who can publish a release here. Keep two-factor
+authentication on the GitHub account, and on Netlify for Foyer.
