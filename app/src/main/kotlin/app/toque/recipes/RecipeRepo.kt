@@ -14,17 +14,20 @@ import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * Recettes Lidl copiées localement (SQLite) + index de recherche en mémoire.
- * L'appli fonctionne entièrement hors ligne ; seule la synchro passe par le réseau.
+ * Recettes copiées localement (SQLite) + index de recherche en mémoire : le catalogue Lidl et les
+ * recettes du foyer (Foyer). Chaque synchro ne touche que les recettes de sa source (colonne
+ * `origin`). L'appli fonctionne entièrement hors ligne ; seule la synchro passe par le réseau.
  */
 class RecipeRepo(private val context: Context) {
-    private val helper = object : SQLiteOpenHelper(context, "recettes.db", null, 1) {
+    private val helper = object : SQLiteOpenHelper(context, "recettes.db", null, 2) {
         override fun onCreate(db: SQLiteDatabase) {
-            db.execSQL("CREATE TABLE recipes (id TEXT PRIMARY KEY, title TEXT NOT NULL, json TEXT NOT NULL, updated INTEGER NOT NULL)")
+            db.execSQL("CREATE TABLE recipes (id TEXT PRIMARY KEY, title TEXT NOT NULL, json TEXT NOT NULL, updated INTEGER NOT NULL, origin TEXT NOT NULL DEFAULT 'lidl')")
             db.execSQL("CREATE TABLE favorites (id TEXT PRIMARY KEY)")
         }
 
-        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            if (oldVersion < 2) db.execSQL("ALTER TABLE recipes ADD COLUMN origin TEXT NOT NULL DEFAULT 'lidl'")
+        }
     }
     private val exec = Executors.newSingleThreadExecutor { r -> Thread(r, "toque-recettes").apply { priority = Thread.NORM_PRIORITY - 1 } }
     private val main = Handler(Looper.getMainLooper())
@@ -73,6 +76,9 @@ class RecipeRepo(private val context: Context) {
 
     val count: Int get() = index.entries.size
 
+    /** Nombre de recettes d'une source (Lidl ou Foyer). */
+    fun countOf(origin: String): Int = index.entries.count { originOf(it.source) == origin }
+
     /** Lecture d'une recette (rapide : une seule ligne). */
     fun get(id: String): Recipe? {
         helper.readableDatabase.rawQuery("SELECT json FROM recipes WHERE id = ?", arrayOf(id)).use { c ->
@@ -99,8 +105,9 @@ class RecipeRepo(private val context: Context) {
     }
 
     /**
-     * Remplace tout le catalogue par l'import du jour (miroir de l'appli d'origine).
-     * Les favoris sont conservés ; ceux marqués dans l'appli d'origine sont ajoutés.
+     * Remplace tout le catalogue Lidl par l'import du jour (miroir de l'appli d'origine).
+     * Les recettes du foyer ne sont pas touchées. Les favoris sont conservés ; ceux marqués
+     * dans l'appli d'origine sont ajoutés.
      */
     fun replaceAll(recipes: List<Recipe>) {
         exec.submit { replaceAllNow(recipes) }.get()
@@ -110,15 +117,10 @@ class RecipeRepo(private val context: Context) {
         val db = helper.writableDatabase
         db.beginTransaction()
         try {
-            db.delete("recipes", null, null)
+            db.delete("recipes", "origin = ?", arrayOf(LIDL))
             val now = System.currentTimeMillis()
             for (r in recipes) {
-                val v = ContentValues()
-                v.put("id", r.id)
-                v.put("title", r.title)
-                v.put("json", RecipeCodec.encode(r.copy(favorite = false)))
-                v.put("updated", now)
-                db.insertWithOnConflict("recipes", null, v, SQLiteDatabase.CONFLICT_REPLACE)
+                db.insertWithOnConflict("recipes", null, row(r, now), SQLiteDatabase.CONFLICT_REPLACE)
                 if (r.favorite) db.execSQL("INSERT OR IGNORE INTO favorites (id) VALUES (?)", arrayOf(r.id))
             }
             db.setTransactionSuccessful()
@@ -135,14 +137,7 @@ class RecipeRepo(private val context: Context) {
             db.beginTransaction()
             try {
                 val now = System.currentTimeMillis()
-                for (r in recipes) {
-                    val v = ContentValues()
-                    v.put("id", r.id)
-                    v.put("title", r.title)
-                    v.put("json", RecipeCodec.encode(r.copy(favorite = false)))
-                    v.put("updated", now)
-                    db.insertWithOnConflict("recipes", null, v, SQLiteDatabase.CONFLICT_REPLACE)
-                }
+                for (r in recipes) db.insertWithOnConflict("recipes", null, row(r, now), SQLiteDatabase.CONFLICT_REPLACE)
                 db.setTransactionSuccessful()
             } finally {
                 db.endTransaction()
@@ -151,19 +146,27 @@ class RecipeRepo(private val context: Context) {
         }.get()
     }
 
-    /** Identifiants de toutes les recettes enregistrées. */
-    fun ids(): Set<String> = exec.submit<Set<String>> {
+    private fun row(r: Recipe, now: Long) = ContentValues().apply {
+        put("id", r.id)
+        put("title", r.title)
+        put("json", RecipeCodec.encode(r.copy(favorite = false)))
+        put("updated", now)
+        put("origin", originOf(r.source))
+    }
+
+    /** Identifiants des recettes d'une source (Lidl par défaut). */
+    fun ids(origin: String = LIDL): Set<String> = exec.submit<Set<String>> {
         val out = HashSet<String>()
-        helper.readableDatabase.rawQuery("SELECT id FROM recipes", null).use { c -> while (c.moveToNext()) out += c.getString(0) }
+        helper.readableDatabase.rawQuery("SELECT id FROM recipes WHERE origin = ?", arrayOf(origin)).use { c -> while (c.moveToNext()) out += c.getString(0) }
         out
     }.get()
 
-    /** Supprime les recettes absentes de [keep] (catalogue miroir de la source). */
-    fun removeAllExcept(keep: Set<String>, rebuild: Boolean = true) {
+    /** Supprime les recettes de [origin] absentes de [keep] (catalogue miroir de cette source). */
+    fun removeAllExcept(keep: Set<String>, rebuild: Boolean = true, origin: String = LIDL) {
         exec.submit {
             val db = helper.writableDatabase
             val gone = ArrayList<String>()
-            db.rawQuery("SELECT id FROM recipes", null).use { c -> while (c.moveToNext()) c.getString(0).let { if (it !in keep) gone += it } }
+            db.rawQuery("SELECT id FROM recipes WHERE origin = ?", arrayOf(origin)).use { c -> while (c.moveToNext()) c.getString(0).let { if (it !in keep) gone += it } }
             db.beginTransaction()
             try {
                 for (id in gone) db.delete("recipes", "id = ?", arrayOf(id))
@@ -191,4 +194,11 @@ class RecipeRepo(private val context: Context) {
     }
 
     fun runInBackground(block: () -> Unit) = exec.execute(block)
+
+    companion object {
+        const val LIDL = "lidl"
+        const val FOYER = "foyer"
+
+        fun originOf(source: RecipeSource): String = if (source == RecipeSource.FOYER) FOYER else LIDL
+    }
 }

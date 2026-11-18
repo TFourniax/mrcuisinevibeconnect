@@ -8,6 +8,7 @@ import app.toque.Prefs
 import app.toque.core.i18n.I18n
 import app.toque.core.i18n.tr
 import app.toque.core.machine.Snapshot
+import app.toque.recipes.RecipeRepo
 import app.toque.ui.Icon
 import app.toque.ui.MainActivity
 import app.toque.ui.Screen
@@ -121,7 +122,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
 
     private fun refresh() {
         val repo = a.app.recipes
-        val n = repo.count
+        val n = repo.countOf(RecipeRepo.LIDL)
         recipesSub.text = when {
             !repo.loaded -> tr("Chargement…")
             n == 0 -> tr("Aucune recette Lidl pour l'instant")

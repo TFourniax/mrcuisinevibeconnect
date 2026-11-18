@@ -19,8 +19,11 @@ import app.toque.core.protocol.Direction
 import app.toque.core.protocol.Mcc
 import app.toque.core.protocol.Operation
 
-/** Recettes Lidl importées (site monsieur-cuisine.com ou appli d'origine) ; USER : réservé aux recettes perso. */
-enum class RecipeSource { IMPORTED, USER }
+/**
+ * IMPORTED : recettes Lidl (site monsieur-cuisine.com ou appli d'origine) ; USER : réservé aux
+ * recettes perso ; FOYER : recettes partagées du foyer, reçues de l'appli Foyer.
+ */
+enum class RecipeSource { IMPORTED, USER, FOYER }
 
 data class Ingredient(val qty: String = "", val unit: String = "", val name: String, val note: String = "") {
     val display: String
