@@ -20,6 +20,7 @@ import app.toque.core.machine.RootShell
 import app.toque.core.machine.Snapshot
 import app.toque.core.time.ZoneLookup
 import app.toque.core.update.Release
+import app.toque.foyer.Foyer
 import app.toque.recipes.LidlSync
 import app.toque.recipes.OnlineSync
 import app.toque.ui.Icon
@@ -38,6 +39,11 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private lateinit var bowlText: TextView
     private lateinit var linkText: TextView
     private lateinit var timeText: TextView
+    private lateinit var foyerText: TextView
+    private lateinit var foyerCode: TextView
+    private lateinit var foyerButtons: LinearLayout
+    private var foyerUnsub: (() -> Unit)? = null
+    private var foyerCounted = false
     private var settingTime = false
     private var mode = a.prefs.mode
     private var syncing = false
@@ -95,6 +101,20 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             15f, Ui.TEXT3).apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = 6))
         safety.addView(toggle(tr("Sons"), a.prefs.sound) { a.prefs.sound = it }, Ui.lp(t = 10))
 
+        // ---- Foyer (appli du foyer) : liaison durable, recettes partagées, état du robot
+        val foyer = section(right, tr("Foyer"), Icon.Kind.LINK)
+        foyerText = Ui.text(c, "", 16f, Ui.TEXT2).apply { setLineSpacing(0f, 1.15f) }
+        foyer.addView(foyerText)
+        foyerCode = Ui.text(c, "", 54f, Ui.TEXT, Ui.LIGHT).apply { letterSpacing = 0.12f }
+        foyer.addView(foyerCode, Ui.lp(t = 8))
+        foyerButtons = Ui.horizontal(c)
+        foyer.addView(foyerButtons, Ui.lp(t = 12))
+        foyer.addView(toggle(tr("Lien avec Foyer"), a.prefs.foyerEnabled) {
+            a.prefs.foyerEnabled = it
+            Foyer.of(a.app).syncNow()
+        }, Ui.lp(t = 10))
+        renderFoyer()
+
         // ---- Langue (titre bilingue : trouvable quelle que soit la langue affichée)
         val language = section(right, "Langue · Language", Icon.Kind.INFO)
         val options = listOf(I18n.AUTO to tr("Automatique (langue du système)")) + I18n.languages.map { it.code to it.name }
@@ -141,6 +161,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         updates.addView(updText)
         updButtons = Ui.horizontal(c)
         updates.addView(updButtons, Ui.lp(t = 12))
+        updates.addView(toggle(tr("Installer les mises à jour la nuit"), a.prefs.autoUpdate) { a.prefs.autoUpdate = it }, Ui.lp(t = 10))
         Updater.onInstallError = { msg -> updateFailed(msg) }
         renderUpdate()
 
@@ -186,7 +207,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         val sw = Ui.text(c, "", 16f, Ui.TEXT, Ui.MEDIUM).apply { gravity = Gravity.CENTER }
         fun paint() {
             sw.text = if (state) tr("Oui") else tr("Non")
-            sw.setTextColor(if (state) 0xFF1A0E05.toInt() else Ui.TEXT2)
+            sw.setTextColor(if (state) Ui.ON_ACCENT else Ui.TEXT2)
             sw.background = if (state) Ui.round(Ui.ACCENT, 24f) else Ui.round(Ui.SURFACE3, 24f)
         }
         paint()
@@ -255,14 +276,14 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         twinBox.visibility = if (mode == Prefs.Mode.TWIN) View.VISIBLE else View.GONE
         linkText.text = when (mode) {
             Prefs.Mode.DEMO -> tr("Base moteur simulée : pour essayer l'appli sur n'importe quel appareil Android.")
-            Prefs.Mode.TWIN -> tr("Jumeau numérique du SDK lancé sur un PC (tools/twin.py). Avec « adb reverse tcp:8765 tcp:8765 », gardez 127.0.0.1.")
+            Prefs.Mode.TWIN -> tr("Jumeau numérique du SDK lancé sur un PC (tools/twin.py). Avec « adb reverse tcp:8765 tcp:8765 », garde 127.0.0.1.")
             Prefs.Mode.HARDWARE -> tr("Pilote le vrai moteur par le port série. Exige le root. L'appli d'origine est coupée du moteur (réversible).")
         }
     }
 
     private fun applyMode() {
         if (a.snapshot.busy) {
-            a.toast(tr("Arrêtez d'abord le programme en cours"), Ui.WARN)
+            a.toast(tr("Arrête d'abord le programme en cours"), Ui.WARN)
             return
         }
         if (mode == Prefs.Mode.HARDWARE && a.prefs.mode != Prefs.Mode.HARDWARE) {
@@ -270,7 +291,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                 tr("Piloter la vraie machine"),
                 tr("Toque va prendre le contrôle du moteur et de la chauffe à la place de l'appli d'origine.\n\n" +
                     "Premier essai : bol vide, couvercle fermé, à portée de l'interrupteur principal. " +
-                    "Si quoi que ce soit semble anormal, coupez l'interrupteur."),
+                    "Si quoi que ce soit semble anormal, coupe l'interrupteur."),
                 tr("Continuer"), danger = true,
             ) { prepareHardware() }
             return
@@ -373,6 +394,37 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         }.start()
     }
 
+    private fun renderFoyer() {
+        val foyer = Foyer.of(a.app)
+        val p = a.prefs
+        foyerButtons.removeAllViews()
+        if (!p.foyerEnabled) {
+            foyerText.text = tr("Lien coupé : le robot ne reçoit plus les recettes du foyer et ne dit plus rien à Foyer.")
+            foyerCode.visibility = View.GONE
+            return
+        }
+        if (foyer.linked) {
+            val last = if (p.foyerLastSyncMs > 0) java.text.SimpleDateFormat(tr("dd/MM à HH:mm"), I18n.locale).format(java.util.Date(p.foyerLastSyncMs)) else ""
+            foyerText.text = tr("Relié à « %s ». Les recettes partagées du foyer arrivent toutes seules, et Foyer te prévient quand un plat est prêt.", p.foyerHousehold) +
+                (if (last.isNotEmpty()) "\n" + tr("Dernière synchro le %s", last) else "") +
+                (if (p.foyerLastResult.isNotEmpty()) "\n" + p.foyerLastResult else "")
+            foyerCode.visibility = View.GONE
+            foyerButtons.addView(Ui.button(c, tr("Synchroniser"), Ui.Style.SECONDARY, Icon.Kind.SYNC, height = 52) { foyer.syncNow() },
+                Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
+            foyerButtons.addView(Ui.button(c, tr("Relier à un autre foyer"), Ui.Style.GHOST, height = 52) {
+                a.confirm(tr("Relier à un autre foyer ?"), tr("Le robot oublie ce lien et affiche un nouveau code. Pense à le délier aussi dans Foyer."),
+                    tr("Nouveau code")) { foyer.forget() }
+            })
+        } else {
+            val code = p.foyerCode
+            foyerText.text = if (code.isEmpty()) tr("Connexion à Foyer…") +
+                (if (p.foyerLastResult.isNotEmpty()) "\n" + p.foyerLastResult else "")
+            else tr("Dans Foyer, sur ton téléphone : Réglages › Monsieur Cuisine. Sur le même Wi-Fi, il suffit de toucher « Relier » ; sinon, tape ce code :")
+            foyerCode.visibility = if (code.isEmpty()) View.GONE else View.VISIBLE
+            foyerCode.text = if (code.length == 6) code.substring(0, 3) + " " + code.substring(3) else code
+        }
+    }
+
     private fun refreshSync() {
         val last = a.prefs.lastSyncResult
         syncText.text = (if (last.isEmpty()) tr("Jamais synchronisé") else tr("Dernière synchro le %s", last)) +
@@ -392,7 +444,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             Upd.AVAILABLE -> installed + "\n" + tr("Nouvelle version disponible : %s", r?.version) + notes(r)
             Upd.DOWNLOADING -> tr("Téléchargement de la version %s… %d %%", r?.version, updPercent)
             Upd.INSTALLING -> tr("Installation de la version %s… Toque va redémarrer.\n" +
-                "Si Android demande une confirmation, touchez « Installer ».", r?.version)
+                "Si Android demande une confirmation, touche « Installer ».", r?.version)
             Upd.ERROR -> installed + "\n" + updMessage
         }
         updButtons.removeAllViews()
@@ -440,7 +492,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private fun installUpdate() {
         val r = release ?: return
         if (a.snapshot.busy) {
-            a.toast(tr("Arrêtez d'abord le programme en cours"), Ui.WARN)
+            a.toast(tr("Arrête d'abord le programme en cours"), Ui.WARN)
             return
         }
         a.confirm(
@@ -479,14 +531,26 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         a.toast(message, Ui.WARN)
     }
 
+    override fun onHide() {
+        foyerUnsub?.invoke()
+        foyerUnsub = null
+        if (foyerCounted) Foyer.of(a.app).showing(false)
+        foyerCounted = false
+    }
+
     override fun onShow() {
+        foyerUnsub?.invoke()
+        foyerUnsub = Foyer.of(a.app).onChange { renderFoyer() }
+        if (!foyerCounted) Foyer.of(a.app).showing(true)
+        foyerCounted = true
+        renderFoyer()
         mode = a.prefs.mode
         renderModes()
         if (!syncing) refreshSync()
     }
 
     override fun onSnapshot(s: Snapshot) {
-        bowlText.text = if (s.hasSample) tr("Capteur du bol en ce moment : %s. Vérifiez qu'il change quand vous retirez le bol avant d'activer cette option.",
+        bowlText.text = if (s.hasSample) tr("Capteur du bol en ce moment : %s. Vérifie qu'il change quand tu retires le bol avant d'activer cette option.",
             if (s.bowlDetected) tr("bol détecté") else tr("bol NON détecté")) else tr("Base non connectée")
     }
 }

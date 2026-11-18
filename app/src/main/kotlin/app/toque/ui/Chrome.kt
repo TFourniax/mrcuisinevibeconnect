@@ -39,7 +39,7 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
     private val back = Icon(a, Icon.Kind.BACK, Ui.TEXT)
     private val titleView = Ui.ellipsize(Ui.text(a, "", 24f, Ui.TEXT, Ui.MEDIUM))
     private val temp = Ui.chip(a, "", Icon.Kind.THERMO, Ui.TEXT2)
-    private val lid = Ui.chip(a, tr("Couvercle ouvert"), Icon.Kind.LID, Ui.WARN, 0x33FFC14D)
+    private val lid = Ui.chip(a, tr("Couvercle ouvert"), Icon.Kind.LID, Ui.WARN, Ui.WARN_DIM)
     private val link = Ui.chip(a, "", Icon.Kind.LINK, Ui.TEXT2)
     private val clock = Ui.text(a, "", 22f, Ui.TEXT, Ui.LIGHT)
     private val home = Icon(a, Icon.Kind.HOME, Ui.TEXT2)
@@ -227,7 +227,7 @@ class MachineBar(private val a: MainActivity) : FrameLayout(a) {
         if (!showJob) return
         if (s.turboActive) {
             label.text = "Turbo"
-            state.text = tr("Relâchez pour arrêter")
+            state.text = tr("Relâche pour arrêter")
             time.text = "●"
             progress.progress = 0f
             setButtons(running = false, ended = false, turbo = true)

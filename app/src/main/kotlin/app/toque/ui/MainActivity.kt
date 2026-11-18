@@ -20,6 +20,7 @@ import app.toque.Prefs
 import app.toque.ToqueApp
 import app.toque.core.i18n.I18n
 import app.toque.core.i18n.tr
+import app.toque.foyer.Foyer
 import app.toque.core.machine.EventType
 import app.toque.core.machine.JobSpec
 import app.toque.core.machine.MachineEvent
@@ -205,7 +206,13 @@ class MainActivity : Activity() {
 
     // ------------------------------------------------------------------ bouton rotatif
 
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) Foyer.of(app).interaction()
+        return super.dispatchTouchEvent(event)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) Foyer.of(app).interaction()
         knobListener?.let { l ->
             if (event.action == KeyEvent.ACTION_DOWN) l(event)
             return true
@@ -229,6 +236,7 @@ class MainActivity : Activity() {
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_SCROLL) {
+            Foyer.of(app).interaction()
             // Encodeur rotatif (AXIS_SCROLL) ou molette (AXIS_VSCROLL)
             val v = event.getAxisValue(AXIS_SCROLL).let { if (it == 0f) -event.getAxisValue(MotionEvent.AXIS_VSCROLL) else it }
             val now = System.currentTimeMillis()
@@ -341,7 +349,7 @@ class MainActivity : Activity() {
                 confirm(
                     tr("Contenu chaud"),
                     tr("Le bol est à %d °C. Mixer chaud peut provoquer des projections.\n\n" +
-                        "Vérifiez que le couvercle est verrouillé, que le gobelet est en place et que le bol n'est pas trop rempli.", snapshot.actualTempC) +
+                        "Vérifie que le couvercle est verrouillé, que le gobelet est en place et que le bol n'est pas trop rempli.", snapshot.actualTempC) +
                         if (prefs.hotRamp) " " + tr("La vitesse montera progressivement.") else "",
                     tr("Mixer quand même"), icon = Icon.Kind.THERMO,
                 ) {
@@ -378,13 +386,13 @@ class MainActivity : Activity() {
 
     fun openVendorApp() {
         if (snapshot.busy) {
-            toast(tr("Arrêtez d'abord le programme en cours"), Ui.WARN)
+            toast(tr("Arrête d'abord le programme en cours"), Ui.WARN)
             return
         }
         confirm(
             tr("Ouvrir l'appli d'origine"),
             tr("Toque libère le moteur et lance l'appli Monsieur Cuisine d'origine, qui se synchronise avec les serveurs Lidl comme d'habitude.\n\n" +
-                "Revenez ensuite à Toque avec le bouton « Retour à Toque » affiché par-dessus (vous pouvez le déplacer) : les recettes seront importées automatiquement."),
+                "Reviens ensuite à Toque avec le bouton « Retour à Toque » affiché par-dessus (tu peux le déplacer) : les recettes seront importées automatiquement."),
             tr("Ouvrir"), icon = Icon.Kind.SYNC,
         ) {
             machine.suspendPort { v ->

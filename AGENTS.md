@@ -120,6 +120,7 @@ step, have the person switch it off. `ls /dev/cu.usbmodem*` lists nothing once i
 | 7 | `install` | agent | Installs Toque, allows it in Magisk, starts it. |
 | 8 | first run | person | Empty bowl: Settings › Machine › Real machine › Apply, badge **Ready**, manual cooking 10 s speed 2. |
 | 9 | `wifi` | agent | ADB over Wi-Fi (port 5555), so the cable can go and the cover go back on. |
+| — | `update` | agent | Only for a robot already installed with a release of the original repository: downloads this repository's latest Toque and installs it over Wi-Fi (`--ip`, or the IP saved by `wifi`). Once: Toque then updates itself at night. Ends with the Foyer link (a code on the robot, a tap in Foyer). |
 
 Then: Toque › Settings › Lidl recipes › **Sync** (about 15 minutes the first time).
 
@@ -207,7 +208,11 @@ and without macFUSE the FUSE package stops mtkclient from starting
 
 ## After the install
 
-- Updates: Toque › Settings › Updates installs new releases from the original repository.
+- Foyer (the household app): link the robot once, see [docs/FOYER.md](docs/FOYER.md). The robot
+  shows a 6-digit code on its home screen; the person taps "Relier" in Foyer › Réglages ›
+  Monsieur Cuisine on the phone.
+
+- Updates: Toque installs new releases of this repository by itself at night (Settings › Updates).
 - Recipes: Settings › Lidl recipes › Sync (monsieur-cuisine.com, no account). Nightly re-sync.
 - Clock: set automatically (time zone from the Internet connection); Settings › Date and time.
 - To work on the robot later over Wi-Fi: `adb connect <robot IP>:5555`.
@@ -220,6 +225,8 @@ app (minSdk 23, no AndroidX, views built in code). Run `./gradlew :core:test` (u
 a check that every interface text has an English translation in `app/src/main/assets/lang/en.json`)
 and `./gradlew :app:assembleRelease`, with JDK 17 or 21 (Android Studio's:
 `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`). Interface texts are
-written in French and wrapped in `tr(...)`. Motor safety rules live in `core/.../machine/Safety.kt`
+written in French and wrapped in `tr(...)`. The Foyer link lives in `app/.../foyer/` and
+`core/.../foyer/` (see docs/FOYER.md); cloud sessions cannot download the Android SDK, so the APK
+is checked by `build.yml` on every push and `core` is tested locally with a core-only Gradle build. Motor safety rules live in `core/.../machine/Safety.kt`
 and are enforced by `MachineController`: keep them strict, and add a test in `ControllerTest` for any
 behaviour change.

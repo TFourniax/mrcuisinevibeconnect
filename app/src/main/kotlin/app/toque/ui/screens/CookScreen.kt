@@ -6,6 +6,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.toque.core.i18n.tr
+import app.toque.foyer.Foyer
 import app.toque.core.machine.Accessory
 import app.toque.core.machine.EventType
 import app.toque.core.machine.JobKind
@@ -106,6 +107,8 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
 
     private fun next() {
         if (index >= recipe.steps.size - 1) {
+            Foyer.of(a.app).cooked(recipe.id)
+            Foyer.of(a.app).guided(null, 0)
             a.prefs.guidedRecipe = ""
             a.chime(1)
             a.toast(tr("Bon appétit !"), Ui.OK)
@@ -121,7 +124,13 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         render()
     }
 
+    override fun onHide() {
+        // Une étape lancée d'ici continue sans l'écran : Foyer garde la recette en tête jusqu'à la fin.
+        if (launchedStep < 0) Foyer.of(a.app).guided(null, 0)
+    }
+
     private fun render() {
+        Foyer.of(a.app).guided(recipe, index)
         val n = recipe.steps.size
         segments.removeAllViews()
         for (i in 0 until n) {
@@ -141,7 +150,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         text.text = step.text.ifBlank { step.machine?.summary ?: "" }
         val w = step.weigh
         weighBox.visibility = if (w != null) View.VISIBLE else View.GONE
-        if (w != null) weighLabel.text = tr("Pesez %d g", w.grams) + if (w.label.isNotBlank()) " · ${w.label}" else ""
+        if (w != null) weighLabel.text = tr("Pèse %d g", w.grams) + if (w.label.isNotBlank()) " · ${w.label}" else ""
         Ui.setButtonEnabled(prevBtn, index > 0)
         nextLabel.text = if (index == n - 1) tr("Terminer") else tr("Suivant")
         buildPanel()
@@ -152,11 +161,14 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     private var turboBtn: HoldButton? = null
     private var reviewBtn: View? = null
     private var panelState: TextView? = null
+    /** Temps restant en très grand pendant la cuisson : lisible depuis l'autre bout de la cuisine. */
+    private var bigTime: TextView? = null
 
     private fun buildPanel() {
         panel.removeAllViews()
         turboBtn = null
         reviewBtn = null
+        bigTime = null
         val m = recipe.steps[index].machine
         if (m == null) {
             val box = Ui.vertical(c, Gravity.CENTER)
@@ -217,6 +229,11 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             panel.addView(Ui.text(c, tr("Puis, enchaînés automatiquement :") + "\n" + list, 15f, Ui.TEXT2)
                 .apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = 10))
         }
+        bigTime = Ui.text(c, "", 78f, Ui.TEXT, Ui.THIN).apply {
+            fontFeatureSettings = "tnum"
+            visibility = View.GONE
+        }
+        panel.addView(bigTime, Ui.lp(t = 8))
         panelState = Ui.text(c, "", 16f, Ui.WARN).apply { setLineSpacing(0f, 1.1f) }
         panel.addView(panelState, Ui.lp(t = 12))
         panel.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
@@ -225,7 +242,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         val step = recipe.steps[index]
         panelInfo = ""
         if (violations.isNotEmpty()) {
-            panelInfo = tr("Réglage refusé par la sécurité : %s. Utilisez la cuisson manuelle.", violations.first().message)
+            panelInfo = tr("Réglage refusé par la sécurité : %s. Utilise la cuisson manuelle.", violations.first().message)
         }
         if (step.needsReview && index !in reviewed && violations.isEmpty()) {
             val rb = Ui.button(c, tr("J'ai vérifié ce réglage"), Ui.Style.GHOST, Icon.Kind.CHECK, height = 56, textSize = 17f) {
@@ -235,7 +252,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             }
             reviewBtn = rb
             panel.addView(rb, Ui.lp(b = 10))
-            panelInfo = tr("Réglage importé : vérifiez-le avant de lancer.")
+            panelInfo = tr("Réglage importé : vérifie-le avant de lancer.")
         }
         panelState?.text = panelInfo
         if (m.program == StepProgram.TURBO) {
@@ -345,6 +362,11 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             startBtn.visibility = if (mine && s.state != JobState.FINISHED && s.state != JobState.ABORTED) View.GONE else View.VISIBLE
             if (s.busy && !mine) Ui.setButtonEnabled(startBtn, false)
             else if (reviewBtn == null && m.violations().isEmpty()) Ui.setButtonEnabled(startBtn, !s.busy)
+        }
+        bigTime?.let { t ->
+            val counting = mine && (s.state == JobState.RUNNING || s.state == JobState.STARTING || s.state == JobState.PAUSED)
+            t.visibility = if (counting) View.VISIBLE else View.GONE
+            if (counting) t.text = Ui.clock(s.remainingMs)
         }
         if (!mine && ps != null) {
             if (index in done) {

@@ -41,7 +41,7 @@ class TimeSync(private val context: Context, private val prefs: Prefs, private v
                     log.write("heure", "${p.name} : ${e.message ?: e.toString()}")
                 }
             }
-            if (zone == null) return Result(false, current(), tr("Fuseau horaire introuvable : vérifiez le Wi-Fi."))
+            if (zone == null) return Result(false, current(), tr("Fuseau horaire introuvable : vérifie le Wi-Fi."))
         } else {
             zone = wanted.takeIf { it in available } ?: return Result(false, current(), tr("Fuseau horaire inconnu : %s", wanted))
         }

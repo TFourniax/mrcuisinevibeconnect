@@ -15,8 +15,9 @@ android {
         targetSdk = 28
         // Pour publier une mise à jour : augmenter les deux valeurs puis pousser sur GitHub
         // (la version est publiée automatiquement, voir .github/workflows/release.yml).
-        versionCode = 8
-        versionName = "0.5.1"
+        // 1.0 : première version reliée à Foyer (au-dessus de toutes celles du dépôt d'origine).
+        versionCode = 100
+        versionName = "1.0.0"
     }
 
     signingConfigs {

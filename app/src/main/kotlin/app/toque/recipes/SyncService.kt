@@ -9,18 +9,40 @@ import android.content.Intent
 import android.os.SystemClock
 import app.toque.Prefs
 import app.toque.ToqueApp
+import app.toque.core.machine.RootShell
 import app.toque.machine.MachineService
 import app.toque.ui.MainActivity
+import app.toque.update.Updater
 import java.util.Calendar
 
-/** Synchro nocturne des recettes (03 h 30) depuis monsieur-cuisine.com. */
+/**
+ * La nuit (03 h 30) : mise à jour de Toque si une nouvelle version est publiée (robot rooté,
+ * machine à l'arrêt), puis synchro des recettes depuis monsieur-cuisine.com.
+ */
 @Suppress("DEPRECATION")
 class SyncService : IntentService("toque-synchro") {
     override fun onHandleIntent(intent: Intent?) {
         val app = ToqueApp.of(this)
+        if (app.prefs.autoUpdate) autoUpdate(app)
         if (!app.prefs.autoSync) return
         if (System.currentTimeMillis() - app.prefs.lastSyncMs < 6 * 3600_000L) return
         OnlineSync(this, app.prefs, app.recipes, app.log).sync()
+    }
+
+    /** Installe la dernière version publiée, sans rien demander ; Toque redémarre ensuite tout seul. */
+    private fun autoUpdate(app: ToqueApp) {
+        try {
+            if (app.machine.snapshot.busy || !RootShell.available()) return
+            val updater = Updater(this)
+            val release = updater.latest()
+            if (!updater.isNewer(release)) return
+            val apk = updater.download(release) {}
+            if (app.machine.snapshot.busy) return
+            app.log.write("maj", "installation automatique de ${release.version}")
+            updater.install(apk)
+        } catch (e: Exception) {
+            app.log.write("maj", "mise à jour automatique impossible : ${e.message}")
+        }
     }
 
     companion object {
