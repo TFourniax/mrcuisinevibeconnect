@@ -276,14 +276,14 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         twinBox.visibility = if (mode == Prefs.Mode.TWIN) View.VISIBLE else View.GONE
         linkText.text = when (mode) {
             Prefs.Mode.DEMO -> tr("Base moteur simulée : pour essayer l'appli sur n'importe quel appareil Android.")
-            Prefs.Mode.TWIN -> tr("Jumeau numérique du SDK lancé sur un PC (tools/twin.py). Avec « adb reverse tcp:8765 tcp:8765 », gardez 127.0.0.1.")
+            Prefs.Mode.TWIN -> tr("Jumeau numérique du SDK lancé sur un PC (tools/twin.py). Avec « adb reverse tcp:8765 tcp:8765 », garde 127.0.0.1.")
             Prefs.Mode.HARDWARE -> tr("Pilote le vrai moteur par le port série. Exige le root. L'appli d'origine est coupée du moteur (réversible).")
         }
     }
 
     private fun applyMode() {
         if (a.snapshot.busy) {
-            a.toast(tr("Arrêtez d'abord le programme en cours"), Ui.WARN)
+            a.toast(tr("Arrête d'abord le programme en cours"), Ui.WARN)
             return
         }
         if (mode == Prefs.Mode.HARDWARE && a.prefs.mode != Prefs.Mode.HARDWARE) {
@@ -291,7 +291,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                 tr("Piloter la vraie machine"),
                 tr("Toque va prendre le contrôle du moteur et de la chauffe à la place de l'appli d'origine.\n\n" +
                     "Premier essai : bol vide, couvercle fermé, à portée de l'interrupteur principal. " +
-                    "Si quoi que ce soit semble anormal, coupez l'interrupteur."),
+                    "Si quoi que ce soit semble anormal, coupe l'interrupteur."),
                 tr("Continuer"), danger = true,
             ) { prepareHardware() }
             return
@@ -444,7 +444,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             Upd.AVAILABLE -> installed + "\n" + tr("Nouvelle version disponible : %s", r?.version) + notes(r)
             Upd.DOWNLOADING -> tr("Téléchargement de la version %s… %d %%", r?.version, updPercent)
             Upd.INSTALLING -> tr("Installation de la version %s… Toque va redémarrer.\n" +
-                "Si Android demande une confirmation, touchez « Installer ».", r?.version)
+                "Si Android demande une confirmation, touche « Installer ».", r?.version)
             Upd.ERROR -> installed + "\n" + updMessage
         }
         updButtons.removeAllViews()
@@ -492,7 +492,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private fun installUpdate() {
         val r = release ?: return
         if (a.snapshot.busy) {
-            a.toast(tr("Arrêtez d'abord le programme en cours"), Ui.WARN)
+            a.toast(tr("Arrête d'abord le programme en cours"), Ui.WARN)
             return
         }
         a.confirm(
@@ -550,7 +550,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     }
 
     override fun onSnapshot(s: Snapshot) {
-        bowlText.text = if (s.hasSample) tr("Capteur du bol en ce moment : %s. Vérifiez qu'il change quand vous retirez le bol avant d'activer cette option.",
+        bowlText.text = if (s.hasSample) tr("Capteur du bol en ce moment : %s. Vérifie qu'il change quand tu retires le bol avant d'activer cette option.",
             if (s.bowlDetected) tr("bol détecté") else tr("bol NON détecté")) else tr("Base non connectée")
     }
 }

@@ -349,7 +349,7 @@ class MainActivity : Activity() {
                 confirm(
                     tr("Contenu chaud"),
                     tr("Le bol est à %d °C. Mixer chaud peut provoquer des projections.\n\n" +
-                        "Vérifiez que le couvercle est verrouillé, que le gobelet est en place et que le bol n'est pas trop rempli.", snapshot.actualTempC) +
+                        "Vérifie que le couvercle est verrouillé, que le gobelet est en place et que le bol n'est pas trop rempli.", snapshot.actualTempC) +
                         if (prefs.hotRamp) " " + tr("La vitesse montera progressivement.") else "",
                     tr("Mixer quand même"), icon = Icon.Kind.THERMO,
                 ) {
@@ -386,13 +386,13 @@ class MainActivity : Activity() {
 
     fun openVendorApp() {
         if (snapshot.busy) {
-            toast(tr("Arrêtez d'abord le programme en cours"), Ui.WARN)
+            toast(tr("Arrête d'abord le programme en cours"), Ui.WARN)
             return
         }
         confirm(
             tr("Ouvrir l'appli d'origine"),
             tr("Toque libère le moteur et lance l'appli Monsieur Cuisine d'origine, qui se synchronise avec les serveurs Lidl comme d'habitude.\n\n" +
-                "Revenez ensuite à Toque avec le bouton « Retour à Toque » affiché par-dessus (vous pouvez le déplacer) : les recettes seront importées automatiquement."),
+                "Reviens ensuite à Toque avec le bouton « Retour à Toque » affiché par-dessus (tu peux le déplacer) : les recettes seront importées automatiquement."),
             tr("Ouvrir"), icon = Icon.Kind.SYNC,
         ) {
             machine.suspendPort { v ->

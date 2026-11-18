@@ -135,7 +135,7 @@ object SafetyPolicy {
             v += Violation("accessory_turbo", tr("Pas de Turbo avec le fouet"))
         if (kind != JobKind.TURBO && actualTemperatureC != null && actualTemperatureC >= Limits.HOT_C &&
             setting.speed >= 4 && !hotBlendConfirmed
-        ) v += Violation(HOT_BLEND, tr("Contenu chaud (%d °C) : confirmez le mixage à vitesse %d", actualTemperatureC, setting.speed))
+        ) v += Violation(HOT_BLEND, tr("Contenu chaud (%d °C) : confirme le mixage à vitesse %d", actualTemperatureC, setting.speed))
         return v
     }
 

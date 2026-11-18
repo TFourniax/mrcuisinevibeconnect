@@ -292,7 +292,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         card.background = Ui.round(Ui.SURFACE, 24f, 0x59E79363, 1f)
         card.setPadding(Ui.u(26), Ui.u(22), Ui.u(26), Ui.u(22))
         card.addView(Ui.text(c, tr("Relier à Foyer").uppercase(I18n.locale), 14f, Ui.ACCENT, Ui.MEDIUM).apply { letterSpacing = 0.1f })
-        card.addView(Ui.text(c, tr("Vos recettes, ici, toutes seules"), 27f, Ui.TEXT, Ui.MEDIUM), Ui.lp(t = 8))
+        card.addView(Ui.text(c, tr("Nos recettes, ici, toutes seules"), 27f, Ui.TEXT, Ui.MEDIUM), Ui.lp(t = 8))
         val shown = if (code.length == 6) code.substring(0, 3) + " " + code.substring(3) else tr("Connexion…")
         card.addView(Ui.text(c, shown, if (code.length == 6) 66f else 28f, Ui.TEXT, Ui.LIGHT).apply { letterSpacing = 0.08f }, Ui.lp(t = 10))
         val steps = listOf(

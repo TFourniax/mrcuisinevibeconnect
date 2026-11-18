@@ -215,10 +215,10 @@ class MachineController(
         if (since != null && now - since > config.unexpectedGraceMs) {
             if (t.motorOn || t.actualRpm > 0) {
                 if (fault?.code != FaultCode.UNEXPECTED_MOTION)
-                    raiseFault(FaultCode.UNEXPECTED_MOTION, tr("Le moteur tourne alors qu'il devrait être arrêté. Coupez l'interrupteur principal."))
+                    raiseFault(FaultCode.UNEXPECTED_MOTION, tr("Le moteur tourne alors qu'il devrait être arrêté. Coupe l'interrupteur principal."))
             } else if (t.heaterOn) {
                 if (fault?.code != FaultCode.UNEXPECTED_HEAT)
-                    raiseFault(FaultCode.UNEXPECTED_HEAT, tr("La chauffe reste active alors qu'elle devrait être coupée. Coupez l'interrupteur principal."))
+                    raiseFault(FaultCode.UNEXPECTED_HEAT, tr("La chauffe reste active alors qu'elle devrait être coupée. Coupe l'interrupteur principal."))
             }
         }
     }
@@ -328,14 +328,14 @@ class MachineController(
         when {
             link == LinkState.OFFLINE -> v += Violation("offline", tr("Base moteur non connectée"))
             link == LinkState.LOST -> v += Violation("lost", tr("Connexion à la base perdue"))
-            link == LinkState.ARMING -> v += Violation("arming", tr("Connexion en cours, patientez"))
+            link == LinkState.ARMING -> v += Violation("arming", tr("Connexion en cours, patiente un instant"))
         }
-        if (fault != null) v += Violation("fault", tr("Acquittez d'abord l'alerte : %s", fault!!.message))
+        if (fault != null) v += Violation("fault", tr("Acquitte d'abord l'alerte : %s", fault!!.message))
         if (t == null || !fresh(now)) {
             if (v.isEmpty()) v += Violation("stale", tr("Pas de mesure récente de la base"))
             return v
         }
-        if (t.lidOpen) v += Violation("lid", tr("Fermez et verrouillez le couvercle"))
+        if (t.lidOpen) v += Violation("lid", tr("Ferme et verrouille le couvercle"))
         if (t.errorDetected) v += Violation("board_error", Mcc.boardErrorMessage(t.errorCode))
         if (config.requireBowl && !t.bowlNtcDetected) v += Violation("bowl", tr("Bol non détecté"))
         return v
@@ -432,10 +432,10 @@ class MachineController(
     fun turboPress(accessory: Accessory = Accessory.BLADE): Verdict {
         val now = clock.nowMs()
         val j = job
-        if (j != null && !j.ended) return Verdict.refuse("busy", tr("Arrêtez d'abord le programme en cours"))
+        if (j != null && !j.ended) return Verdict.refuse("busy", tr("Arrête d'abord le programme en cours"))
         val v = ArrayList(baseChecks(now))
         val t = latest
-        if (v.isEmpty() && t != null && !t.motorStopped) v += Violation("moving", tr("Attendez l'arrêt complet du moteur"))
+        if (v.isEmpty() && t != null && !t.motorStopped) v += Violation("moving", tr("Attends l'arrêt complet du moteur"))
         v += SafetyPolicy.checkSetting(Programs.turboSetting(), JobKind.TURBO, accessory, actualTemp(), false)
         if (v.isNotEmpty()) return Verdict.refuse(v)
         turboStartedAt = now

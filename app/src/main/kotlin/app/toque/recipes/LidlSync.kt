@@ -102,7 +102,7 @@ class LidlSync(private val context: Context, private val prefs: Prefs, private v
         }
         forceStop()
         val report = importNow(progress)
-        val note = if (!changed) " " + tr("(aucune nouveauté reçue : si ça persiste, utilisez « Ouvrir l'appli d'origine »)") else ""
+        val note = if (!changed) " " + tr("(aucune nouveauté reçue : si ça persiste, utilise « Ouvrir l'appli d'origine »)") else ""
         return finish(report.copy(message = report.message + note))
     }
 
@@ -130,7 +130,7 @@ class LidlSync(private val context: Context, private val prefs: Prefs, private v
         writeDiagnostic(tables)
         progress(tr("Conversion…"))
         val result = OriginalDbMapper.map(tables, "fr")
-        if (result.recipes.isEmpty()) return finish(Report(false, tr("Aucune recette lisible. Envoyez le fichier diagnostic-recettes.txt.")))
+        if (result.recipes.isEmpty()) return finish(Report(false, tr("Aucune recette lisible. Envoie le fichier diagnostic-recettes.txt.")))
 
         progress(tr("Copie des photos…"))
         val img = repo.imagesDir.absolutePath

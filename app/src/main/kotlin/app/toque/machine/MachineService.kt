@@ -232,7 +232,7 @@ class MachineService : Service() {
             }.start()
             Ipc.SUSPEND_PORT -> Thread {
                 val ok = try { l.suspendPort() } catch (_: Exception) { false }
-                reply(to, id, if (ok) Verdict.OK else Verdict.refuse("busy", tr("Arrêtez d'abord le programme en cours")))
+                reply(to, id, if (ok) Verdict.OK else Verdict.refuse("busy", tr("Arrête d'abord le programme en cours")))
             }.start()
             Ipc.RESUME_PORT -> {
                 l.resumePort()

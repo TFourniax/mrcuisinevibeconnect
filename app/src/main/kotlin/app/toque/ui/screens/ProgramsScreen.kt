@@ -33,7 +33,7 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
     private val progs = listOf(
         Prog(Icon.Kind.KNEAD, JobKind.KNEAD.label, tr("Pâtes à pain, pizza, brioche. Alterne sens inverse et normal à vitesse 4."),
             45, 30, 120, 5) { Programs.knead(it) },
-        Prog(Icon.Kind.STEAM, JobKind.STEAM.label, tr("Mettez au moins 500 g d'eau dans le bol. 120 °C, la lame reste immobile."),
+        Prog(Icon.Kind.STEAM, JobKind.STEAM.label, tr("Mets au moins 500 g d'eau dans le bol. 120 °C, la lame reste immobile."),
             1200, 300, 3600, 60) { Programs.steam(it) },
         Prog(Icon.Kind.FLAME, JobKind.TOAST.label, tr("Dorer oignons, lardons, viandes à 130 °C, avec un brassage doux en sens inverse."),
             420, 180, 840, 30) { Programs.toast(it) },

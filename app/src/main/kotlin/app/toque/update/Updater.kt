@@ -42,7 +42,7 @@ class Updater(private val context: Context) {
             when (val code = c.responseCode) {
                 200 -> {}
                 404 -> throw Failure(tr("Aucune version publiée sur GitHub pour l'instant"))
-                403, 429 -> throw Failure(tr("GitHub limite les vérifications : réessayez dans une heure"))
+                403, 429 -> throw Failure(tr("GitHub limite les vérifications : réessaie dans une heure"))
                 else -> throw Failure(tr("GitHub a répondu %d", code))
             }
             val text = c.inputStream.bufferedReader().use { it.readText() }
@@ -88,7 +88,7 @@ class Updater(private val context: Context) {
             }
             if (r.apkSize > 0 && done != r.apkSize) {
                 file.delete()
-                throw Failure(tr("Téléchargement incomplet, réessayez"))
+                throw Failure(tr("Téléchargement incomplet, réessaie"))
             }
         } catch (e: IOException) {
             file.delete()
@@ -136,7 +136,7 @@ class Updater(private val context: Context) {
                 throw Failure(explain(result))
             }
         }
-        throw Failure(tr("L'installation ne répond pas. Redémarrez le robot puis réessayez."))
+        throw Failure(tr("L'installation ne répond pas. Redémarre le robot puis réessaie."))
     }
 
     private fun installSession(apk: File) {
@@ -176,8 +176,8 @@ class Updater(private val context: Context) {
     private fun network(e: IOException): Failure {
         log.write("maj", "réseau : $e")
         return when (e) {
-            is SSLException -> Failure(tr("Connexion sécurisée à GitHub impossible. Vérifiez la date et l'heure du robot."))
-            else -> Failure(tr("Pas de connexion à GitHub. Vérifiez le Wi-Fi du robot."))
+            is SSLException -> Failure(tr("Connexion sécurisée à GitHub impossible. Vérifie la date et l'heure du robot."))
+            else -> Failure(tr("Pas de connexion à GitHub. Vérifie le Wi-Fi du robot."))
         }
     }
 
@@ -187,7 +187,7 @@ class Updater(private val context: Context) {
 
         fun explain(result: String): String = when {
             result.contains("UPDATE_INCOMPATIBLE") || result.contains("SIGNATURE") ->
-                tr("La version installée n'a pas la même signature. Désinstallez Toque une fois, puis installez la version de GitHub.")
+                tr("La version installée n'a pas la même signature. Désinstalle Toque une fois, puis installe la version de GitHub.")
             result.contains("INSUFFICIENT_STORAGE") -> tr("Espace de stockage insuffisant sur le robot")
             result.contains("VERSION_DOWNGRADE") -> tr("Cette version est plus ancienne que celle installée")
             result.contains("OLDER_SDK") -> tr("Cette version n'est pas compatible avec ce robot")

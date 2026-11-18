@@ -225,7 +225,7 @@ object Mcc {
         4 -> tr("Sous-tension secteur")
         5 -> tr("Erreur moteur")
         6 -> tr("Pas d'eau (vapeur)")
-        7 -> tr("Moteur en surchauffe : laissez refroidir")
+        7 -> tr("Moteur en surchauffe : laisse refroidir")
         8 -> tr("Durée maximale dépassée")
         else -> tr("Erreur de la base (code %d)", code)
     }

@@ -150,7 +150,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         text.text = step.text.ifBlank { step.machine?.summary ?: "" }
         val w = step.weigh
         weighBox.visibility = if (w != null) View.VISIBLE else View.GONE
-        if (w != null) weighLabel.text = tr("Pesez %d g", w.grams) + if (w.label.isNotBlank()) " · ${w.label}" else ""
+        if (w != null) weighLabel.text = tr("Pèse %d g", w.grams) + if (w.label.isNotBlank()) " · ${w.label}" else ""
         Ui.setButtonEnabled(prevBtn, index > 0)
         nextLabel.text = if (index == n - 1) tr("Terminer") else tr("Suivant")
         buildPanel()
@@ -242,7 +242,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         val step = recipe.steps[index]
         panelInfo = ""
         if (violations.isNotEmpty()) {
-            panelInfo = tr("Réglage refusé par la sécurité : %s. Utilisez la cuisson manuelle.", violations.first().message)
+            panelInfo = tr("Réglage refusé par la sécurité : %s. Utilise la cuisson manuelle.", violations.first().message)
         }
         if (step.needsReview && index !in reviewed && violations.isEmpty()) {
             val rb = Ui.button(c, tr("J'ai vérifié ce réglage"), Ui.Style.GHOST, Icon.Kind.CHECK, height = 56, textSize = 17f) {
@@ -252,7 +252,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             }
             reviewBtn = rb
             panel.addView(rb, Ui.lp(b = 10))
-            panelInfo = tr("Réglage importé : vérifiez-le avant de lancer.")
+            panelInfo = tr("Réglage importé : vérifie-le avant de lancer.")
         }
         panelState?.text = panelInfo
         if (m.program == StepProgram.TURBO) {

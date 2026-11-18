@@ -227,7 +227,7 @@ class MachineBar(private val a: MainActivity) : FrameLayout(a) {
         if (!showJob) return
         if (s.turboActive) {
             label.text = "Turbo"
-            state.text = tr("Relâchez pour arrêter")
+            state.text = tr("Relâche pour arrêter")
             time.text = "●"
             progress.progress = 0f
             setButtons(running = false, ended = false, turbo = true)

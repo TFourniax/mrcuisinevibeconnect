@@ -177,8 +177,8 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
             none && a.prefs.mode == Prefs.Mode.HARDWARE ->
                 tr("Les recettes Lidl apparaîtront après la première synchronisation.\nRéglages › Recettes Lidl › Synchroniser.")
             none -> tr("Les recettes Lidl apparaîtront après la première synchronisation, une fois Toque installé sur le robot.")
-            filter.favoritesOnly && query.isBlank() -> tr("Aucun favori pour l'instant.\nTouchez l'étoile d'une recette pour l'ajouter.")
-            else -> tr("Aucune recette ne correspond.\nAstuce : séparez plusieurs ingrédients par des virgules.")
+            filter.favoritesOnly && query.isBlank() -> tr("Aucun favori pour l'instant.\nTouche l'étoile d'une recette pour l'ajouter.")
+            else -> tr("Aucune recette ne correspond.\nAstuce : sépare plusieurs ingrédients par des virgules.")
         }
     }
 

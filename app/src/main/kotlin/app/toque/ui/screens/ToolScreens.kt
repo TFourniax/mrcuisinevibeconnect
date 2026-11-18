@@ -133,7 +133,7 @@ class KnobScreen(a: MainActivity) : Screen(a) {
 
     private fun ask(which: String) {
         capture = which
-        info.text = tr("Faites maintenant l'action « %s » sur le bouton du robot…", when (which) {
+        info.text = tr("Fais maintenant l'action « %s » sur le bouton du robot…", when (which) {
             "left" -> tr("tourner à gauche")
             "right" -> tr("tourner à droite")
             else -> tr("appuyer")
