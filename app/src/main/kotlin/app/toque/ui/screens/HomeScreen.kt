@@ -279,7 +279,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val todayMs = try { parse.parse(today)?.time ?: 0L } catch (_: Exception) { 0L }
         val days = Math.round((dayMs - todayMs) / 86_400_000.0).toInt()
         val day = when {
-            days <= 0 -> if (plan.time == null || plan.time >= "17:00") tr("Ce soir") else tr("Aujourd'hui")
+            days <= 0 -> if ((plan.time ?: "99:99") >= "17:00") tr("Ce soir") else tr("Aujourd'hui")
             days == 1 -> tr("Demain")
             else -> SimpleDateFormat("EEEE", I18n.locale).format(Date(dayMs)).replaceFirstChar { it.uppercaseChar() }
         }
