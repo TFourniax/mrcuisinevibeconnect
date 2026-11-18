@@ -43,6 +43,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private lateinit var foyerCode: TextView
     private lateinit var foyerButtons: LinearLayout
     private var foyerUnsub: (() -> Unit)? = null
+    private var foyerCounted = false
     private var settingTime = false
     private var mode = a.prefs.mode
     private var syncing = false
@@ -533,13 +534,15 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     override fun onHide() {
         foyerUnsub?.invoke()
         foyerUnsub = null
-        Foyer.of(a.app).showing(false)
+        if (foyerCounted) Foyer.of(a.app).showing(false)
+        foyerCounted = false
     }
 
     override fun onShow() {
         foyerUnsub?.invoke()
         foyerUnsub = Foyer.of(a.app).onChange { renderFoyer() }
-        Foyer.of(a.app).showing(true)
+        if (!foyerCounted) Foyer.of(a.app).showing(true)
+        foyerCounted = true
         renderFoyer()
         mode = a.prefs.mode
         renderModes()

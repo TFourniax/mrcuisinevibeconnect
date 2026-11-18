@@ -45,6 +45,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
     private var unsubRecipes: (() -> Unit)? = null
     private var unsubFoyer: (() -> Unit)? = null
     private var clockView: TextView? = null
+    private var counted = false
     private val tick = object : Runnable {
         override fun run() {
             clockView?.text = MainActivity.now()
@@ -322,9 +323,12 @@ class HomeScreen(a: MainActivity) : Screen(a) {
 
     override fun onShow() {
         refresh()
+        unsubRecipes?.invoke()
         unsubRecipes = a.app.recipes.onChange { refresh() }
+        unsubFoyer?.invoke()
         unsubFoyer = foyer.onChange { refresh() }
-        foyer.showing(true)
+        if (!counted) foyer.showing(true)
+        counted = true
         foyer.syncSoon()
         view.removeCallbacks(tick)
         view.postDelayed(tick, 10_000)
@@ -333,7 +337,10 @@ class HomeScreen(a: MainActivity) : Screen(a) {
     override fun onHide() {
         unsubRecipes?.invoke()
         unsubFoyer?.invoke()
-        foyer.showing(false)
+        unsubRecipes = null
+        unsubFoyer = null
+        if (counted) foyer.showing(false)
+        counted = false
         view.removeCallbacks(tick)
     }
 }
