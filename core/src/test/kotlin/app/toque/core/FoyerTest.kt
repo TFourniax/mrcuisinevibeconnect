@@ -122,6 +122,20 @@ class FoyerTest {
         assertEquals("La base ne répond plus", fault.alert)
     }
 
+    @Test fun aSafetyStopStaysUntilSomeoneComes() {
+        tracker.current(running)
+        val alert = tracker.current(running.copy(faultCode = "SILENT", faultMessage = "La base ne répond plus"))
+        assertTrue(alert.notify)
+        // The job is aborted by the stop and the next samples show no job: still an alert, no new push.
+        tracker.onJobAborted()
+        val after = tracker.current(Snapshot(faultCode = "SILENT", faultMessage = "La base ne répond plus"))
+        assertEquals("alert", after.state)
+        assertFalse(after.notify)
+        assertEquals("alert", tracker.current(Snapshot()).state)
+        tracker.interaction()
+        assertEquals("idle", tracker.current(Snapshot()).state)
+    }
+
     @Test fun aStoppedJobSaysNothing() {
         tracker.current(running)
         tracker.onJobFinished("x")

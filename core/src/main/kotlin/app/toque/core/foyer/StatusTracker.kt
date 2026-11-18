@@ -73,8 +73,9 @@ class StatusTracker(private val clock: () -> Long, private val graceMs: Long = 4
 
     fun interaction() {
         lastInteraction = clock()
-        // Quelqu'un est revenu au robot après « c'est prêt » et n'est plus dans la recette : au repos.
-        if (held?.state == "done" && guided == null) held = null
+        // Quelqu'un est revenu au robot après « c'est prêt » (hors recette) ou après un arrêt
+        // de sécurité (il l'a vu sur l'écran) : au repos.
+        if ((held?.state == "done" && guided == null) || held?.state == "alert") held = null
     }
 
     /** Une étape ou un travail vient de se terminer. */
@@ -91,9 +92,9 @@ class StatusTracker(private val clock: () -> Long, private val graceMs: Long = 4
         return report
     }
 
-    /** Travail arrêté à la main : rien à annoncer. */
+    /** Travail arrêté à la main : rien à annoncer (un arrêt de sécurité reste affiché). */
     fun onJobAborted() {
-        held = null
+        if (held?.state != "alert") held = null
     }
 
     /** L'état à dire maintenant, d'après le dernier échantillon de la machine. */
@@ -113,7 +114,12 @@ class StatusTracker(private val clock: () -> Long, private val graceMs: Long = 4
             val text = if (fault) s.faultMessage.ifBlank { PauseReason.SAFETY.label } else PauseReason.SAFETY.label
             val notify = alertNotified != text
             alertNotified = text
-            return base.copy(state = "alert", alert = text, notify = notify)
+            val report = base.copy(state = "alert", alert = text, notify = notify)
+            // Reste affiché dans Foyer jusqu'à ce que quelqu'un vienne au robot.
+            held = report.copy(notify = false)
+            heldAt = now
+            heldNotified = true
+            return report
         }
         alertNotified = null
         if (state == JobState.PAUSED) return base.copy(state = "paused")
