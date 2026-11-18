@@ -82,7 +82,7 @@ finish (the cursor comes back).
    ```
 3. **Download this repository** into a `MrCuisineVibeConnect` folder in your home folder:
    ```
-   git clone https://github.com/flexbox/MrCuisineVibeConnect.git ~/MrCuisineVibeConnect
+   git clone https://github.com/TFourniax/mrcuisinevibeconnect.git ~/MrCuisineVibeConnect
    ```
 4. **Go into that folder**:
    ```
@@ -317,7 +317,7 @@ Lidl's servers; come back with the **"Back to Toque"** button. If that import fa
 
 Still stuck? Send `~/Toque/setup-log.txt` (and `~/Toque/mtk-<step>-out.txt` for `backup` or
 `flash-twrp`) to whoever helps you, or open an
-[issue](https://github.com/flexbox/MrCuisineVibeConnect/issues).
+[issue](https://github.com/TFourniax/mrcuisinevibeconnect/issues).
 
 ### If the Mac never reaches the robot in download mode
 

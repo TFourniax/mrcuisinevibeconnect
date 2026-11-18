@@ -83,7 +83,7 @@ attendez qu'elle se termine (le curseur revient).
    ```
 3. **Télécharger ce dépôt** dans le dossier `MrCuisineVibeConnect` de votre dossier personnel :
    ```
-   git clone https://github.com/flexbox/MrCuisineVibeConnect.git ~/MrCuisineVibeConnect
+   git clone https://github.com/TFourniax/mrcuisinevibeconnect.git ~/MrCuisineVibeConnect
    ```
 4. **Aller dans ce dossier** :
    ```
@@ -321,7 +321,7 @@ d'origine »** la laisse se synchroniser avec les serveurs Lidl ; revenez avec l
 
 Toujours bloqué ? Envoyez le fichier `~/Toque/setup-log.txt` (et `~/Toque/mtk-<étape>-out.txt`
 pour `backup` ou `flash-twrp`) à qui vous aide, ou ouvrez une
-[issue](https://github.com/flexbox/MrCuisineVibeConnect/issues).
+[issue](https://github.com/TFourniax/mrcuisinevibeconnect/issues).
 
 ### Si le Mac ne joint jamais le robot en mode téléchargement
 
