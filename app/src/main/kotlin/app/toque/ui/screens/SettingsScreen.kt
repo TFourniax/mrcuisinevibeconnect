@@ -160,6 +160,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         updates.addView(updText)
         updButtons = Ui.horizontal(c)
         updates.addView(updButtons, Ui.lp(t = 12))
+        updates.addView(toggle(tr("Installer les mises à jour la nuit"), a.prefs.autoUpdate) { a.prefs.autoUpdate = it }, Ui.lp(t = 10))
         Updater.onInstallError = { msg -> updateFailed(msg) }
         renderUpdate()
 

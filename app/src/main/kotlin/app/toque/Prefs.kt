@@ -248,4 +248,11 @@ class Prefs(context: Context) {
         set(v) {
             p.edit().putString("foyerPlans", v).commit()
         }
+
+    /** Mises à jour de Toque installées toutes seules la nuit (robot rooté, machine à l'arrêt). */
+    var autoUpdate: Boolean
+        get() = p.getBoolean("autoUpdate", true)
+        set(v) {
+            p.edit().putBoolean("autoUpdate", v).commit()
+        }
 }

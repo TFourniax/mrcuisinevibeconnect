@@ -5,7 +5,8 @@
 #   tools/setup/toque-setup.sh status
 #
 # Steps, in order: status, prepare, backup, flash-twrp, root, flash-root, android, install, wifi.
-# 'unroot' puts the original boot and recovery back. Lines starting with "HUMAN:" are actions only a
+# 'update' switches an already installed robot to this repository's Toque over Wi-Fi (once; it then
+# updates itself). 'unroot' puts the original boot and recovery back. Lines starting with "HUMAN:" are actions only a
 # person can do (unscrewing, cables, power switch, a macOS prompt, a tap on the robot's screen).
 # A step that needs one stops and says so; run it again once the person is done.
 #
@@ -23,7 +24,7 @@
 set -u
 set -o pipefail
 
-STEPS="status prepare backup flash-twrp root flash-root android install wifi unroot"
+STEPS="status prepare backup flash-twrp root flash-root android install wifi update unroot"
 STEP=""
 WORK="$HOME/Toque"
 APK=""
@@ -374,6 +375,35 @@ step_status() {
   say "Everything is done."
 }
 
+# Latest Toque release of this repository into $DOWNLOADS (prints where; empty if none).
+fetch_toque_apk() {
+  local rel tag count url name i
+  rel="$DOWNLOADS/latest-release.json"
+  rm -f "$rel"
+  if curl -fsSL --proto '=https' -A toque-setup -o "$rel" "$RELEASES_API"; then
+    tag=$(plutil -extract tag_name raw "$rel" 2> /dev/null)
+    count=$(plutil -extract assets raw "$rel" 2> /dev/null) || count=0
+    url=""
+    i=0
+    while [ "$i" -lt "$count" ]; do
+      name=$(plutil -extract "assets.$i.name" raw "$rel" 2> /dev/null)
+      case "$name" in Toque-*.apk)
+        url=$(plutil -extract "assets.$i.browser_download_url" raw "$rel" 2> /dev/null)
+        break ;;
+      esac
+      i=$((i + 1))
+    done
+    if [ -n "$url" ]; then
+      [ -f "$DOWNLOADS/$name" ] || fetch "$url" "$DOWNLOADS/$name"
+      ok "Toque $tag: $DOWNLOADS/$name"
+    else
+      say "No Toque APK in the latest release: build it (see README) or pass --apk later."
+    fi
+  else
+    say "GitHub releases unreachable: build the APK (see README) or pass --apk later."
+  fi
+}
+
 step_prepare() {
   local missing=0 zip tmp twrp scatter rel count i name url tag
   mkdir -p "$WORK" "$DOWNLOADS" "$BACKUP"
@@ -414,31 +444,7 @@ step_prepare() {
   ok "TWRP and scatter file (boot at $BOOT_OFFSET, recovery at $RECOVERY_OFFSET)"
 
   # Toque APK (latest release)
-  if [ -z "$APK" ]; then
-    rel="$DOWNLOADS/latest-release.json"
-    if curl -fsSL --proto '=https' -A toque-setup -o "$rel" "$RELEASES_API"; then
-      tag=$(plutil -extract tag_name raw "$rel" 2> /dev/null)
-      count=$(plutil -extract assets raw "$rel" 2> /dev/null) || count=0
-      url=""
-      i=0
-      while [ "$i" -lt "$count" ]; do
-        name=$(plutil -extract "assets.$i.name" raw "$rel" 2> /dev/null)
-        case "$name" in Toque-*.apk)
-          url=$(plutil -extract "assets.$i.browser_download_url" raw "$rel" 2> /dev/null)
-          break ;;
-        esac
-        i=$((i + 1))
-      done
-      if [ -n "$url" ]; then
-        [ -f "$DOWNLOADS/$name" ] || fetch "$url" "$DOWNLOADS/$name"
-        ok "Toque $tag: $DOWNLOADS/$name"
-      else
-        say "No Toque APK in the latest release: build it (see README) or pass --apk later."
-      fi
-    else
-      say "GitHub releases unreachable: build the APK (see README) or pass --apk later."
-    fi
-  fi
+  [ -n "$APK" ] || fetch_toque_apk
 
   # mtkclient, for the robot's download mode (replaces SP Flash Tool; no driver on macOS).
   PY=$(find_python) || { missing=1; say "MISSING: Python 3.10 or newer. Install it with Homebrew: brew install python"; }
@@ -583,6 +589,30 @@ step_install() {
   ok "install done. Next: wifi (optional)"
 }
 
+# Switches an installed robot to this repository's Toque (the one linked to Foyer), over Wi-Fi.
+# Once only: afterwards Toque updates itself from this repository's releases, at night.
+step_update() {
+  local apk=$APK ver f ip
+  mkdir -p "$DOWNLOADS"
+  if [ -z "$apk" ]; then
+    fetch_toque_apk
+    for f in "$DOWNLOADS"/Toque-*.apk; do
+      [ -f "$f" ] && { [ -z "$apk" ] || [ "$f" -nt "$apk" ]; } && apk=$f
+    done
+  fi
+  [ -n "$apk" ] && [ -f "$apk" ] || fail "No Toque APK: none published yet in this repository's releases, or pass --apk <file>."
+  ADB=$(find_adb) || fail "adb is missing: run 'prepare' once (it downloads Google's platform tools)."
+  ip=${IP:-$(state_get robot-ip)}
+  [ -n "$ip" ] || fail "Robot IP unknown: pass --ip <robot IP> (Toque > Settings > Tools > Android settings > Wi-Fi shows it)."
+  ADB="$ADB" "$REPO/tools/install-robot.sh" --apk "$apk" --ip "$ip" || fail "Installation failed: is the robot on, on the same Wi-Fi, with ADB over Wi-Fi ('wifi' step)?"
+  ver=$("$ADB" -s "$ip:5555" shell "dumpsys package app.toque | grep versionName" | tr -d '\r')
+  case "$ver" in *versionName*) ;; *) fail "Toque is not installed." ;; esac
+  state_set robot-ip "$ip"
+  state_set done-update "$(now)"
+  ok "Toque installed: $(printf '%s' "$ver" | tr -s ' ' | sed 's/^ //'). From now on it updates itself at night."
+  human "On the robot: Toque > Settings > Foyer shows a 6-digit code. On the phone: Foyer > Settings > Monsieur Cuisine, tap 'Relier' (same Wi-Fi) or type the code. Once only."
+}
+
 step_wifi() {
   local st robot_ip check
   resolve_adb
@@ -656,5 +686,6 @@ case "$STEP" in
   android) step_android ;;
   install) step_install ;;
   wifi) step_wifi ;;
+  update) step_update ;;
   unroot) step_unroot ;;
 esac
