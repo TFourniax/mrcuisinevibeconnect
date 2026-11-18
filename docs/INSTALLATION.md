@@ -14,7 +14,8 @@ On a Windows PC, this guide does not apply: follow the one in the
 2. [Prepare the Mac](#2-prepare-the-mac-once) (once, 15 minutes)
 3. [Install with Claude](#3a-install-with-claude-recommended) (recommended) **or**
    [install it yourself](#3b-install-it-yourself-step-by-step), step by step
-4. [After the install](#4-after-the-install): first run, recipes, Wi-Fi
+4. [After the install](#4-after-the-install): first run, link to Foyer, recipes, close Wi-Fi
+   access
 5. [If something goes wrong](#5-if-something-goes-wrong) · [Undo](#6-undo) ·
    [Technical details](#7-technical-details)
 
@@ -93,6 +94,16 @@ finish (the cursor comes back).
 Then choose: **3a** (Claude runs the commands for you) or **3b** (you type them). Either way, the
 robot only changes at the steps that say so.
 
+> **The robot already has Toque** (a release of the original repository)? No need to redo
+> everything, no cable, no cover. Robot on, on Wi-Fi:
+> ```
+> brew install android-platform-tools
+> bash tools/setup/toque-setup.sh update --ip <robot IP address>
+> ```
+> The IP address: in Toque, tap the clock at the top right 5 times quickly (Android settings) ›
+> Wi-Fi › the network. The first time, the robot asks "Allow debugging?": tick "Always allow", OK,
+> and run the command again. Then go to [Link to Foyer](#link-to-foyer-once).
+
 ## 3a. Install with Claude (recommended)
 
 [Claude Code](https://code.claude.com/docs/en/quickstart) is an AI assistant that types the
@@ -111,7 +122,8 @@ Claude plan (Pro or higher): the free plan is not enough.
    ```
    The first time, it opens the browser to sign in to your Claude account.
 3. Paste this message:
-   > Install Toque on my Monsieur Cuisine Connect by following AGENTS.md.
+   > Install Toque on my Monsieur Cuisine Connect by following AGENTS.md, then help me link it to
+   > Foyer and close Wi-Fi access (adb-off).
 
 Then:
 
@@ -274,6 +286,29 @@ on**. Done.
 4. At the slightest odd behaviour: **power switch**, then go back to the stock app
    ([part 6](#6-undo)).
 
+### Link to Foyer (once)
+
+1. Robot on the home Wi-Fi: Toque's home screen shows **"Relier à Foyer"** and a 6-digit code
+   (also in Settings › Foyer). It changes every 10 minutes.
+2. On the phone, in Foyer: **Réglages › Monsieur Cuisine**. Type the code, tap **"Relier"**.
+3. The robot shows **"Linked to the household …"**: check it is yours. The household's shared
+   recipes arrive within 5 minutes; tonight's planned meal shows on the home screen.
+
+Nothing more to do afterwards. To undo it: Foyer › Réglages › Monsieur Cuisine › Délier (the robot
+then erases the household's recipes). Details: [FOYER.md](FOYER.md).
+
+### Close Wi-Fi access (recommended)
+
+Once the first run works and the robot is linked to Foyer, ADB over Wi-Fi (step 8) is no longer
+needed day to day. Left open, it is administrator access to the robot on the home network:
+
+```
+bash tools/setup/toque-setup.sh adb-off
+```
+
+✅ At the end: `OK: ADB over Wi-Fi closed`. To work on the robot again one day: cover, cable,
+`wifi` step.
+
 ### Lidl recipes
 
 **Settings › Lidl recipes › Sync** (robot on Wi-Fi). Toque downloads the official recipes from
@@ -291,7 +326,9 @@ Lidl's servers; come back with the **"Back to Toque"** button. If that import fa
 - The robot has no Home or Back button: when another app is open (the stock app, the Android
   settings), the **"Back to Toque"** button stays on top (you can move it).
 - Android settings: tap the clock at the top right 5 times quickly.
-- Updates: **Settings › Updates** installs new versions.
+- Updates: every night Toque looks for a new version; the home screen announces it and
+  **Settings › Updates** installs it in one tap. Optionally, unattended night installs (2 days
+  after a release).
 - From the Mac, over Wi-Fi: `~/Toque/platform-tools/adb connect <robot IP address>:5555`, then
   `~/Toque/platform-tools/adb shell am start -n app.toque/.ui.MainActivity` opens Toque.
 
