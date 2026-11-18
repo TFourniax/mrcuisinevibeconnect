@@ -14,7 +14,8 @@ Sur un PC Windows, ce guide ne s'applique pas : suivez celui du
 2. [Préparer le Mac](#2-préparer-le-mac-une-seule-fois) (une seule fois, 15 minutes)
 3. [Installer avec Claude](#3a-installer-avec-claude-recommandé) (recommandé) **ou**
    [installer vous-même](#3b-installer-vous-même-étape-par-étape), étape par étape
-4. [Après l'installation](#4-après-linstallation) : premier essai, recettes, Wi-Fi
+4. [Après l'installation](#4-après-linstallation) : premier essai, relier à Foyer, recettes,
+   fermer l'accès Wi-Fi
 5. [En cas de problème](#5-en-cas-de-problème) · [Revenir en arrière](#6-revenir-en-arrière) ·
    [Détails techniques](#7-détails-techniques)
 
@@ -94,6 +95,17 @@ attendez qu'elle se termine (le curseur revient).
 Choisissez ensuite : **3a** (Claude fait les commandes à votre place) ou **3b** (vous les tapez).
 Dans les deux cas, le robot ne change qu'aux étapes qui le disent.
 
+> **Le robot a déjà Toque** (une version du dépôt d'origine, installée avant) ? Inutile de tout
+> refaire : pas de câble ni de trappe. Robot allumé, sur le Wi-Fi :
+> ```
+> brew install android-platform-tools
+> bash tools/setup/toque-setup.sh update --ip <adresse IP du robot>
+> ```
+> L'adresse IP : dans Toque, 5 appuis rapides sur l'heure en haut à droite (paramètres Android) ›
+> Wi-Fi › le réseau. La première fois, le robot demande « Autoriser le débogage ? » : cochez
+> « Toujours autoriser », OK, puis relancez la commande. Passez ensuite à
+> [Relier à Foyer](#relier-à-foyer-une-seule-fois).
+
 ## 3a. Installer avec Claude (recommandé)
 
 [Claude Code](https://code.claude.com/docs/en/quickstart) est un assistant IA qui tape les
@@ -112,7 +124,8 @@ abonnement Claude payant (Pro ou plus) : l'offre gratuite ne suffit pas.
    ```
    La première fois, il ouvre le navigateur pour vous connecter à votre compte Claude.
 3. Collez ce message :
-   > Installe Toque sur mon Monsieur Cuisine Connect en suivant AGENTS.md. Parle-moi en français.
+   > Installe Toque sur mon Monsieur Cuisine Connect en suivant AGENTS.md, puis aide-moi à le
+   > relier à Foyer et à fermer l'accès Wi-Fi (adb-off). Parle-moi en français.
 
 Ensuite :
 
@@ -277,6 +290,31 @@ C'est fini.
 4. Au moindre comportement anormal : **interrupteur**, puis revenez à l'appli d'origine
    ([partie 6](#6-revenir-en-arrière)).
 
+### Relier à Foyer (une seule fois)
+
+1. Robot sur le Wi-Fi de la maison : l'accueil de Toque affiche **« Relier à Foyer »** et un code
+   à 6 chiffres (aussi dans Réglages › Foyer). Il change toutes les 10 minutes.
+2. Sur le téléphone, dans Foyer : **Réglages › Monsieur Cuisine**. Tapez le code, touchez
+   **« Relier »**.
+3. Le robot affiche **« Relié au foyer « … » »** : vérifiez que c'est bien le vôtre. Les recettes
+   partagées du foyer arrivent en moins de 5 minutes ; le repas prévu du soir s'affiche sur l'accueil.
+
+Le lien ne demande plus rien ensuite. Pour le défaire : Foyer › Réglages › Monsieur Cuisine ›
+Délier (le robot efface alors les recettes du foyer). Détails : [FOYER.md](FOYER.md).
+
+### Fermer l'accès Wi-Fi (recommandé)
+
+Une fois le premier essai réussi et le robot relié à Foyer, l'accès par Wi-Fi (étape 8) ne sert
+plus à rien au quotidien. Le laisser ouvert, c'est laisser un accès administrateur au robot sur le
+réseau de la maison :
+
+```
+bash tools/setup/toque-setup.sh adb-off
+```
+
+✅ À la fin : `OK: ADB over Wi-Fi closed`. Pour retravailler un jour sur le robot : trappe, câble,
+étape `wifi`.
+
 ### Les recettes Lidl
 
 **Réglages › Recettes Lidl › Synchroniser** (robot en Wi-Fi). Toque télécharge les recettes
@@ -295,7 +333,9 @@ d'origine »** la laisse se synchroniser avec les serveurs Lidl ; revenez avec l
   d'origine, les paramètres Android), le bouton **« Retour à Toque »** reste affiché par-dessus
   (on peut le déplacer).
 - Paramètres Android : 5 appuis rapides sur l'heure en haut à droite.
-- Mises à jour : **Réglages › Mises à jour** installe les nouvelles versions.
+- Mises à jour : chaque nuit, Toque regarde s'il existe une nouvelle version ; l'accueil l'annonce
+  et **Réglages › Mises à jour** l'installe d'un geste. En option, installation seule la nuit
+  (2 jours après la sortie d'une version).
 - Depuis le Mac, par Wi-Fi : `~/Toque/platform-tools/adb connect <adresse IP du robot>:5555`, puis
   `~/Toque/platform-tools/adb shell am start -n app.toque/.ui.MainActivity` ouvre Toque.
 
