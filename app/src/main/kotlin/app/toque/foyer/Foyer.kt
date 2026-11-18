@@ -108,6 +108,12 @@ class Foyer private constructor(private val app: ToqueApp) {
         else -> 5 * 60_000L
     }
 
+    /** Relié : toutes les 5 min le jour, toutes les 30 min de 23 h à 6 h (personne ne cuisine). */
+    private fun idleDelay(): Long {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        return if (hour >= 23 || hour < 6) 30 * 60_000L else 5 * 60_000L
+    }
+
     /** Synchro tout de suite (accueil affiché, bouton « Synchroniser »). */
     fun syncNow() {
         bg.removeCallbacks(loopTask)
@@ -252,7 +258,7 @@ class Foyer private constructor(private val app: ToqueApp) {
         return when (r.code) {
             304 -> {
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
-                5 * 60_000L
+                idleDelay()
             }
             200 -> {
                 val feed = FoyerFeed.parse(r.body)
@@ -274,7 +280,7 @@ class Foyer private constructor(private val app: ToqueApp) {
                     60_000L
                 } else {
                     quickSyncs = 0
-                    5 * 60_000L
+                    idleDelay()
                 }
             }
             401, 409 -> {

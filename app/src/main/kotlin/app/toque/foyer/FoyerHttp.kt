@@ -96,17 +96,31 @@ object FoyerHttp {
         }
     }
 
-    /** Une photo de recette (https, 8 Mo au plus). */
+    /**
+     * Une photo de recette : https seulement (une redirection vers http n'est pas suivie),
+     * 4 Mo au plus, et seulement du JPEG, du PNG ou du WebP reconnus à leurs premiers octets :
+     * rien d'autre n'arrive au décodeur d'images d'Android 6.
+     */
     fun download(url: String, userAgent: String): ByteArray {
         val c = open(url)
         try {
             c.instanceFollowRedirects = true
             c.setRequestProperty("User-Agent", userAgent)
             if (c.responseCode != 200) throw IOException("réponse ${c.responseCode}")
-            return c.inputStream.use { readAll(it, 8 * 1024 * 1024) }
+            if (c.url.protocol != "https") throw IOException("redirection hors https")
+            val bytes = c.inputStream.use { readAll(it, 4 * 1024 * 1024) }
+            if (!isImage(bytes)) throw IOException("pas une image JPEG, PNG ou WebP")
+            return bytes
         } finally {
             c.disconnect()
         }
+    }
+
+    fun isImage(b: ByteArray): Boolean {
+        fun at(i: Int, vararg v: Int) = b.size > i + v.size && v.withIndex().all { (k, x) -> (b[i + k].toInt() and 0xFF) == x }
+        return at(0, 0xFF, 0xD8, 0xFF) ||
+            at(0, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) ||
+            (at(0, 0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50))
     }
 
     private fun readAll(input: java.io.InputStream, max: Int): ByteArray {
