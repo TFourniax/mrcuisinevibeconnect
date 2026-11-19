@@ -44,6 +44,12 @@ class Screensaver(private val a: MainActivity, private val layer: FrameLayout, p
 
     val showing: Boolean get() = view != null
 
+    /** Dernier geste ou mouvement de la machine (horloge monotone). */
+    val lastActivityAt: Long get() = lastActivity
+
+    /** Appelé à chaque geste, et quand l'écran de veille s'affiche ou se ferme (anneau lumineux). */
+    var onChange: (() -> Unit)? = null
+
     private val check = object : Runnable {
         override fun run() {
             maybeShow()
@@ -68,6 +74,7 @@ class Screensaver(private val a: MainActivity, private val layer: FrameLayout, p
     fun activity() {
         lastActivity = SystemClock.elapsedRealtime()
         if (view != null) hide()
+        onChange?.invoke()
     }
 
     /** « Voir l'écran de veille » (Réglages) : tout de suite, s'il peut s'afficher. */
@@ -95,6 +102,7 @@ class Screensaver(private val a: MainActivity, private val layer: FrameLayout, p
         layer.addView(v.root, Ui.flp())
         v.start()
         onShown()
+        onChange?.invoke()
     }
 
     fun hide() {
@@ -102,6 +110,7 @@ class Screensaver(private val a: MainActivity, private val layer: FrameLayout, p
         view = null
         v.release()
         layer.removeView(v.root)
+        onChange?.invoke()
     }
 }
 
