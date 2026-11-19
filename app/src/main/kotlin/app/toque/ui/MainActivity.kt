@@ -426,7 +426,11 @@ class MainActivity : Activity() {
     /** « Réinitialiser l'anneau » : blanc d'origine, réglages par défaut ; [done] sur le fil principal. */
     fun ringResetAll(done: (Boolean) -> Unit) {
         Thread({
-            val ok = RingLight.resetAll(prefs)
+            val ok = try {
+                RingLight.resetAll(prefs)
+            } catch (_: Throwable) {
+                false
+            }
             runOnUiThread {
                 ring.reset()
                 done(ok)

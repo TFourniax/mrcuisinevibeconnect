@@ -155,8 +155,12 @@ class RingLight(
         // Pendant l'observation de l'appli d'origine, Toque ne touche à rien (elle fausserait le relevé).
         if (RingWatch.running) return
         writer.execute {
-            val cmds = plan.parts.mapNotNull { (name, component) -> Leds.setCommand(name, RingPolicy.level(component, plan.intensity, maxBrightness(name))) }
-            if (cmds.isNotEmpty()) RootShell.run(cmds.joinToString("; "), 5_000)
+            // The ring is a comfort: whatever goes wrong here never stops Toque.
+            try {
+                val cmds = plan.parts.mapNotNull { (name, component) -> Leds.setCommand(name, RingPolicy.level(component, plan.intensity, maxBrightness(name))) }
+                if (cmds.isNotEmpty()) RootShell.run(cmds.joinToString("; "), 5_000)
+            } catch (_: Throwable) {
+            }
         }
     }
 
@@ -169,15 +173,20 @@ class RingLight(
         if (searched) return
         searched = true
         writer.execute {
-            val leds = list()
-            if (prefs.ringOriginal.isEmpty() && leds.isNotEmpty()) prefs.ringOriginal = Leds.encodeOriginal(leds)
-            val rgb = RingLeds.detect(leds.map { it.name })
-            when {
-                rgb != null -> {
-                    prefs.ringRgb = rgb.encode()
-                    if (prefs.ringLed.isNotEmpty()) prefs.ringLed = ""
+            try {
+                val leds = list()
+                if (prefs.ringOriginal.isEmpty() && leds.isNotEmpty()) prefs.ringOriginal = Leds.encodeOriginal(leds)
+                val rgb = RingLeds.detect(leds.map { it.name })
+                when {
+                    rgb != null -> {
+                        prefs.ringRgb = rgb.encode()
+                        if (prefs.ringLed.isNotEmpty()) prefs.ringLed = ""
+                    }
+                    leds.isNotEmpty() -> prefs.ringRgb = ""
                 }
-                leds.isNotEmpty() -> prefs.ringRgb = ""
+            } catch (_: Throwable) {
+                // Never let the ring stop Toque (1.0.9 crashed here on Android 6).
+                return@execute
             }
             main.post {
                 applied = null

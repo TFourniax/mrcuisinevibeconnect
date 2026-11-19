@@ -132,13 +132,31 @@ data class RgbLeds(val red: String, val green: String, val blue: String) {
 
 /** Trouve l'anneau RVB parmi les voyants : `red`/`green`/`blue`, `led_r`/`led_g`/`led_b`, `x:red`… */
 object RingLeds {
-    private val SEPARATORS = Regex("(?<=[:_.+-])|(?=[:_.+-])")
+    // No regex here: Android's ICU engine reads a character class starting with "[:" as a POSIX
+    // property and throws (1.0.9 crashed at every start on the robot, while the JVM tests passed).
+    private const val SEPARATORS = ":_.+-"
+
+    /** "led_red:2" → ["led", "_", "red", ":", "2"]: words and separators, in order. */
+    internal fun tokens(name: String): List<String> {
+        val out = ArrayList<String>()
+        val word = StringBuilder()
+        for (ch in name) {
+            if (ch in SEPARATORS) {
+                if (word.isNotEmpty()) out += word.toString().also { word.setLength(0) }
+                out += ch.toString()
+            } else {
+                word.append(ch)
+            }
+        }
+        if (word.isNotEmpty()) out += word.toString()
+        return out
+    }
     private val CHANNELS = mapOf("red" to 'r', "r" to 'r', "green" to 'g', "g" to 'g', "blue" to 'b', "b" to 'b')
 
     /** Canal (r, g ou b) et « famille » du voyant (son nom, la couleur remplacée par *), ou null. */
     fun channel(name: String): Pair<Char, String>? {
         if (!Leds.validName(name) || Leds.isScreen(name)) return null
-        val tokens = name.lowercase().split(SEPARATORS).filter { it.isNotEmpty() }
+        val tokens = tokens(name.lowercase())
         for (i in tokens.indices.reversed()) {
             val ch = CHANNELS[tokens[i]] ?: continue
             return ch to tokens.mapIndexed { j, t -> if (j == i) "*" else t }.joinToString("")

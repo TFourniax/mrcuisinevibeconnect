@@ -185,4 +185,20 @@ class RingTest {
         // Un déclencheur douteux n'est jamais écrit.
         assertFalse(Leds.restoreCommand("red", 255, "x; reboot")!!.contains("reboot"))
     }
+
+    @Test
+    fun splitsNamesWithoutARegexAndroidRefuses() {
+        assertEquals(listOf("led", "_", "red", ":", "2"), app.toque.core.ui.RingLeds.tokens("led_red:2"))
+        assertEquals(listOf("red"), app.toque.core.ui.RingLeds.tokens("red"))
+        assertEquals(listOf(":", "red"), app.toque.core.ui.RingLeds.tokens(":red"))
+        assertEquals(app.toque.core.ui.RgbLeds("red", "green", "blue"), app.toque.core.ui.RingLeds.detect(listOf("blue", "green", "lcd-backlight", "red")))
+    }
+
+    @Test
+    fun noRegexClassStartsWithAColonInTheCore() {
+        // Android's ICU regex engine refuses "[:" (POSIX property syntax): a crash on the robot.
+        val bad = java.io.File("src/main/kotlin").walkTopDown().filter { it.isFile && it.name.endsWith(".kt") }
+            .filter { f -> f.readLines().any { line -> Regex("""Regex\("[^"]*\[:""").containsMatchIn(line) } }.map { it.name }.toList()
+        assertEquals(emptyList<String>(), bad)
+    }
 }
