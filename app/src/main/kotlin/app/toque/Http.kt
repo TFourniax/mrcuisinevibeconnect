@@ -10,6 +10,9 @@ import java.net.URL
 object Http {
     class Response(val body: String, val serverMs: Long)
 
+    /** Réponse refusée ; l'heure du serveur reste utile pour régler l'horloge du robot. */
+    class Failure(message: String, val serverMs: Long) : IOException(message)
+
     var userAgent = "Toque (Android; +https://github.com/TFourniax/mrcuisinevibeconnect)"
 
     fun get(url: String, headers: Map<String, String> = emptyMap(), timeoutMs: Int = 15_000, maxBytes: Int = 1024 * 1024): Response {
@@ -21,7 +24,7 @@ object Http {
             for ((k, v) in headers) c.setRequestProperty(k, v)
             val code = c.responseCode
             val date = c.date
-            if (code != 200) throw IOException(tr("réponse %d du serveur", code))
+            if (code != 200) throw Failure(tr("réponse %d du serveur", code), date)
             c.inputStream.use { input ->
                 val out = ByteArrayOutputStream()
                 val buf = ByteArray(8192)
@@ -33,6 +36,22 @@ object Http {
                 }
                 return Response(String(out.toByteArray(), Charsets.UTF_8), date)
             }
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    /** Heure d'un serveur d'après son en-tête Date, sans suivre de redirection (0 si absente). */
+    fun serverTime(url: String, timeoutMs: Int = 8_000): Long {
+        val c = URL(url).openConnection() as HttpURLConnection
+        try {
+            c.instanceFollowRedirects = false
+            c.connectTimeout = timeoutMs
+            c.readTimeout = timeoutMs
+            c.requestMethod = "HEAD"
+            c.setRequestProperty("User-Agent", userAgent)
+            c.responseCode
+            return c.date
         } finally {
             c.disconnect()
         }

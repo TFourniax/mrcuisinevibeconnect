@@ -6,6 +6,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.widget.Toast
 import android.util.Base64
+import app.toque.TimeSync
 import app.toque.ToqueApp
 import app.toque.core.foyer.FoyerFeed
 import app.toque.core.foyer.FoyerPlan
@@ -69,6 +70,8 @@ class Foyer private constructor(private val app: ToqueApp) {
     // Fil « toque-foyer » uniquement.
     private var pending: StatusReport? = null
     private var quickSyncs = 0
+    /** Dernier essai de chaque photo manquante (horloge monotone) : une adresse cassée n'est réessayée qu'une fois par heure. */
+    private val photoTried = HashMap<String, Long>()
 
     val linked: Boolean get() = prefs.foyerHousehold.isNotEmpty()
     val plans: List<FoyerPlan> get() = FoyerFeed.decodePlans(prefs.foyerPlans)
@@ -84,6 +87,12 @@ class Foyer private constructor(private val app: ToqueApp) {
 
     private fun start() {
         FoyerHttp.init(app)
+        // Nouvelle version de Toque : le prochain contenu de Foyer est repris en entier (photos comprises).
+        if (prefs.foyerAppliedVersion != version) {
+            prefs.foyerEtag = ""
+            prefs.foyerFeedHash = ""
+            prefs.foyerAppliedVersion = version
+        }
         app.machine.connect()
         app.machine.onSnapshot { s -> onSnapshot(s) }
         app.machine.onEvent { e -> onEvent(e) }
@@ -220,15 +229,34 @@ class Foyer private constructor(private val app: ToqueApp) {
 
     private fun loop() {
         bg.removeCallbacks(loopTask)
-        val next = if (!prefs.foyerEnabled) 10 * 60_000L else try {
-            if (linked) sync() else hello()
-        } catch (e: Exception) {
-            prefs.foyerLastResult = tr("Foyer injoignable : %s", e.message ?: e.toString())
-            log.write("foyer", "injoignable : $e")
-            changed()
-            if (visible > 0) 30_000L else 5 * 60_000L
+        val next = when {
+            !prefs.foyerEnabled -> 10 * 60_000L
+            // Robot tout juste allumé (pas de pile d'horloge) : la connexion sécurisée échouerait.
+            !TimeSync.clockPlausible() -> clockNotSet()
+            else -> try {
+                if (linked) sync() else hello()
+            } catch (e: Exception) {
+                if (clockProblem(e)) clockNotSet() else {
+                    prefs.foyerLastResult = tr("Foyer injoignable : %s", e.message ?: e.toString())
+                    log.write("foyer", "injoignable : $e")
+                    changed()
+                    if (visible > 0) 30_000L else 5 * 60_000L
+                }
+            }
         }
         bg.postDelayed(loopTask, next)
+    }
+
+    /** L'heure du robot est fausse : on la fait régler tout de suite et on repasse dans 20 s. */
+    private fun clockNotSet(): Long {
+        TimeSync.kick()
+        val line = tr("L'heure du robot n'est pas encore réglée : Foyer se connecte dès qu'elle l'est.")
+        if (prefs.foyerLastResult != line) {
+            prefs.foyerLastResult = line
+            log.write("foyer", "heure du robot pas encore réglée")
+            changed()
+        }
+        return 20_000L
     }
 
     private fun hello(): Long {
@@ -271,6 +299,7 @@ class Foyer private constructor(private val app: ToqueApp) {
         return when (r.code) {
             304 -> {
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
+                queueMissingPhotos()
                 idleDelay()
             }
             200 -> {
@@ -279,12 +308,13 @@ class Foyer private constructor(private val app: ToqueApp) {
                 // identique au précédent ne range rien de nouveau.
                 val hash = sha1(r.body)
                 if (hash != prefs.foyerFeedHash) {
-                    val photos = apply(feed)
+                    apply(feed)
                     // Enregistré avant les photos : une photo qui pose problème ne fait jamais tout recommencer.
                     prefs.foyerFeedHash = hash
                     prefs.foyerEtag = r.etag.orEmpty()
-                    if (photos.isNotEmpty()) photosBg.post { fetchPhotos(photos) }
                 }
+                // Photos manquantes, que le contenu ait changé ou non (une photo refusée la dernière fois est reprise).
+                queueMissingPhotos()
                 prefs.foyerEtag = r.etag.orEmpty()
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
                 prefs.foyerLastResult = tr("%d recettes du foyer", feed.recipes.size)
@@ -321,6 +351,8 @@ class Foyer private constructor(private val app: ToqueApp) {
         prefs.foyerCodeUntil = 0
         prefs.foyerPlans = "[]"
         prefs.foyerRobotName = ""
+        prefs.foyerPhotos = "{}"
+        photoTried.clear()
         try {
             app.recipes.removeAllExcept(emptySet(), origin = RecipeRepo.FOYER)
         } catch (e: Exception) {
@@ -329,8 +361,8 @@ class Foyer private constructor(private val app: ToqueApp) {
         changed()
     }
 
-    /** Range les recettes reçues (celles retirées de Foyer disparaissent) ; rend les photos à télécharger. */
-    private fun apply(feed: FoyerFeed): Map<String, String> {
+    /** Range les recettes reçues (celles retirées de Foyer disparaissent) et note l'adresse de leurs photos. */
+    private fun apply(feed: FoyerFeed) {
         val repo = app.recipes
         val photos = LinkedHashMap<String, String>()
         val recipes = feed.recipes.map { r ->
@@ -346,7 +378,29 @@ class Foyer private constructor(private val app: ToqueApp) {
         prefs.foyerPlans = FoyerFeed.encodePlans(feed.plans)
         if (feed.household.isNotBlank()) prefs.foyerHousehold = feed.household
         prefs.foyerRobotName = feed.robotName
-        return photos.filterKeys { repo.imageFile(it) == null }
+        prefs.foyerPhotos = Json.write(photos)
+    }
+
+    /**
+     * Photos des recettes du foyer encore absentes du robot, téléchargées sur leur propre fil.
+     * Chaque adresse est essayée au plus une fois par heure : une photo refusée (robot pas encore
+     * à jour, site lent) revient toute seule, sans marteler une adresse cassée.
+     */
+    private fun queueMissingPhotos() {
+        val stored = try { Json.parse(prefs.foyerPhotos).obj() } catch (_: Exception) { emptyMap<String, Any?>() }
+        if (stored.isEmpty()) return
+        val repo = app.recipes
+        val now = SystemClock.elapsedRealtime()
+        val due = LinkedHashMap<String, String>()
+        for ((name, value) in stored) {
+            val url = value as? String ?: continue
+            if (repo.imageFile(name) != null) continue
+            val last = photoTried[url]
+            if (last != null && now - last < 60 * 60_000L) continue
+            photoTried[url] = now
+            due[name] = url
+        }
+        if (due.isNotEmpty()) photosBg.post { fetchPhotos(due) }
     }
 
     /** Fil des photos : chacune 20 s au plus ; une image piégée (mémoire, format) est sautée, jamais fatale. */
@@ -357,7 +411,9 @@ class Foyer private constructor(private val app: ToqueApp) {
         for ((name, url) in photos) {
             if (repo.imageFile(name) != null) continue
             try {
-                Photos.save(FoyerHttp.download(url, userAgent), repo.imagesDir, name)
+                // La clé du robot ne part qu'avec une photo gardée par Foyer lui-même.
+                val key = if (FoyerHttp.isFoyerPhoto(url)) secret() else null
+                Photos.save(FoyerHttp.download(url, userAgent, key), repo.imagesDir, name)
                 saved++
                 Thread.sleep(150)
             } catch (t: Throwable) {
@@ -403,6 +459,20 @@ class Foyer private constructor(private val app: ToqueApp) {
         }
 
         fun of(app: ToqueApp): Foyer = start(app)
+
+        /** Échec dû à l'heure du robot : certificat « pas encore valide » ou « expiré » (horloge en 2010…). */
+        fun clockProblem(e: Throwable): Boolean {
+            if (!TimeSync.clockPlausible()) return true
+            var t: Throwable? = e
+            var depth = 0
+            while (t != null && depth++ < 10) {
+                if (t is java.security.cert.CertificateNotYetValidException || t is java.security.cert.CertificateExpiredException) return true
+                val m = t.message.orEmpty()
+                if ("not valid until" in m || "Certificate expired" in m) return true
+                t = t.cause
+            }
+            return false
+        }
 
         fun sha1(text: String): String =
             MessageDigest.getInstance("SHA-1").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }

@@ -53,7 +53,7 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
             badge.background = Ui.round(Ui.ACCENT_DIM, 28f)
             badge.addView(Icon(c, p.icon, Ui.ACCENT), Ui.flp(Ui.u(32), Ui.u(32), Gravity.CENTER))
             card.addView(badge, LinearLayout.LayoutParams(Ui.u(56), Ui.u(56)))
-            card.addView(Ui.text(c, p.name, 28f, Ui.TEXT, Ui.MEDIUM), Ui.lp(t = 14))
+            card.addView(Ui.fitWords(Ui.text(c, p.name, 28f, Ui.TEXT, Ui.MEDIUM), 18f), Ui.lp(t = 14))
             card.addView(Ui.text(c, p.text, 16f, Ui.TEXT2).apply { setLineSpacing(0f, 1.15f) }, Ui.lp(t = 6))
             card.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
             val dur = Ui.horizontal(c)

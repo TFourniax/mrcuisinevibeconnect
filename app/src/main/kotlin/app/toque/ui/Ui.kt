@@ -14,9 +14,12 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import app.toque.R
+import app.toque.core.recipes.DishKind
 
 /** Thème sombre (couleurs de Foyer) et utilitaires de mise en page, à l'échelle d'un écran de référence 1024×600. */
 object Ui {
@@ -78,6 +81,32 @@ object Ui {
             typeface = face
             includeFontPadding = false
         }
+
+    /**
+     * Les mots ne sont jamais coupés en deux : si le plus long ne tient pas dans la largeur
+     * disponible, la taille du texte baisse (jusqu'à [minSize], unités de l'interface) ; elle
+     * revient à sa taille d'origine dès qu'il y a la place. Le retour à la ligne se fait entre
+     * les mots.
+     */
+    fun fitWords(t: TextView, minSize: Float = 12f): TextView {
+        val maxPx = t.textSize
+        val minPx = uf(minSize)
+        t.addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
+            val tv = v as TextView
+            val avail = (r - l) - tv.totalPaddingLeft - tv.totalPaddingRight
+            val words = tv.text.toString().split(' ', '\n').filter { it.isNotEmpty() }
+            if (avail <= 0 || words.isEmpty()) return@addOnLayoutChangeListener
+            val paint = android.text.TextPaint(tv.paint)
+            var size = maxPx
+            while (size > minPx) {
+                paint.textSize = size
+                if (words.all { paint.measureText(it) <= avail }) break
+                size = maxOf(minPx, size - uf(0.5f))
+            }
+            if (Math.abs(size - tv.textSize) > 0.25f) tv.post { tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, size) }
+        }
+        return t
+    }
 
     fun ellipsize(t: TextView, lines: Int = 1): TextView {
         t.maxLines = lines
@@ -223,9 +252,35 @@ object Ui {
         return intArrayOf(a, b)
     }
 
-    fun initials(title: String): String {
-        val words = title.split(' ', '-', '\'').filter { it.length > 2 }
-        return words.take(2).joinToString("") { it.first().uppercaseChar().toString() }.ifEmpty { title.take(1).uppercase() }
+    /** Icône du genre de plat (Lucide), blanche à 55 %, pour une recette sans photo ; à poser sur [placeholderColors]. */
+    fun dishIcon(c: Context, title: String = "", category: String = ""): ImageView = ImageView(c).apply {
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        imageAlpha = 140
+        setDish(this, title, category)
+    }
+
+    fun setDish(icon: ImageView, title: String, category: String = "") = icon.setImageResource(dishDrawable(DishKind.of(title, category)))
+
+    fun dishDrawable(kind: DishKind): Int = when (kind) {
+        DishKind.SOUP -> R.drawable.dish_soup
+        DishKind.SALAD -> R.drawable.dish_salad
+        DishKind.PIZZA -> R.drawable.dish_pizza
+        DishKind.SANDWICH -> R.drawable.dish_sandwich
+        DishKind.EGG -> R.drawable.dish_egg_fried
+        DishKind.COOKIE -> R.drawable.dish_cookie
+        DishKind.CAKE -> R.drawable.dish_cake_slice
+        DishKind.DESSERT -> R.drawable.dish_ice_cream_cone
+        DishKind.COFFEE -> R.drawable.dish_coffee
+        DishKind.WINE -> R.drawable.dish_wine
+        DishKind.DRINK -> R.drawable.dish_cup_soda
+        DishKind.FISH -> R.drawable.dish_fish
+        DishKind.POULTRY -> R.drawable.dish_drumstick
+        DishKind.MEAT -> R.drawable.dish_beef
+        DishKind.POT -> R.drawable.dish_cooking_pot
+        DishKind.BREAD -> R.drawable.dish_croissant
+        DishKind.VEGETABLE -> R.drawable.dish_carrot
+        DishKind.FRUIT -> R.drawable.dish_citrus
+        DishKind.DEFAULT -> R.drawable.dish_chef_hat
     }
 
     fun gradient(colors: IntArray, radius: Float): GradientDrawable =

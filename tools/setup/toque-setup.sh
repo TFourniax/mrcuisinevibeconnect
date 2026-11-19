@@ -202,7 +202,7 @@ find_python() { # Python 3.10 or newer, for mtkclient
   done
   return 1
 }
-find_libusb() { # folder holding libusb-1.0.dylib (Homebrew: brew install libusb)
+find_libusb() { # folder holding libusb-1.0.dylib (Apple silicon: brew install libusb; Intel: MacPorts, sudo port install libusb)
   local d
   for d in "${HOMEBREW_PREFIX:-/opt/homebrew}/lib" /opt/homebrew/lib /usr/local/lib /opt/homebrew/opt/libusb/lib \
     /usr/local/opt/libusb/lib /opt/local/lib; do
@@ -220,7 +220,7 @@ mtk_patched() {
 mtk_ready() {
   [ -x "$MTK_VENV/bin/python" ] && [ -f "$MTK_SRC/mtk.py" ] && mtk_pinned && mtk_patched
 }
-# mtkclient's own code looks for "libusb-1.0.so" on macOS; pyusb then finds Homebrew's libusb
+# mtkclient's own code looks for "libusb-1.0.so" on macOS; pyusb then finds Homebrew's (or MacPorts') libusb
 # through DYLD_FALLBACK_LIBRARY_PATH. 'exec' so that the caller's $! is mtkclient itself.
 mtk_exec() {
   local lib
@@ -364,9 +364,9 @@ step_status() {
   say "Work folder: $WORK"
   [ -f "$STATE_FILE" ] && done_steps=$(sed -n 's/^done-\([^=]*\)=.*/\1/p' "$STATE_FILE" | paste -sd ',' - | sed 's/,/, /g')
   say "Done steps: $done_steps"
-  py=$(find_python) || py="missing (brew install python)"
+  py=$(find_python) || py="missing (Apple silicon: brew install python; Intel: sudo port install python313)"
   say "Python 3.10+: $py"
-  lib=$(find_libusb) || lib="missing (brew install libusb)"
+  lib=$(find_libusb) || lib="missing (Apple silicon: brew install libusb; Intel: sudo port install libusb)"
   say "libusb: $lib"
   if mtk_ready; then say "mtkclient: $MTK_TAG + macOS serial fixes"; else say "mtkclient: not installed or not patched ('prepare')"; fi
   if ADB=$(find_adb); then say "adb state: $(adb_state)"; else ADB=""; say "adb: missing ('prepare')"; fi
@@ -448,8 +448,8 @@ step_prepare() {
   [ -n "$APK" ] || fetch_toque_apk
 
   # mtkclient, for the robot's download mode (replaces SP Flash Tool; no driver on macOS).
-  PY=$(find_python) || { missing=1; say "MISSING: Python 3.10 or newer. Install it with Homebrew: brew install python"; }
-  find_libusb > /dev/null || { missing=1; say "MISSING: libusb. Install it with Homebrew: brew install libusb"; }
+  PY=$(find_python) || { missing=1; say "MISSING: Python 3.10 or newer. Apple silicon (Homebrew): brew install python. Intel Mac (MacPorts): sudo port install python313"; }
+  find_libusb > /dev/null || { missing=1; say "MISSING: libusb. Apple silicon (Homebrew): brew install libusb. Intel Mac (MacPorts): sudo port install libusb"; }
   if ! { command -v git && git --version; } > /dev/null 2>&1; then
     missing=1; say "MISSING: git. Install Apple's command line tools: xcode-select --install"
   fi
@@ -620,7 +620,7 @@ step_update() {
 # Opening it again needs the cable ('wifi').
 step_adb_off() {
   local ip
-  ADB=$(find_adb) || fail "adb is missing: run 'prepare' once, or brew install android-platform-tools."
+  ADB=$(find_adb) || fail "adb is missing: run 'prepare' once, or unzip Google's platform-tools-latest-darwin.zip into $WORK (see the guide)."
   ip=${IP:-$(state_get robot-ip)}
   [ -n "$ip" ] || fail "Robot IP unknown: pass --ip <robot IP>."
   say "$("$ADB" connect "$ip:5555" 2>&1)"

@@ -32,7 +32,7 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         val left = Ui.vertical(c)
         val header = FrameLayout(c)
         header.background = Ui.gradient(Ui.placeholderColors(recipe.title), 24f)
-        header.addView(Ui.text(c, Ui.initials(recipe.title), 70f, 0x44FFFFFF, Ui.THIN), Ui.flp(Ui.WRAP, Ui.WRAP, Gravity.CENTER))
+        header.addView(Ui.dishIcon(c, recipe.title, recipe.category), Ui.flp(Ui.u(88), Ui.u(88), Gravity.CENTER))
         val img = ImageView(c).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         header.addView(img, Ui.flp())
         header.clipToOutline = true
