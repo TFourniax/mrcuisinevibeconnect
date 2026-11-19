@@ -11,6 +11,7 @@ import app.toque.ToqueApp
 import app.toque.core.foyer.FoyerFeed
 import app.toque.core.foyer.FoyerPlan
 import app.toque.core.foyer.Guided
+import app.toque.core.foyer.ScreensaverConfig
 import app.toque.core.foyer.StatusReport
 import app.toque.core.foyer.StatusTracker
 import app.toque.core.i18n.tr
@@ -50,6 +51,11 @@ class Foyer private constructor(private val app: ToqueApp) {
     // Photos sur leur propre fil : un site lent ne retarde jamais un état ou une alerte.
     private val photoWorker = HandlerThread("toque-foyer-photos").apply { start() }
     private val photosBg = Handler(photoWorker.looper)
+    // Fichiers de l'écran de veille : leur propre fil, un à la fois (jusqu'à 15 Mo chacun).
+    private val mediaWorker = HandlerThread("toque-foyer-media").apply { start() }
+    private val mediaBg = Handler(mediaWorker.looper)
+    private val mediaTried = HashMap<String, Long>()
+    @Volatile private var mediaBusy = false
     private val main = Handler(Looper.getMainLooper())
     private val secretFile = File(app.filesDir, "foyer-secret")
     private val version = try {
@@ -140,6 +146,9 @@ class Foyer private constructor(private val app: ToqueApp) {
     fun syncSoon() {
         if (System.currentTimeMillis() - prefs.foyerLastSyncMs > 60_000) syncNow()
     }
+
+    /** Une étape attend quelqu'un ou un arrêt de sécurité reste affiché : pas d'écran de veille. */
+    fun needsAttention(): Boolean = tracker.heldState == "waiting" || tracker.heldState == "alert"
 
     fun interaction() {
         tracker.interaction()
@@ -359,6 +368,7 @@ class Foyer private constructor(private val app: ToqueApp) {
             304 -> {
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
                 queueMissingPhotos()
+                queueScreensaver()
                 idleDelay()
             }
             200 -> {
@@ -374,6 +384,7 @@ class Foyer private constructor(private val app: ToqueApp) {
                 }
                 // Photos manquantes, que le contenu ait changé ou non (une photo refusée la dernière fois est reprise).
                 queueMissingPhotos()
+                queueScreensaver()
                 prefs.foyerEtag = r.etag.orEmpty()
                 prefs.foyerLastSyncMs = System.currentTimeMillis()
                 prefs.foyerLastResult = tr("%d recettes du foyer", feed.recipes.size)
@@ -412,6 +423,10 @@ class Foyer private constructor(private val app: ToqueApp) {
         prefs.foyerRobotName = ""
         prefs.foyerPhotos = "{}"
         photoTried.clear()
+        // L'écran de veille du foyer s'en va aussi : l'horloge revient.
+        prefs.screensaver = ""
+        mediaTried.clear()
+        mediaBg.post { cleanScreensaver(emptyList()) }
         try {
             app.recipes.removeAllExcept(emptySet(), origin = RecipeRepo.FOYER)
         } catch (e: Exception) {
@@ -438,6 +453,63 @@ class Foyer private constructor(private val app: ToqueApp) {
         if (feed.household.isNotBlank()) prefs.foyerHousehold = feed.household
         prefs.foyerRobotName = feed.robotName
         prefs.foyerPhotos = Json.write(photos)
+        prefs.screensaver = ScreensaverConfig.encode(feed.screensaver ?: ScreensaverConfig.DEFAULT)
+        changed()
+    }
+
+    // ------------------------------------------------------------------ écran de veille
+
+    /** Dossier des fichiers de l'écran de veille (privé à Toque). */
+    val screensaverDir: File get() = File(app.filesDir, "screensaver").apply { mkdirs() }
+
+    /** Le fichier prêt pour [stem] (« <id>-<version> »), ou null tant qu'il n'est pas téléchargé. */
+    fun screensaverFile(stem: String): File? =
+        screensaverDir.listFiles()?.firstOrNull { it.name.startsWith("$stem.") && !it.name.endsWith(".part") && it.length() > 0 }
+
+    /**
+     * Fichiers de l'écran de veille encore absents, téléchargés un à un sur leur fil (après chaque
+     * synchro, 304 compris). Chacun est essayé au plus une fois par heure ; ceux que Foyer ne liste
+     * plus sont effacés.
+     */
+    private fun queueScreensaver() {
+        val config = ScreensaverConfig.decode(prefs.screensaver)
+        val items = config.items
+        if (mediaBusy) return
+        val now = SystemClock.elapsedRealtime()
+        val due = items.filter { item ->
+            if (screensaverFile(item.stem) != null) return@filter false
+            val last = mediaTried[item.stem]
+            if (last != null && now - last < 60 * 60_000L) return@filter false
+            mediaTried[item.stem] = now
+            true
+        }
+        mediaBusy = true
+        mediaBg.post {
+            try {
+                cleanScreensaver(items.map { it.stem })
+                for (item in due) {
+                    if (screensaverFile(item.stem) != null) continue
+                    try {
+                        val key = if (FoyerHttp.isFoyerFile(item.url)) secret() else null
+                        FoyerHttp.downloadMedia(item.url, item.kind, userAgent, key, screensaverDir, item.stem)
+                        changed()
+                    } catch (t: Throwable) {
+                        log.write("foyer", "écran de veille : fichier ignoré (${t.javaClass.simpleName} ${t.message.orEmpty()})")
+                    }
+                }
+            } finally {
+                mediaBusy = false
+            }
+        }
+    }
+
+    /** Efface les fichiers que Foyer ne liste plus (et les restes d'un téléchargement coupé). */
+    private fun cleanScreensaver(keep: List<String>) {
+        val wanted = keep.toHashSet()
+        for (f in screensaverDir.listFiles().orEmpty()) {
+            val stem = f.name.substringBeforeLast('.')
+            if (f.name.endsWith(".part") || stem !in wanted) f.delete()
+        }
     }
 
     /**
@@ -471,7 +543,7 @@ class Foyer private constructor(private val app: ToqueApp) {
             if (repo.imageFile(name) != null) continue
             try {
                 // La clé du robot ne part qu'avec une photo gardée par Foyer lui-même.
-                val key = if (FoyerHttp.isFoyerPhoto(url)) secret() else null
+                val key = if (FoyerHttp.isFoyerFile(url)) secret() else null
                 Photos.save(FoyerHttp.download(url, userAgent, key), repo.imagesDir, name)
                 saved++
                 Thread.sleep(150)

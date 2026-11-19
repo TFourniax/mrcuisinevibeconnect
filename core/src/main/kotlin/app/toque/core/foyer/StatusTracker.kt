@@ -74,6 +74,9 @@ class StatusTracker(private val clock: () -> Long, private val graceMs: Long = 4
     private var wasActive = false
     private var alertNotified: String? = null
 
+    /** Ce qui reste affiché pour Foyer (« waiting », « done », « alert ») ; null au repos. Lecture seule. */
+    val heldState: String? get() = held?.state
+
     fun interaction() {
         lastInteraction = clock()
         // Quelqu'un est revenu au robot après « c'est prêt » (hors recette) ou après un arrêt
