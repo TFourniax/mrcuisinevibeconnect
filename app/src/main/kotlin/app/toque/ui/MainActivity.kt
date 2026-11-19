@@ -7,6 +7,7 @@ import android.media.ToneGenerator
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -29,6 +30,8 @@ import app.toque.core.machine.PauseReason
 import app.toque.core.machine.SafetyPolicy
 import app.toque.core.machine.Snapshot
 import app.toque.core.machine.Verdict
+import app.toque.core.ui.RingPolicy
+import app.toque.core.ui.RingState
 import app.toque.core.recipes.Recipe
 import app.toque.recipes.LidlSync
 import app.toque.recipes.SyncService
@@ -399,18 +402,18 @@ class MainActivity : Activity() {
      * Ce que fait le robot, pour l'anneau : alerte (défaut, arrêt de sécurité), une étape qui
      * attend quelqu'un, une cuisson (ou pause, turbo), « c'est prêt » pendant 2 minutes, ou rien.
      */
-    private fun ringState(): app.toque.core.ui.RingState {
+    private fun ringState(): RingState {
         val s = snapshot
         val held = Foyer.of(app).tracker.heldState
-        val now = android.os.SystemClock.elapsedRealtime()
+        val now = SystemClock.elapsedRealtime()
         if (held == "done" && ringHeld != "done") ringDoneAt = now
         ringHeld = held
         return when {
-            s.hasFault || held == "alert" || (s.state == JobState.PAUSED && s.pauseReason == PauseReason.SAFETY.name) -> app.toque.core.ui.RingState.ALERT
-            held == "waiting" -> app.toque.core.ui.RingState.WAITING
-            s.busy || s.jobActive || s.turboActive -> app.toque.core.ui.RingState.COOKING
-            held == "done" && now - ringDoneAt < app.toque.core.ui.RingPolicy.DONE_MS -> app.toque.core.ui.RingState.DONE
-            else -> app.toque.core.ui.RingState.IDLE
+            s.hasFault || held == "alert" || (s.state == JobState.PAUSED && s.pauseReason == PauseReason.SAFETY.name) -> RingState.ALERT
+            held == "waiting" -> RingState.WAITING
+            s.busy || s.jobActive || s.turboActive -> RingState.COOKING
+            held == "done" && now - ringDoneAt < RingPolicy.DONE_MS -> RingState.DONE
+            else -> RingState.IDLE
         }
     }
 
