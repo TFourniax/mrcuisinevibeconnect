@@ -56,6 +56,7 @@ class MainActivity : Activity() {
     private var lastKnobMs = 0L
     private lateinit var knobNav: KnobNav
     private lateinit var screensaver: Screensaver
+    private lateinit var ring: RingLight
     /** Le geste qui a fermé l'écran de veille ne va pas plus loin (doigt levé, touche relâchée). */
     private var swallowTouch = false
     private var swallowKey = -1
@@ -98,6 +99,8 @@ class MainActivity : Activity() {
         knobNav = KnobNav(this, root)
         // Le cadre du bouton rotatif s'efface sous l'écran de veille.
         screensaver = Screensaver(this, root) { knobNav.touch() }
+        ring = RingLight(prefs, busy = { ringBusy() }, screensaverShown = { screensaver.showing }, lastActivityAt = { screensaver.lastActivityAt })
+        screensaver.onChange = { ring.update() }
 
         try {
             tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
@@ -126,6 +129,7 @@ class MainActivity : Activity() {
         unsubscribe = app.machine.onSnapshot { s ->
             if (machineMoved(lastSeen, s)) screensaver.activity()
             lastSeen = s
+            ring.update()
             topBar.update(s)
             machineBar.update(s)
             stack.lastOrNull()?.onSnapshot(s)
@@ -133,6 +137,7 @@ class MainActivity : Activity() {
         unsubscribeEvents = app.machine.onEvent { e -> onMachineEvent(e) }
         topBar.startClock()
         screensaver.start()
+        ring.start()
     }
 
     override fun onResume() {
@@ -144,6 +149,8 @@ class MainActivity : Activity() {
     }
 
     override fun onStop() {
+        // Une autre appli devant (appli d'origine, paramètres) : l'anneau lui est rendu allumé.
+        ring.stop(otherApp = prefs.returnBubble || prefs.vendorSession)
         screensaver.stop()
         closeVideo()
         unsubscribe?.invoke()
@@ -380,6 +387,17 @@ class MainActivity : Activity() {
     /** Réglages › « Voir l'écran de veille ». */
     fun showScreensaver() = screensaver.showNow()
 
+    // ------------------------------------------------------------------ anneau lumineux
+
+    /** L'anneau reste allumé pendant une cuisson, une pause, un turbo, un défaut ou une étape qui attend. */
+    private fun ringBusy(): Boolean {
+        val s = snapshot
+        return s.busy || s.jobActive || s.turboActive || s.hasFault || Foyer.of(app).needsAttention()
+    }
+
+    /** L'anneau désigné ou son réglage a changé (Réglages, Outils › Anneau lumineux). */
+    fun ringChanged() = ring.reset()
+
     /** Quelque chose bouge à la machine (couvercle, bol, poids, cuisson, défaut) : quelqu'un est là. */
     private fun machineMoved(before: Snapshot?, now: Snapshot): Boolean {
         if (before == null) return false
@@ -543,6 +561,11 @@ class MainActivity : Activity() {
     /** Retour depuis l'appli d'origine : on la coupe du moteur, on reprend la main, on importe. */
     private fun endVendorSession() {
         prefs.vendorSession = false
+        // Observation de l'anneau (Outils › Anneau lumineux) : le relevé s'arrête au retour.
+        if (RingWatch.running) {
+            RingWatch.stop()
+            main.postDelayed({ (current as? app.toque.ui.screens.RingScreen)?.refreshObserved() }, 1_500)
+        }
         toast(tr("Reprise de la main sur le robot…"))
         Thread {
             val sync = LidlSync(this, prefs, app.recipes, app.log)
@@ -554,7 +577,7 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    fun openVendorApp() {
+    fun openVendorApp(onOpen: (() -> Unit)? = null) {
         if (snapshot.busy) {
             toast(tr("Arrête d'abord le programme en cours"), Ui.WARN)
             return
@@ -587,6 +610,7 @@ class MainActivity : Activity() {
                             prefs.vendorSession = true
                             prefs.returnBubble = true
                             ReturnBubble.start(this)
+                            onOpen?.invoke()
                             startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         }
                     }

@@ -288,6 +288,20 @@ class Prefs(context: Context) {
             p.edit().putString("screensaver", v).commit()
         }
 
+    /** Voyant de /sys/class/leds désigné comme l'anneau du bouton rotatif ("" : pas encore trouvé). */
+    var ringLed: String
+        get() = p.getString("ringLed", "") ?: ""
+        set(v) {
+            p.edit().putString("ringLed", v).commit()
+        }
+
+    /** Anneau lumineux : « auto » (quand on se sert du robot), « on » ou « off » (RingPolicy). */
+    var ringMode: String
+        get() = p.getString("ringMode", "auto") ?: "auto"
+        set(v) {
+            p.edit().putString("ringMode", v).commit()
+        }
+
     /** Dernière version publiée plus récente que celle installée ("" : aucune), vue la nuit. */
     var updateAvailable: String
         get() = p.getString("updateAvailable", "") ?: ""

@@ -48,6 +48,10 @@ l'écran du robot.
   minute, ou les animations du foyer (GIF, vidéos MP4, images) ajoutées dans Foyer › Réglages ›
   Monsieur Cuisine. Toque ne fournit aucune image ; les fichiers restent privés au foyer. Un doigt,
   un tour de bouton ou un mouvement à la machine le referme.
+- **L'anneau lumineux du bouton**, une fois trouvé dans Réglages › Outils › Anneau lumineux (Toque
+  liste les voyants de la tablette et peut observer lequel l'appli d'origine commande) : allumé
+  quand on se sert du robot ou pendant une cuisson, éteint après le délai de l'écran de veille ;
+  ou toujours allumé, ou toujours éteint.
 - **Recettes Lidl, directement depuis monsieur-cuisine.com**. Toque télécharge les recettes
   officielles du Monsieur Cuisine connect (environ 1 700 en français, avec les réglages machine de
   chaque étape) par l'API publique du site, chaque nuit ou sur demande : aucun compte, aucun

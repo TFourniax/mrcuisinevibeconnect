@@ -46,6 +46,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private lateinit var foyerCode: TextView
     private lateinit var foyerButtons: LinearLayout
     private lateinit var saverText: TextView
+    private lateinit var ringBox: LinearLayout
     private var foyerUnsub: (() -> Unit)? = null
     private var foyerCounted = false
     private var settingTime = false
@@ -128,6 +129,12 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             Ui.lp(Ui.WRAP, Ui.WRAP, t = 10))
         renderSaver()
 
+        // ---- Anneau lumineux du bouton : quand il s'allume (une fois le voyant trouvé dans Outils)
+        val ring = section(right, tr("Anneau lumineux"), Icon.Kind.SETTINGS)
+        ringBox = Ui.vertical(c)
+        ring.addView(ringBox)
+        renderRing()
+
         // ---- Langue (titre bilingue : trouvable quelle que soit la langue affichée)
         val language = section(right, "Langue · Language", Icon.Kind.INFO)
         val options = listOf(I18n.AUTO to tr("Automatique (langue du système)")) + I18n.languages.map { it.code to it.name }
@@ -182,6 +189,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         val tools = section(right, tr("Outils"), Icon.Kind.SETTINGS)
         tools.addView(link(tr("Diagnostic de la base moteur")) { a.push(DiagnosticsScreen(a)) })
         tools.addView(link(tr("Bouton rotatif")) { a.push(KnobScreen(a)) })
+        tools.addView(link(tr("Anneau lumineux")) { a.push(RingScreen(a)) })
         tools.addView(link(tr("Journal")) { a.push(LogScreen(a)) })
         tools.addView(link(tr("Paramètres Android")) { a.openAndroidSettings() })
         tools.addView(link(tr("Revenir à l'appli d'origine")) { restoreVendor() })
@@ -603,9 +611,34 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         foyerCounted = true
         renderFoyer()
         renderSaver()
+        renderRing()
         mode = a.prefs.mode
         renderModes()
         if (!syncing) refreshSync()
+    }
+
+    /** Anneau lumineux : le réglage une fois le voyant désigné, sinon comment le trouver. */
+    private fun renderRing() {
+        if (!::ringBox.isInitialized) return
+        ringBox.removeAllViews()
+        val led = a.prefs.ringLed
+        if (led.isEmpty()) {
+            ringBox.addView(Ui.text(c, tr("Toque ne sait pas encore comment la tablette commande l'anneau du bouton. Trouve-le une fois dans Outils › Anneau lumineux."), 16f, Ui.TEXT2)
+                .apply { setLineSpacing(0f, 1.15f) })
+            ringBox.addView(Ui.button(c, tr("Trouver l'anneau"), Ui.Style.SECONDARY, height = 52) { a.push(RingScreen(a)) }, Ui.lp(Ui.WRAP, Ui.WRAP, t = 10))
+            return
+        }
+        val modes = listOf(
+            app.toque.core.ui.RingPolicy.AUTO to tr("Quand on se sert du robot"),
+            app.toque.core.ui.RingPolicy.ALWAYS_ON to tr("Toujours allumé"),
+            app.toque.core.ui.RingPolicy.ALWAYS_OFF to tr("Toujours éteint"),
+        )
+        ringBox.addView(dropdown(modes, app.toque.core.ui.RingPolicy.mode(a.prefs.ringMode)) { m ->
+            a.prefs.ringMode = m
+            a.ringChanged()
+        }, Ui.lp(Ui.MATCH, Ui.u(58), t = 4))
+        ringBox.addView(Ui.text(c, tr("Éteint après le délai de l'écran de veille (2 minutes sans écran de veille), allumé dès qu'on touche le robot ou pendant une cuisson. Voyant : %s.", led),
+            15f, Ui.TEXT3).apply { setLineSpacing(0f, 1.15f) }, Ui.lp(t = 8))
     }
 
     override fun onSnapshot(s: Snapshot) {

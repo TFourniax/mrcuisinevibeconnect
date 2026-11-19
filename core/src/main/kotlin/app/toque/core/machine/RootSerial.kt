@@ -69,6 +69,52 @@ object RootShell {
     }
 
     fun available(): Boolean = run("id -u", 8_000).out.trim() == "0"
+
+    /**
+     * Commande longue (une seule session root) dont chaque ligne de sortie est remise à [onLine]
+     * dès qu'elle arrive ; [stop] ou [timeoutMs] l'arrêtent. Renvoie le code de sortie (-1 : échec).
+     */
+    fun stream(command: String, timeoutMs: Long, stop: () -> Boolean, onLine: (String) -> Unit): Int {
+        val p = try {
+            ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
+        } catch (_: IOException) {
+            return -1
+        }
+        try {
+            p.outputStream.close()
+        } catch (_: IOException) {
+        }
+        val deadline = System.currentTimeMillis() + timeoutMs
+        val watchdog = Thread {
+            try {
+                while (true) {
+                    if (stop() || System.currentTimeMillis() > deadline) {
+                        p.destroy()
+                        return@Thread
+                    }
+                    try {
+                        p.exitValue()
+                        return@Thread
+                    } catch (_: IllegalThreadStateException) {
+                    }
+                    Thread.sleep(200)
+                }
+            } catch (_: InterruptedException) {
+            }
+        }
+        watchdog.isDaemon = true
+        watchdog.start()
+        try {
+            p.inputStream.bufferedReader(Charsets.UTF_8).useLines { lines -> lines.forEach(onLine) }
+        } catch (_: IOException) {
+        }
+        watchdog.interrupt()
+        return try {
+            p.waitFor()
+        } catch (_: InterruptedException) {
+            -1
+        }
+    }
 }
 
 /**
