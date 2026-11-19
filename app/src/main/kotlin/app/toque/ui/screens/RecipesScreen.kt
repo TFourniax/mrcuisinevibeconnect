@@ -222,7 +222,7 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
         val root = Ui.vertical(c)
         val imageBox = FrameLayout(c)
         val image = ImageView(c)
-        val initials = Ui.text(c, "", 44f, 0x55FFFFFF, Ui.THIN)
+        val dish = Ui.dishIcon(c)
         val title = Ui.ellipsize(Ui.text(c, "", 18f, Ui.TEXT, Ui.MEDIUM), 2)
         val meta = Ui.ellipsize(Ui.text(c, "", 15f, Ui.TEXT2))
         val star = Icon(c, Icon.Kind.STAR_FILLED, Ui.ACCENT)
@@ -232,7 +232,7 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
             root.background = Ui.round(Ui.SURFACE, 22f)
             root.layoutParams = AbsListView.LayoutParams(AbsListView.LayoutParams.MATCH_PARENT, Ui.u(232))
             image.scaleType = ImageView.ScaleType.CENTER_CROP
-            imageBox.addView(initials, Ui.flp(Ui.WRAP, Ui.WRAP, Gravity.CENTER))
+            imageBox.addView(dish, Ui.flp(Ui.u(52), Ui.u(52), Gravity.CENTER))
             imageBox.addView(image, Ui.flp())
             imageBox.addView(star, Ui.flp(Ui.u(26), Ui.u(26), Gravity.TOP or Gravity.END).apply { setMargins(0, Ui.u(10), Ui.u(10), 0) })
             imageBox.clipToOutline = true
@@ -255,7 +255,7 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
             meta.text = parts.joinToString(" · ")
             star.visibility = if (a.app.recipes.isFavorite(e.id)) View.VISIBLE else View.GONE
             imageBox.background = Ui.gradient(Ui.placeholderColors(e.title), 0f)
-            initials.text = Ui.initials(e.title)
+            Ui.setDish(dish, e.title, e.category)
             ImageLoader.load(image, a.app.recipes.imageFile(e.image), Ui.u(260))
         }
     }

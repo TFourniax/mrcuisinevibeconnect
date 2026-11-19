@@ -99,15 +99,28 @@ object FoyerHttp {
         }
     }
 
+    /** Une photo gardée par Foyer lui-même (https, l'hôte exact de Foyer, chemin des photos du robot). */
+    fun isFoyerPhoto(url: String): Boolean = try {
+        val u = URL(url)
+        val base = URL(BASE)
+        u.protocol == "https" && u.host.equals(base.host, ignoreCase = true) && (u.port == -1 || u.port == 443) &&
+            u.path.startsWith("/api/robot/photo/")
+    } catch (_: Exception) {
+        false
+    }
+
     /**
      * Une photo de recette : https seulement, jamais une adresse du réseau local (le robot est
      * chez toi), redirections vérifiées une à une (3 au plus), 20 s en tout, 4 Mo au plus, et
      * seulement du JPEG, du PNG ou du WebP reconnus à leurs premiers octets : rien d'autre
-     * n'arrive au décodeur d'images d'Android 6.
+     * n'arrive au décodeur d'images d'Android 6. [secret] (la clé du robot) n'accompagne que la
+     * première requête, et seulement vers une photo gardée par Foyer : jamais une redirection,
+     * jamais un autre site.
      */
-    fun download(url: String, userAgent: String): ByteArray {
+    fun download(url: String, userAgent: String, secret: String? = null): ByteArray {
         val deadline = System.currentTimeMillis() + 20_000
         var target = URL(url)
+        var hop = 0
         repeat(4) {
             if (target.protocol != "https") throw IOException("https uniquement")
             if (InetAddress.getAllByName(target.host).any { isLocal(it) }) throw IOException("adresse locale refusée")
@@ -117,6 +130,8 @@ object FoyerHttp {
                 c.connectTimeout = 8_000
                 c.readTimeout = 8_000
                 c.setRequestProperty("User-Agent", userAgent)
+                if (secret != null && hop == 0 && isFoyerPhoto(target.toString())) c.setRequestProperty("Authorization", "Bearer $secret")
+                hop++
                 val code = c.responseCode
                 if (code in 300..399) {
                     val next = c.getHeaderField("Location") ?: throw IOException("redirection sans adresse")

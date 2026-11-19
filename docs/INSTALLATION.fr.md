@@ -31,9 +31,9 @@ Sur un PC Windows, ce guide ne s'applique pas : suivez celui du
 
 | | À avoir | Remarque |
 |---|---|---|
-| ☐ | Un **Mac** (Apple silicon ou Intel), connecté à Internet | Le mot de passe de session du Mac vous sera demandé |
+| ☐ | Un **Mac** (Apple silicon ou Intel), connecté à Internet | Le mot de passe de session du Mac vous sera demandé. Pour installer avec Claude ([3a](#3a-installer-avec-claude-recommandé)) : macOS 13 Ventura ou plus récent ( › À propos de ce Mac) |
 | ☐ | Un câble de données **USB-A mâle ↔ USB-A mâle** | Les deux bouts sont de grandes prises USB rectangulaires. Un câble USB-C ↔ USB-A **ne marche pas** |
-| ☐ | Si le Mac n'a que des ports USB-C : un **adaptateur USB-C → USB-A** (femelle) ou un hub | Le câble A-A se branche dedans |
+| ☐ | Si le Mac n'a que des ports USB-C : un **adaptateur USB-C → USB-A** (femelle) ou un **hub** avec une prise USB-A | Le câble A-A se branche dedans. Sur un hub, préférez un port USB 2.0 (languette blanche ou noire) ; si le Mac ne voit pas le robot, essayez un autre port |
 | ☐ | Un **petit tournevis Torx** | Pour la trappe de maintenance sous le robot |
 | ☐ | Le **mot de passe du Wi-Fi** de la maison | Pour la fin |
 | ☐ | Le robot **près du Mac**, branché sur le secteur, **bol vide** | Il reste branché au secteur du début à la fin |
@@ -44,8 +44,9 @@ Sur un PC Windows, ce guide ne s'applique pas : suivez celui du
 - Une erreur peut rendre la tablette du robot inutilisable. Le script vérifie tout avant d'écrire
   quoi que ce soit, et la **sauvegarde** faite au début est votre voie de retour : ne la sautez
   jamais, gardez-en une copie.
-- Toque tourne au quotidien sur deux robots : un installé depuis Windows (octobre 2026), un depuis
-  un Mac (novembre 2026). C'est peu : à vos risques.
+- Toque tourne au quotidien sur trois robots : un installé depuis Windows (octobre 2026), un C3
+  depuis un Mac Apple silicon et un B2 de 2018 depuis un Mac Intel par un hub USB-C (novembre
+  2026). C'est peu : à vos risques.
 
 ### Les 3 règles à retenir
 
@@ -70,6 +71,11 @@ Tout se fait dans le **Terminal** : ouvrez-le avec `Cmd + Espace`, tapez `Termin
 Pour chaque commande ci-dessous : copiez-la, collez-la dans le Terminal (`Cmd + V`), `Entrée`, et
 attendez qu'elle se termine (le curseur revient).
 
+Votre Mac a une puce **Apple** (M1, M2…) ou **Intel** : c'est écrit dans  › À propos de ce Mac
+(ligne *Puce* ou *Processeur*). Les étapes 1 et 2 diffèrent ; la suite est la même.
+
+**Mac Apple silicon (M1, M2…)**
+
 1. **Installer Homebrew** (l'outil qui installe le reste) :
    ```
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -82,6 +88,38 @@ attendez qu'elle se termine (le curseur revient).
    ```
    brew install python libusb
    ```
+
+**Mac Intel** — Homebrew ne s'installe plus sur les Mac Intel (*Homebrew on macOS is only
+supported on Apple Silicon processors*) : on passe par MacPorts, son équivalent.
+
+1. **Installer les outils d'Apple** (dont git) :
+   ```
+   xcode-select --install
+   ```
+   Une fenêtre s'ouvre : **Installer**, puis **Accepter**. Comptez 5 à 15 minutes ; attendez la fin.
+   S'il répond qu'ils sont déjà installés, passez à la suite.
+2. **Installer MacPorts, puis Python et libusb** :
+   - Sur [macports.org/install.php](https://www.macports.org/install.php), téléchargez le fichier
+     `.pkg` qui porte le nom de **votre version de macOS** ( › À propos de ce Mac), ouvrez-le et
+     installez-le. Puis **quittez le Terminal (`Cmd + Q`) et rouvrez-le** : `port version` doit
+     afficher un numéro.
+   - Puis :
+     ```
+     sudo port install python313 libusb
+     ```
+     Mot de passe du Mac (rien ne s'affiche, c'est normal) ; s'il demande `Continue? [Y/n]`,
+     tapez `Y`. Comptez 5 à 20 minutes.
+   - Le Terminal répond `port: command not found` (ou plus tard `claude: command not found`) ?
+     Votre Terminal utilise l'ancien shell bash. Tapez la ligne qui correspond, puis rouvrez le
+     Terminal :
+     ```
+     echo 'export PATH="/opt/local/bin:/opt/local/sbin:$PATH"' >> ~/.bash_profile
+     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bash_profile
+     ```
+     (la première pour `port`, la seconde pour `claude`).
+
+**Puis, sur tous les Mac :**
+
 3. **Télécharger ce dépôt** dans le dossier `MrCuisineVibeConnect` de votre dossier personnel :
    ```
    git clone https://github.com/TFourniax/mrcuisinevibeconnect.git ~/MrCuisineVibeConnect
@@ -98,9 +136,11 @@ Dans les deux cas, le robot ne change qu'aux étapes qui le disent.
 > **Le robot a déjà Toque** (une version du dépôt d'origine, installée avant) ? Inutile de tout
 > refaire : pas de câble ni de trappe. Robot allumé, sur le Wi-Fi :
 > ```
-> brew install android-platform-tools
+> mkdir -p ~/Toque && curl -fsSL -o ~/Toque/platform-tools.zip https://dl.google.com/android/repository/platform-tools-latest-darwin.zip && unzip -q -o ~/Toque/platform-tools.zip -d ~/Toque
 > bash tools/setup/toque-setup.sh update --ip <adresse IP du robot>
 > ```
+> (la première ligne télécharge adb, l'outil de Google qui parle au robot, sur un Mac Intel comme
+> Apple silicon).
 > L'adresse IP : dans Toque, 5 appuis rapides sur l'heure en haut à droite (paramètres Android) ›
 > Wi-Fi › le réseau. La première fois, le robot demande « Autoriser le débogage ? » : cochez
 > « Toujours autoriser », OK, puis relancez la commande. Passez ensuite à
@@ -110,7 +150,8 @@ Dans les deux cas, le robot ne change qu'aux étapes qui le disent.
 
 [Claude Code](https://code.claude.com/docs/en/quickstart) est un assistant IA qui tape les
 commandes dans le Terminal, lit les résultats et vous dit quoi faire de vos mains. Il faut un
-abonnement Claude payant (Pro ou plus) : l'offre gratuite ne suffit pas.
+abonnement Claude payant (Pro ou plus) : l'offre gratuite ne suffit pas, et **macOS 13 Ventura ou
+plus récent** (sinon, passez à [3b](#3b-installer-vous-même-étape-par-étape)).
 
 1. Installez-le :
    ```
@@ -206,7 +247,9 @@ il est resté en mode téléchargement).
 ✅ À la fin : `OK: flash-twrp done`
 
 4. **Éteignez** le robot, **débranchez** le câble, **rallumez** : l'écran de **TWRP** apparaît.
-   **Rebranchez** le câble.
+   La première fois, il demande *Unmodified System Partition — Keep System Read only?* : faites
+   glisser **Swipe to Allow Modifications** jusqu'au bout (l'étape suivante modifie justement le
+   système ; ne cochez rien). **Rebranchez** le câble.
 
 ### Étape 4 · Préparer le root — `root`
 
@@ -344,12 +387,14 @@ d'origine »** la laisse se synchroniser avec les serveurs Lidl ; revenez avec l
 | Ce que vous voyez | Pourquoi | Que faire |
 |---|---|---|
 | Le robot affiche une **batterie** au lieu de démarrer | Allumé avec le câble branché | Éteindre, débrancher, allumer, rebrancher une fois l'écran allumé |
-| `backup` / `flash-twrp` attendent sans fin (*Waiting for device*) | Mauvais câble, mauvais port, port USB-C sans adaptateur, ou robot déjà allumé | Câble A-A, port « Android USB », adaptateur USB-C → USB-A. Robot éteint, relancer l'étape, allumer quand c'est demandé |
+| `backup` / `flash-twrp` attendent sans fin (*Waiting for device*) | Mauvais câble, mauvais port, port USB-C sans adaptateur, ou robot déjà allumé | Câble A-A, port « Android USB », adaptateur ou hub USB-C → USB-A (sur un hub, essayer un autre port, USB 2.0 de préférence). Robot éteint, relancer l'étape, allumer quand c'est demandé |
 | *Handshake failed, retrying...* toutes les 10 s | Normal : le Mac attend le robot | Allumer le robot, une seule fois |
 | *Sync error* ou *Failed to upload da* | Le robot était déjà en mode téléchargement, ou `prepare` pas fait | `prepare`, éteindre le robot, relancer l'étape |
 | Écran du robot noir après `backup` ou `flash-twrp` | Il reste en mode téléchargement | L'éteindre |
 | Le Mac demande d'**autoriser l'accessoire** | Sécurité des Mac Apple silicon | **Autoriser**, puis éteindre et rallumer le robot |
-| `MISSING: Python` ou `MISSING: libusb` | Paquets manquants | `brew install python libusb`. `brew` introuvable : refaire les *Next steps* de Homebrew ([partie 2](#2-préparer-le-mac-une-seule-fois)) |
+| `MISSING: Python` ou `MISSING: libusb` | Paquets manquants | Apple silicon : `brew install python libusb` (`brew` introuvable : refaire les *Next steps* de Homebrew). Intel : `sudo port install python313 libusb` ([partie 2](#2-préparer-le-mac-une-seule-fois)) |
+| *Homebrew on macOS is only supported on Apple Silicon processors* | Mac Intel | Passer par MacPorts ([partie 2](#2-préparer-le-mac-une-seule-fois), « Mac Intel ») |
+| TWRP demande *Keep System Read only?* | Premier démarrage de TWRP | **Swipe to Allow Modifications** |
 | Le Mac ne voit pas le robot dans TWRP | Câble branché avant que TWRP soit affiché | Débrancher, rebrancher |
 | Écran de batterie entre `root` et `flash-root` | Le robot a redémarré câble branché | Éteindre, débrancher, rallumer : TWRP revient. Rebrancher, continuer |
 | `flash-root` : *write failed* ou *read-back differs* | Erreur d'écriture | **Ne pas éteindre le robot** (TWRP tourne toujours). Relancer `flash-root` |
@@ -415,7 +460,8 @@ par `prepare`.
 DYLD_FALLBACK_LIBRARY_PATH="$(brew --prefix)/lib" ../venv/bin/python ../src/mtk.py --serialport DETECT multi "ro 0x1d20000 0x1000000 boot-original.img --parttype user;ro 0x2d20000 0x1000000 recovery-original.img --parttype user"
 ```
 
-(le chemin de libusb est nécessaire sur Apple silicon ; `--serialport` ne marche qu'avec les
+(le chemin de libusb est nécessaire sur Apple silicon ; sur un Mac Intel avec MacPorts, remplacer
+`$(brew --prefix)/lib` par `/opt/local/lib` ; `--serialport` ne marche qu'avec les
 corrections qu'applique `prepare`).
 
 **`flash-twrp`** écrit TWRP (`hacks/recovery.img`) dans `boot` uniquement, et le relit pour vérifier.

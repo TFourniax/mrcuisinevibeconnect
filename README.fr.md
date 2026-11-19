@@ -24,7 +24,7 @@ de zéro, pour Mac. Sous Windows, suivez le
 [guide du dépôt d'origine](https://github.com/Wuki60/MrCuisineVibeConnect/blob/main/docs/INSTALLATION.fr.md).
 
 En bref : il faut un Mac, un câble **USB-A mâle ↔ USB-A mâle**, un petit tournevis Torx et 1 à 2
-heures. Vous préparez le Mac (Homebrew, puis une copie de ce dépôt), puis soit vous laissez
+heures. Vous préparez le Mac (Homebrew, ou MacPorts sur un Mac Intel, puis une copie de ce dépôt), puis soit vous laissez
 [Claude Code](https://code.claude.com/docs/en/quickstart) faire l'installation en suivant
 [AGENTS.md](AGENTS.md), soit vous lancez vous-même [`tools/setup/toque-setup.sh`](tools/setup/toque-setup.sh),
 une étape à la fois. Il sauvegarde d'abord le robot, le roote avec Magisk, installe Toque et active
@@ -165,6 +165,7 @@ d'origine.
 - Protocole : [Monsieur Cuisine Developer SDK](https://github.com/antrea/monsieur-cuisine-developer-sdk) (MIT).
 - Accès au robot : [Monsieur-Cuisine-Connect-Hack](https://github.com/EliasKotlyar/Monsieur-Cuisine-Connect-Hack).
 - Mode téléchargement MediaTek sous macOS : [mtkclient](https://github.com/bkerler/mtkclient) (GPLv3, téléchargé par `prepare`, non inclus ; `prepare` applique les corrections pour le pilote série de macOS de `tools/setup/mtkclient-macos-serial.patch`).
+- Icônes des plats sans photo (`app/src/main/res/drawable/dish_*.xml`) : [Lucide](https://lucide.dev) (ISC, licence dans `tools/icons/LUCIDE-LICENSE.txt`), converties par `tools/icons/lucide-to-vector.mjs`.
 
 Licence MIT. Ce dépôt ne contient aucune recette, image ni code de Lidl : chaque robot télécharge
 lui-même les recettes sur monsieur-cuisine.com, pour l'usage personnel de son propriétaire.

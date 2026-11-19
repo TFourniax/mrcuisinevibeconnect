@@ -35,9 +35,20 @@ household. Either way the robot erases the household's recipes and meals and sho
 - A linked robot can read the household's shared recipes and planned meals, report its state and
   mark a recipe as cooked. Nothing else: no private items, no other module, 60 calls a minute,
   and it can cause at most 12 notifications an hour (3 between 21:00 and 08:00).
-- Recipe photos come from the recipes' own sites. The robot only fetches them over https, never
-  from an address of the home network, 20 s and 4 MB at most each, on their own thread, and only
-  JPEG, PNG or WebP of a sane size reach Android 6's image decoder; a bad one is skipped.
+- Recipe photos: Foyer keeps its own copy of each household recipe's photo (the cover of an
+  Instagram reel or a TikTok video, a recipe site's picture, or a photo taken in Foyer) and serves
+  it at `/api/robot/photo/<recipe>?v=…`, to linked robots only: the robot sends its key with that
+  request, and only that one (never on a redirect, never to another site). Older recipes may still
+  point at their site's picture. Either way the robot only fetches photos over https, never from an
+  address of the home network, 20 s and 4 MB at most each, on their own thread, and only JPEG, PNG
+  or WebP of a sane size reach Android 6's image decoder; a bad one is skipped and tried again an
+  hour later at most (a new Toque version re-reads the whole feed, photos included).
+- The robot has no clock battery: after being switched off it believes it is 1970 or 2010, and
+  no secure connection works until the time is set. Toque sets it as soon as the network answers
+  (time servers, else the `Date` header of Foyer's http → https redirect, retried within seconds
+  while the clock is wrong); meanwhile the Foyer card says the clock is not set yet instead of a
+  certificate error. Recipes without a photo show an icon of their kind of dish (soup, cake,
+  fish…, guessed from the title and category).
 - The robot's secret is made once; if it cannot be read, the robot stops instead of making a new
   one (which would unlink it silently).
 - Android 6 lacks the newer root certificates: connections to Foyer and to recipe photos also
@@ -69,6 +80,7 @@ robot checks it again before running it.
 | `GET /api/robot/sync` | Recipes in the `toque-recettes-1` format (ids `foyer-<uuid>`), planned meals of the next 7 days, `pendingSteps`; `ETag` / 304 |
 | `POST /api/robot/status` | `{ state, recipeId, title, stepIndex, stepCount, stepText, tempC, speed, remainingSeconds, alert, notify }` (the end time is computed with the server's clock) |
 | `POST /api/robot/cooked` | `{ recipeId }` |
+| `GET /api/robot/photo/<recipe>?v=…` | The photo Foyer keeps for a shared household recipe (JPEG, PNG or WebP); 401 unlinked, 404 none |
 
 401 means the robot is not (or no longer) linked: Toque shows a code again. The code is in
 `app/src/main/kotlin/app/toque/foyer/` (Android) and `core/.../foyer/` (feed reader and state

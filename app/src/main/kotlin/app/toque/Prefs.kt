@@ -267,6 +267,20 @@ class Prefs(context: Context) {
             p.edit().putString("foyerFeedHash", v).commit()
         }
 
+    /** Photos des recettes du foyer : nom du fichier → adresse (JSON), pour reprendre celles qui manquent. */
+    var foyerPhotos: String
+        get() = p.getString("foyerPhotos", "{}") ?: "{}"
+        set(v) {
+            p.edit().putString("foyerPhotos", v).commit()
+        }
+
+    /** Version de Toque qui a rangé le dernier contenu de Foyer (une nouvelle version le reprend en entier). */
+    var foyerAppliedVersion: String
+        get() = p.getString("foyerAppliedVersion", "") ?: ""
+        set(v) {
+            p.edit().putString("foyerAppliedVersion", v).commit()
+        }
+
     /** Dernière version publiée plus récente que celle installée ("" : aucune), vue la nuit. */
     var updateAvailable: String
         get() = p.getString("updateAvailable", "") ?: ""

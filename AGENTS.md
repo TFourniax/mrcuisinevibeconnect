@@ -32,8 +32,10 @@ work: through libusb the preloader handshake always failed (as in
 serial driver three bugs stopped it (*Sync error*, then the DA upload stopped half-way). `prepare`
 now applies the fixes, [tools/setup/mtkclient-macos-serial.patch](tools/setup/mtkclient-macos-serial.patch),
 and the script uses the serial driver by default. With them, `backup` and two later read-backs
-gave identical images, and `flash-twrp` wrote and verified TWRP. That is one robot and one Mac:
-if download mode does not work from the Mac, see
+gave identical images, and `flash-twrp` wrote and verified TWRP. On **19 November 2026** the procedure
+(through `install` and the link to Foyer) was also done from an **Intel** MacBook Pro (2017, macOS 13, Python and libusb from
+MacPorts) through a USB-C hub, on an older robot (SKMC 1200 **B2**, made 10/2018). That is two
+robots and two Macs: if download mode does not work from the Mac, see
 [When mtkclient does not reach the robot](#when-mtkclient-does-not-reach-the-robot). Tell the
 person this before starting.
 
@@ -47,7 +49,7 @@ person this before starting.
   run other mtkclient commands than the ones the script runs (no erase, no full-flash write, no
   preloader or other partitions).
 - **Never type passwords, never change macOS security settings yourself.** Installing Homebrew
-  packages: ask first, saying which ones.
+  or MacPorts packages: ask first, saying which ones.
 - Download only from the URLs below, and let the script check the SHA-256 of every file (and the
   mtkclient commit). If a check does not match, stop.
 - Ask before each step that writes to the robot (`flash-twrp`, `root`, `flash-root`, `unroot`) — say
@@ -59,22 +61,31 @@ person this before starting.
 
 ## What the person needs
 
-- A Mac (Apple silicon or Intel) with Internet, [Homebrew](https://brew.sh), and the agent able to
-  run commands in Terminal. Python 3.10+ and libusb: `brew install python libusb`; git: Apple's
-  command line tools (`xcode-select --install`). `prepare` says what is missing.
+- A Mac (Apple silicon or Intel) with Internet, and the agent able to run commands in Terminal.
+  Python 3.10+ and libusb, and git (Apple's command line tools, `xcode-select --install`):
+  - **Apple silicon**: [Homebrew](https://brew.sh), `brew install python libusb`.
+  - **Intel**: Homebrew's installer now refuses Intel Macs (*Homebrew on macOS is only supported on
+    Apple Silicon processors*). Use [MacPorts](https://www.macports.org/install.php) (the `.pkg`
+    for the Mac's macOS version, installed by the person), then `sudo port install python313
+    libusb`; `find_libusb` already looks in `/opt/local/lib`. If the person's Terminal runs bash
+    and `port` is not found, `/opt/local/bin` goes on the PATH in `~/.bash_profile` (the guide's
+    part 2 has the line).
+  `prepare` says what is missing. You (Claude Code) need macOS 13 Ventura or later.
 - A **USB-A male ↔ USB-A male data cable**. The robot's port is a device port: a USB-C ↔ USB-A
   cable does **not** work (the Mac's USB-C port never sees it). On a Mac with only USB-C ports, put
-  a **USB-C to USB-A adapter** (female USB-A) or a USB hub between the Mac and the A↔A cable.
+  a **USB-C to USB-A adapter** (female USB-A) or a USB hub between the Mac and the A↔A cable (on a
+  hub, a USB 2.0 port first; another port if the robot is not seen).
 - A small Torx screwdriver (maintenance cover under the robot).
 - The robot within reach of the Mac, connected to the mains, and the home Wi-Fi password (for the
   end).
 
 No driver to install, no SP Flash Tool, no change to macOS security.
 
-The person usually comes from part 2 of [docs/INSTALLATION.md](docs/INSTALLATION.md) (Homebrew,
-`brew install python libusb`, this repository cloned into `~/MrCuisineVibeConnect`) and keeps that
-guide open: its part 3b shows them what each step looks like. If Homebrew is missing, the person
-installs it themselves (it asks for their Mac password): give them the command from that part.
+The person usually comes from part 2 of [docs/INSTALLATION.md](docs/INSTALLATION.md) (Homebrew or
+MacPorts, Python and libusb, this repository cloned into `~/MrCuisineVibeConnect`) and keeps that
+guide open: its part 3b shows them what each step looks like. If Homebrew (Apple silicon) or
+MacPorts (Intel) is missing, the person installs it themselves (it asks for their Mac password):
+give them the instructions from that part. Never try to install Homebrew on an Intel Mac.
 
 ## The tool
 
@@ -113,7 +124,7 @@ step, have the person switch it off. `ls /dev/cu.usbmodem*` lists nothing once i
 | 0 | clone | agent | Get this repository on the Mac (git clone or a ZIP). |
 | 1 | `prepare` | agent | Downloads adb, Magisk v31.0, TWRP and the scatter file, the latest Toque APK, mtkclient v2.1.4.1 and its Python packages (into `~/Toque/mtkclient`); checks every SHA-256 and the mtkclient commit, applies the macOS serial fixes. Says which Homebrew packages are missing, if any. |
 | 2 | `backup` | person, then agent | Cover off, cable in the **right-hand "Android USB" port**, robot off; mtkclient reads `boot` and `recovery` when the person switches the robot on. Verifies two 16 MiB Android images before keeping them. |
-| 3 | `flash-twrp` | agent + person | Writes TWRP into `boot` in download mode and reads it back. The person power-cycles: off, **unplug**, on, plug back → TWRP. |
+| 3 | `flash-twrp` | agent + person | Writes TWRP into `boot` in download mode and reads it back. The person power-cycles: off, **unplug**, on, plug back → TWRP (first start: swipe *Allow Modifications*). |
 | 4 | `root` | agent | In TWRP: patches the *original* boot with Magisk, enables ADB in Android, authorizes the Mac's ADB key, pulls `boot-magisk.img`. |
 | 5 | `flash-root` | agent | Still in TWRP: writes TWRP into `recovery` and `boot-magisk.img` into `boot`. Checks first that both partitions hold what they should (else writes nothing), reads each one back. Power cycle as above → stock app. |
 | 6 | `android` | agent + person | Checks Magisk, installs its app; the person taps **Grant** on the robot once. Checks the boot partition. |
@@ -181,12 +192,13 @@ and without macFUSE the FUSE package stops mtkclient from starting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| mtkclient waits forever (*Waiting for device*) | A↔C cable, wrong port, USB-C port without adapter, or the robot was already on | A↔A cable, right-hand "Android USB" port, USB-C → USB-A adapter; robot off, then on while the step waits |
+| mtkclient waits forever (*Waiting for device*) | A↔C cable, wrong port, USB-C port without adapter, or the robot was already on | A↔A cable, right-hand "Android USB" port, USB-C → USB-A adapter or hub (try another hub port); robot off, then on while the step waits |
 | *Handshake failed, retrying...* every 10 s | Normal while mtkclient waits for the robot (serial driver) | Have the person switch the robot on, once |
 | mtkclient sees the robot, then *Sync error* or *Failed to upload da* | mtkclient without its macOS serial fixes, or the robot was already in download mode | `prepare`; robot off; run the step again; else the Windows fallback above |
 | Black screen, `/dev/cu.usbmodem…` still there after a download-mode step | The robot stays in download mode after an mtkclient session | Switch the robot off |
 | *Allow accessory to connect?* on the Mac | Apple silicon accessory security | **Allow**, then switch the robot off and on again |
-| `prepare`: *MISSING: libusb / Python* | Homebrew packages | Ask the person, then `brew install libusb python` |
+| `prepare`: *MISSING: libusb / Python* | Packages | Ask the person, then `brew install libusb python` (Apple silicon) or `sudo port install python313 libusb` (Intel, MacPorts; the person types the password) |
+| TWRP shows *Unmodified System Partition — Keep System Read only?* | First TWRP start after `flash-twrp` | Have the person swipe **Swipe to Allow Modifications** (the `root` step modifies `/system` anyway) |
 | Robot shows a battery picture instead of booting | Switched on with the cable plugged in | Off, unplug, on, plug in after start-up |
 | `adb` shows nothing in TWRP | Cable plugged before TWRP was up | Unplug/replug; `status` |
 | Battery screen between `root` and `flash-root` (TWRP gone) | The robot restarted with the cable in | Off, unplug, on: `boot` still holds TWRP, which comes back; plug in, run the next step |

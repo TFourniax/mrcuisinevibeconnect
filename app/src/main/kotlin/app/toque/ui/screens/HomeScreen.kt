@@ -125,7 +125,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         t.background = Ui.pressable(Ui.round(Ui.SURFACE, 20f), 20f)
         t.addView(Icon(c, icon, Ui.ACCENT), LinearLayout.LayoutParams(Ui.u(26), Ui.u(26)))
         t.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
-        t.addView(Ui.text(c, label, 16f, Ui.TEXT, Ui.MEDIUM).apply { setLineSpacing(0f, 1.0f) })
+        t.addView(Ui.fitWords(Ui.text(c, label, 16f, Ui.TEXT, Ui.MEDIUM).apply { setLineSpacing(0f, 1.0f) }))
         val sub = Ui.ellipsize(Ui.text(c, "", 13f, Ui.TEXT2))
         sub.visibility = View.GONE
         t.addView(sub)
@@ -192,7 +192,9 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         card.background = Ui.pressable(Ui.round(Ui.SURFACE, 20f), 20f)
         rounded(card, 20f)
         val photo = FrameLayout(c)
-        photo.setBackgroundColor(Ui.SURFACE2)
+        // Sans photo : le dégradé de la recette et l'icône de son genre de plat ; la photo les couvre.
+        photo.background = Ui.gradient(Ui.placeholderColors(e.title), 0f)
+        photo.addView(Ui.dishIcon(c, e.title, e.category), Ui.flp(Ui.u(64), Ui.u(64), Gravity.CENTER))
         val img = ImageView(c).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         photo.addView(img, Ui.flp())
         ImageLoader.load(img, a.app.recipes.imageFile(e.image), Ui.u(240))

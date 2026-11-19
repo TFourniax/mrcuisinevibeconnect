@@ -31,9 +31,9 @@ On a Windows PC, this guide does not apply: follow the one in the
 
 | | You need | Note |
 |---|---|---|
-| ☐ | A **Mac** (Apple silicon or Intel), connected to the Internet | You will be asked for the Mac's login password |
+| ☐ | A **Mac** (Apple silicon or Intel), connected to the Internet | You will be asked for the Mac's login password. To install with Claude ([3a](#3a-install-with-claude-recommended)): macOS 13 Ventura or later ( › About This Mac) |
 | ☐ | A **USB-A male ↔ USB-A male** data cable | Both ends are the large rectangular USB plugs. A USB-C ↔ USB-A cable does **not** work |
-| ☐ | If the Mac has only USB-C ports: a **USB-C → USB-A adapter** (female) or a hub | The A-A cable plugs into it |
+| ☐ | If the Mac has only USB-C ports: a **USB-C → USB-A adapter** (female) or a **hub** with a USB-A socket | The A-A cable plugs into it. On a hub, prefer a USB 2.0 port (white or black tongue); if the Mac does not see the robot, try another port |
 | ☐ | A **small Torx screwdriver** | For the maintenance cover under the robot |
 | ☐ | The home **Wi-Fi password** | For the end |
 | ☐ | The robot **near the Mac**, plugged into the mains, **bowl empty** | It stays plugged into the mains from start to end |
@@ -43,8 +43,9 @@ On a Windows PC, this guide does not apply: follow the one in the
 - The robot's warranty is void.
 - A mistake can leave the robot's tablet unusable. The script checks everything before it writes
   anything, and the **backup** made at the start is your way back: never skip it, keep a copy.
-- Toque runs every day on two robots: one installed from Windows (October 2026), one from a Mac
-  (November 2026). That is not many: at your own risk.
+- Toque runs every day on three robots: one installed from Windows (October 2026), a C3 from an
+  Apple silicon Mac and a 2018 B2 from an Intel Mac through a USB-C hub (November 2026). That is
+  not many: at your own risk.
 
 ### The 3 rules to remember
 
@@ -69,6 +70,11 @@ Everything happens in **Terminal**: open it with `Cmd + Space`, type `Terminal`,
 For each command below: copy it, paste it into Terminal (`Cmd + V`), `Return`, and wait for it to
 finish (the cursor comes back).
 
+Your Mac has an **Apple** chip (M1, M2…) or an **Intel** processor: see  › About This Mac
+(*Chip* or *Processor* line). Steps 1 and 2 differ; the rest is the same.
+
+**Apple silicon Mac (M1, M2…)**
+
 1. **Install Homebrew** (the tool that installs the rest):
    ```
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -81,6 +87,36 @@ finish (the cursor comes back).
    ```
    brew install python libusb
    ```
+
+**Intel Mac** — Homebrew no longer installs on Intel Macs (*Homebrew on macOS is only supported
+on Apple Silicon processors*): use MacPorts, its equivalent.
+
+1. **Install Apple's command line tools** (git among them):
+   ```
+   xcode-select --install
+   ```
+   A window opens: **Install**, then **Agree**. 5 to 15 minutes; wait for the end. If it says they
+   are already installed, go on.
+2. **Install MacPorts, then Python and libusb**:
+   - On [macports.org/install.php](https://www.macports.org/install.php), download the `.pkg` named
+     after **your macOS version** ( › About This Mac), open it and install it. Then **quit
+     Terminal (`Cmd + Q`) and open it again**: `port version` must print a number.
+   - Then:
+     ```
+     sudo port install python313 libusb
+     ```
+     The Mac's password (nothing shows, that is normal); if it asks `Continue? [Y/n]`, type `Y`.
+     5 to 20 minutes.
+   - Terminal answers `port: command not found` (or later `claude: command not found`)? Your
+     Terminal uses the older bash shell. Type the matching line, then open Terminal again:
+     ```
+     echo 'export PATH="/opt/local/bin:/opt/local/sbin:$PATH"' >> ~/.bash_profile
+     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bash_profile
+     ```
+     (the first for `port`, the second for `claude`).
+
+**Then, on every Mac:**
+
 3. **Download this repository** into a `MrCuisineVibeConnect` folder in your home folder:
    ```
    git clone https://github.com/TFourniax/mrcuisinevibeconnect.git ~/MrCuisineVibeConnect
@@ -97,9 +133,11 @@ robot only changes at the steps that say so.
 > **The robot already has Toque** (a release of the original repository)? No need to redo
 > everything, no cable, no cover. Robot on, on Wi-Fi:
 > ```
-> brew install android-platform-tools
+> mkdir -p ~/Toque && curl -fsSL -o ~/Toque/platform-tools.zip https://dl.google.com/android/repository/platform-tools-latest-darwin.zip && unzip -q -o ~/Toque/platform-tools.zip -d ~/Toque
 > bash tools/setup/toque-setup.sh update --ip <robot IP address>
 > ```
+> (the first line downloads adb, Google's tool that talks to the robot, on Intel and Apple silicon
+> Macs alike).
 > The IP address: in Toque, tap the clock at the top right 5 times quickly (Android settings) ›
 > Wi-Fi › the network. The first time, the robot asks "Allow debugging?": tick "Always allow", OK,
 > and run the command again. Then go to [Link to Foyer](#link-to-foyer-once).
@@ -108,7 +146,8 @@ robot only changes at the steps that say so.
 
 [Claude Code](https://code.claude.com/docs/en/quickstart) is an AI assistant that types the
 commands in Terminal, reads the results and tells you what to do with your hands. It needs a paid
-Claude plan (Pro or higher): the free plan is not enough.
+Claude plan (Pro or higher): the free plan is not enough; and **macOS 13 Ventura or later**
+(otherwise go to [3b](#3b-install-it-yourself-step-by-step)).
 
 1. Install it:
    ```
@@ -203,7 +242,9 @@ Writes to the robot: TWRP, a maintenance system, temporarily replaces the normal
 ✅ At the end: `OK: flash-twrp done`
 
 4. **Switch** the robot **off**, **unplug** the cable, **switch it on**: the **TWRP** screen
-   appears. **Plug** the cable back in.
+   appears. The first time, it asks *Unmodified System Partition — Keep System Read only?*: drag
+   **Swipe to Allow Modifications** all the way (the next step does modify the system; tick
+   nothing). **Plug** the cable back in.
 
 ### Step 4 · Prepare root — `root`
 
@@ -337,12 +378,14 @@ Lidl's servers; come back with the **"Back to Toque"** button. If that import fa
 | What you see | Why | What to do |
 |---|---|---|
 | The robot shows a **battery** instead of starting | Switched on with the cable plugged in | Switch off, unplug, switch on, plug in once the screen is on |
-| `backup` / `flash-twrp` wait forever (*Waiting for device*) | Wrong cable, wrong port, USB-C port without adapter, or robot already on | A-A cable, "Android USB" port, USB-C → USB-A adapter. Robot off, run the step again, switch on when asked |
+| `backup` / `flash-twrp` wait forever (*Waiting for device*) | Wrong cable, wrong port, USB-C port without adapter, or robot already on | A-A cable, "Android USB" port, USB-C → USB-A adapter or hub (on a hub, try another port, USB 2.0 preferably). Robot off, run the step again, switch on when asked |
 | *Handshake failed, retrying...* every 10 s | Normal: the Mac is waiting for the robot | Switch the robot on, once |
 | *Sync error* or *Failed to upload da* | The robot was already in download mode, or `prepare` not done | `prepare`, switch the robot off, run the step again |
 | Robot's screen black after `backup` or `flash-twrp` | It stays in download mode | Switch it off |
 | The Mac asks to **allow the accessory** | Apple silicon Mac security | **Allow**, then switch the robot off and on again |
-| `MISSING: Python` or `MISSING: libusb` | Missing packages | `brew install python libusb`. `brew` not found: redo Homebrew's *Next steps* ([part 2](#2-prepare-the-mac-once)) |
+| `MISSING: Python` or `MISSING: libusb` | Missing packages | Apple silicon: `brew install python libusb` (`brew` not found: redo Homebrew's *Next steps*). Intel: `sudo port install python313 libusb` ([part 2](#2-prepare-the-mac-once)) |
+| *Homebrew on macOS is only supported on Apple Silicon processors* | Intel Mac | Use MacPorts ([part 2](#2-prepare-the-mac-once), "Intel Mac") |
+| TWRP asks *Keep System Read only?* | First TWRP start | **Swipe to Allow Modifications** |
 | The Mac does not see the robot in TWRP | Cable plugged in before TWRP was on screen | Unplug, plug back in |
 | Battery screen between `root` and `flash-root` | The robot restarted with the cable in | Switch off, unplug, switch on: TWRP comes back. Plug in, continue |
 | `flash-root`: *write failed* or *read-back differs* | Write error | **Do not switch the robot off** (TWRP is still running). Run `flash-root` again |
@@ -404,7 +447,8 @@ Tool and its Windows driver for the two operations that need the robot's MediaTe
 DYLD_FALLBACK_LIBRARY_PATH="$(brew --prefix)/lib" ../venv/bin/python ../src/mtk.py --serialport DETECT multi "ro 0x1d20000 0x1000000 boot-original.img --parttype user;ro 0x2d20000 0x1000000 recovery-original.img --parttype user"
 ```
 
-(the libusb path is needed on Apple silicon; `--serialport` only works with the fixes `prepare`
+(the libusb path is needed on Apple silicon; on an Intel Mac with MacPorts, replace
+`$(brew --prefix)/lib` with `/opt/local/lib`; `--serialport` only works with the fixes `prepare`
 applies).
 
 **`flash-twrp`** writes TWRP (`hacks/recovery.img`) into `boot` only, and reads it back to verify.
