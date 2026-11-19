@@ -430,14 +430,14 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         }
     }
 
-    override fun onKnob(delta: Int): Boolean {
-        go(index + delta)
-        return true
-    }
-
-    override fun onKnobPress(): Boolean {
-        val m = recipe.steps.getOrNull(index)?.machine
-        if (m == null) next() else if (m.program != StepProgram.TURBO && startBtn.isEnabled && startBtn.visibility == View.VISIBLE) launch()
-        return true
-    }
+    /**
+     * Au bouton rotatif : on arrive sur le bouton de l'étape (Lancer, Étape suivante), sinon sur
+     * Suivant. Lancer se touche comme du doigt : jamais d'un seul appui sans le cadre dessus.
+     */
+    override val knobStart: View?
+        get() = when {
+            ::startBtn.isInitialized && startBtn.isShown && startBtn.isEnabled -> startBtn
+            ::nextBtn.isInitialized -> nextBtn
+            else -> null
+        }
 }

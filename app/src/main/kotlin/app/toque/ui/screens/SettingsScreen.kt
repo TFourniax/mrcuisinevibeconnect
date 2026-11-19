@@ -24,6 +24,8 @@ import app.toque.foyer.Foyer
 import app.toque.recipes.LidlSync
 import app.toque.recipes.OnlineSync
 import app.toque.ui.Icon
+import app.toque.ui.Knob
+import app.toque.ui.KnobAdjustable
 import app.toque.ui.MainActivity
 import app.toque.ui.Screen
 import app.toque.ui.Ui
@@ -61,8 +63,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         val col = Ui.vertical(c)
         col.setPadding(Ui.u(24), Ui.u(6), Ui.u(24), Ui.u(24))
         val columns = Ui.horizontal(c, Gravity.TOP)
-        val left = Ui.vertical(c)
-        val right = Ui.vertical(c)
+        // Au bouton rotatif, la colonne de gauche se parcourt entière avant celle de droite.
+        val left = Knob.region(Ui.vertical(c))
+        val right = Knob.region(Ui.vertical(c))
         columns.addView(left, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(18) })
         columns.addView(right, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         col.addView(columns)
@@ -233,7 +236,28 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         box.setPadding(Ui.u(16), 0, Ui.u(14), 0)
         box.background = Ui.pressable(Ui.round(Ui.SURFACE2, 16f, Ui.STROKE, 1f), 16f)
         val label = options.firstOrNull { it.first == selected }?.second ?: options.first().second
-        box.addView(Ui.text(c, label, 19f, Ui.TEXT), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        val labelView = Ui.text(c, label, 19f, Ui.TEXT)
+        box.addView(labelView, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        // Au bouton rotatif : un appui, tourner fait défiler les choix dans la case, un second appui valide.
+        var applied = selected
+        var shown = options.indexOfFirst { it.first == selected }.coerceAtLeast(0)
+        Knob.adjustable(box, object : KnobAdjustable {
+            override fun knobAdjust(delta: Int) {
+                shown = (shown + delta).coerceIn(0, options.size - 1)
+                labelView.text = options[shown].second
+            }
+            override fun knobDone() {
+                val code = options[shown].first
+                if (code != applied) {
+                    applied = code
+                    onPick(code)
+                }
+            }
+            override fun knobCancel() {
+                shown = options.indexOfFirst { it.first == applied }.coerceAtLeast(0)
+                labelView.text = options[shown].second
+            }
+        })
         box.addView(Icon(c, Icon.Kind.CHEVRON, Ui.TEXT2).apply { rotation = 90f }, LinearLayout.LayoutParams(Ui.u(22), Ui.u(22)))
         box.isClickable = true
         box.setOnClickListener {
@@ -246,13 +270,18 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             val height = if (options.size > 7) Ui.u(400) else ViewGroup.LayoutParams.WRAP_CONTENT
             val popup = PopupWindow(scroll, box.width, height, false)
             for ((code, name) in options) {
-                val row = Ui.text(c, name, 19f, if (code == selected) Ui.ACCENT else Ui.TEXT)
+                val row = Ui.text(c, name, 19f, if (code == applied) Ui.ACCENT else Ui.TEXT)
                 row.setPadding(Ui.u(16), Ui.u(14), Ui.u(16), Ui.u(14))
                 row.background = Ui.pressable(Ui.round(0, 0f), 0f)
                 row.isClickable = true
                 row.setOnClickListener {
                     popup.dismiss()
-                    if (code != selected) onPick(code)
+                    if (code != applied) {
+                        applied = code
+                        shown = options.indexOfFirst { it.first == code }.coerceAtLeast(0)
+                        labelView.text = name
+                        onPick(code)
+                    }
                 }
                 list.addView(row, Ui.lp(Ui.MATCH, Ui.WRAP))
             }

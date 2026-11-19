@@ -264,17 +264,6 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
         hint.text = v.firstOrNull()?.message ?: if (a.snapshot.hot && speed >= 4) tr("Contenu chaud : confirmation demandée") else ""
     }
 
-    override fun onKnob(delta: Int): Boolean {
-        change(selected, delta)
-        return true
-    }
-
-    override fun onKnobPress(): Boolean {
-        val s = a.snapshot
-        when {
-            s.state == JobState.RUNNING -> a.machine.pause { a.refusal(it) }
-            else -> start()
-        }
-        return true
-    }
+    /** Au bouton rotatif : on arrive sur la durée ; Démarrer se touche comme du doigt (jamais d'un seul appui). */
+    override val knobStart: View? get() = if (::timeCard.isInitialized) timeCard else null
 }
