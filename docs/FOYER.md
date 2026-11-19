@@ -80,6 +80,32 @@ Foyer sends each recipe's source link (`link`) and, for a social video, the same
   notifications (if several, the robot asks whose); the notification opens the recipe in Foyer,
   whose "Voir la vidéo" opens the reel in Instagram or the browser. 30 a day per robot.
 
+## Screensaver
+
+After a few minutes with nobody at the robot (no touch, no knob, nothing moving at the machine)
+and only when it is idle (never while a job starts, runs, pauses or stops, nor with a step
+waiting, a safety stop shown, a dialog or a reel open), Toque shows a screensaver. It is chosen in
+Foyer › Réglages › Monsieur Cuisine: the clock (time, date, tonight's meal from Foyer; it drifts
+slightly every minute so nothing marks the screen), the household's animations, or nothing; the
+delay (1 to 60 minutes) and how long each animation stays (5 to 300 seconds). Without a Foyer
+setting (not linked, older Foyer) it is the clock after 5 minutes. Any touch, knob turn or press,
+or change at the machine (lid, bowl, weight, a job, a fault) wakes it, and that gesture does
+nothing else. Settings › Écran de veille shows what Foyer chose and tries it at once.
+
+- **Nothing is bundled with Toque**: no characters, no pictures (its code is public). The
+  animations are the household's own files (GIF, MP4 in H.264, JPEG, PNG or WebP, 15 MB at most,
+  60 per household), uploaded in Foyer and kept in a private storage bucket of the household.
+- The feed lists each one as `/api/robot/screensaver/<id>?v=…`. The robot asks it with its key
+  (only on that first request to Foyer's exact host), Foyer answers with a redirect to a storage
+  link valid two minutes, and the robot follows it after the same checks as photos (https, no
+  home-network address). Each file is written straight to the robot's private storage (never whole
+  in memory), 15 MB and 2 minutes at most, kept only if its first bytes match the announced kind,
+  downloaded once on its own thread, and deleted when Foyer no longer lists it. A file that fails
+  is tried again after an hour.
+- GIFs are played with Android's Movie (fit to the screen, 20 images a second at most), videos
+  muted and looped with Android's player, pictures decoded at the screen's size. One that cannot be
+  read is skipped; if none can, the clock shows.
+
 ## Machine settings of household recipes
 
 Foyer works them out once per recipe and keeps them while the recipe is unchanged:
@@ -99,10 +125,11 @@ robot checks it again before running it.
 | Call | What |
 |---|---|
 | `POST /api/robot/hello` | `{ version }` → `{ status: "paired", household }` or `{ status: "pending", code, expiresAt }` |
-| `GET /api/robot/sync` | Recipes in the `toque-recettes-1` format (ids `foyer-<uuid>`), planned meals of the next 7 days, `pendingSteps`; `ETag` / 304 |
+| `GET /api/robot/sync` | Recipes in the `toque-recettes-1` format (ids `foyer-<uuid>`), planned meals of the next 7 days, `pendingSteps`, and the `screensaver` block (mode, delay, seconds, files); `ETag` / 304 |
 | `POST /api/robot/status` | `{ state, recipeId, title, stepIndex, stepCount, stepText, tempC, speed, remainingSeconds, alert, notify }` (the end time is computed with the server's clock) |
 | `POST /api/robot/cooked` | `{ recipeId }` |
 | `GET /api/robot/photo/<recipe>?v=…` | The photo Foyer keeps for a shared household recipe (JPEG, PNG or WebP); 401 unlinked, 404 none |
+| `GET /api/robot/screensaver/<id>?v=…` | One of the household's screensaver files: 302 to a storage link valid 2 minutes; 401 unlinked, 404 gone |
 | `POST /api/robot/open` | `{ recipeId, memberId? }` → `{ status: "sent" }`, `{ status: "choose", phones: [{ id, name }] }`, `{ status: "no_phone" }`; 404 no link, 429 too many |
 
 401 means the robot is not (or no longer) linked: Toque shows a code again. The code is in

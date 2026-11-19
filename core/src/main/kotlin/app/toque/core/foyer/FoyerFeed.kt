@@ -22,6 +22,8 @@ data class FoyerFeed(
     val pendingSteps: Int,
     /** Entrées ignorées (illisibles, ou qui ne sont pas des recettes du foyer). */
     val skipped: Int,
+    /** Écran de veille choisi dans Foyer (null : Foyer n'en dit rien, l'horloge par défaut). */
+    val screensaver: ScreensaverConfig? = null,
 ) {
     companion object {
         const val ID_PREFIX = "foyer-"
@@ -56,6 +58,7 @@ data class FoyerFeed(
                 plans = plans,
                 pendingSteps = (root.int("pendingSteps") ?: 0).coerceAtLeast(0),
                 skipped = skipped,
+                screensaver = (root["screensaver"] as? Map<*, *>)?.let { ScreensaverConfig.fromMap(root["screensaver"].obj()) },
             )
         }
 

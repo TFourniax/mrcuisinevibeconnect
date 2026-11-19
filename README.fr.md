@@ -43,6 +43,11 @@ l'écran du robot.
   sont reconnus d'office ; Réglages › Outils › Bouton rotatif en apprend d'autres. Démarrer le
   moteur demande toujours d'appuyer sur un bouton de démarrage visible et encadré, avec toutes les
   règles de sécurité d'un appui du doigt.
+- **Un écran de veille** après quelques minutes sans personne au robot, jamais pendant une
+  cuisson : une horloge (avec le repas prévu ce soir dans Foyer) qui se décale un peu chaque
+  minute, ou les animations du foyer (GIF, vidéos MP4, images) ajoutées dans Foyer › Réglages ›
+  Monsieur Cuisine. Toque ne fournit aucune image ; les fichiers restent privés au foyer. Un doigt,
+  un tour de bouton ou un mouvement à la machine le referme.
 - **Recettes Lidl, directement depuis monsieur-cuisine.com**. Toque télécharge les recettes
   officielles du Monsieur Cuisine connect (environ 1 700 en français, avec les réglages machine de
   chaque étape) par l'API publique du site, chaque nuit ou sur demande : aucun compte, aucun

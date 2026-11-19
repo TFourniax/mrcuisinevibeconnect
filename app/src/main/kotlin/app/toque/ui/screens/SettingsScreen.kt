@@ -14,6 +14,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import app.toque.Prefs
 import app.toque.TimeSync
+import app.toque.core.foyer.ScreensaverConfig
 import app.toque.core.i18n.I18n
 import app.toque.core.i18n.tr
 import app.toque.core.machine.RootShell
@@ -44,6 +45,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private lateinit var foyerText: TextView
     private lateinit var foyerCode: TextView
     private lateinit var foyerButtons: LinearLayout
+    private lateinit var saverText: TextView
     private var foyerUnsub: (() -> Unit)? = null
     private var foyerCounted = false
     private var settingTime = false
@@ -117,6 +119,14 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             Foyer.of(a.app).syncNow()
         }, Ui.lp(t = 10))
         renderFoyer()
+
+        // ---- Écran de veille : choisi dans Foyer (horloge ou animations du foyer), essayé ici
+        val saver = section(right, tr("Écran de veille"), Icon.Kind.CLOCK)
+        saverText = Ui.text(c, "", 16f, Ui.TEXT2).apply { setLineSpacing(0f, 1.15f) }
+        saver.addView(saverText)
+        saver.addView(Ui.button(c, tr("Voir l'écran de veille"), Ui.Style.SECONDARY, height = 52) { a.showScreensaver() },
+            Ui.lp(Ui.WRAP, Ui.WRAP, t = 10))
+        renderSaver()
 
         // ---- Langue (titre bilingue : trouvable quelle que soit la langue affichée)
         val language = section(right, "Langue · Language", Icon.Kind.INFO)
@@ -423,6 +433,22 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         }.start()
     }
 
+    private fun renderSaver() {
+        val config = ScreensaverConfig.decode(a.prefs.screensaver)
+        val foyer = Foyer.of(a.app)
+        val summary = when (config.mode) {
+            ScreensaverConfig.OFF -> tr("Désactivé.")
+            ScreensaverConfig.MEDIA -> {
+                val ready = config.items.count { foyer.screensaverFile(it.stem) != null }
+                if (config.items.isEmpty()) tr("Vos animations, après %d min sans personne au robot : aucune pour l'instant, l'horloge les remplace.", config.delayMinutes)
+                else tr("Vos animations (%d prêtes sur %d), après %d min sans personne au robot.", ready, config.items.size, config.delayMinutes)
+            }
+            else -> tr("L'horloge, après %d min sans personne au robot.", config.delayMinutes)
+        }
+        saverText.text = summary + "\n" +
+            tr("Se règle dans Foyer › Réglages › Monsieur Cuisine : l'horloge ou vos propres animations (GIF, vidéos MP4, images), et le délai. Jamais pendant une cuisson.")
+    }
+
     private fun renderFoyer() {
         val foyer = Foyer.of(a.app)
         val p = a.prefs
@@ -569,10 +595,14 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
 
     override fun onShow() {
         foyerUnsub?.invoke()
-        foyerUnsub = Foyer.of(a.app).onChange { renderFoyer() }
+        foyerUnsub = Foyer.of(a.app).onChange {
+            renderFoyer()
+            renderSaver()
+        }
         if (!foyerCounted) Foyer.of(a.app).showing(true)
         foyerCounted = true
         renderFoyer()
+        renderSaver()
         mode = a.prefs.mode
         renderModes()
         if (!syncing) refreshSync()

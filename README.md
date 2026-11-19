@@ -52,6 +52,11 @@ screen.
   second press confirms. The Monsieur Cuisine Connect's knob codes (F7, F6, F5) are recognised out
   of the box; *Settings › Tools › Rotary knob* learns others. Starting the motor still takes a
   press on a highlighted, visible start button, with every safety rule of a tap.
+- **A screensaver** after a few minutes with nobody at the robot, never while it cooks: a clock
+  (with tonight's meal from Foyer) that drifts slightly every minute, or the household's own
+  animations (GIF, MP4 videos, pictures) added in Foyer › Settings › Monsieur Cuisine. Toque ships
+  no pictures of its own; the files stay private to the household. Any touch, knob turn or move at
+  the machine wakes it.
 - **Lidl recipes, straight from monsieur-cuisine.com.** Toque downloads the official Monsieur
   Cuisine connect recipes (about 1,700 in French, with each step's machine settings) from the
   site's public API, nightly or on demand: no account, no server to run, no need for the stock app.

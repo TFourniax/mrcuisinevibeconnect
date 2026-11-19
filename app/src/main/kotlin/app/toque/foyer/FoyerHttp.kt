@@ -2,8 +2,11 @@ package app.toque.foyer
 
 import android.content.Context
 import android.util.Base64
+import app.toque.core.foyer.MediaSniff
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.Inet6Address
@@ -151,12 +154,16 @@ object FoyerHttp {
         }
     }
 
-    /** Une photo gardée par Foyer lui-même (https, l'hôte exact de Foyer, chemin des photos du robot). */
-    fun isFoyerPhoto(url: String): Boolean = try {
+    /**
+     * Un fichier gardé par Foyer lui-même pour le robot : https, l'hôte exact de Foyer, et le
+     * chemin des photos de recettes ou de l'écran de veille. Seul cas où la clé du robot part
+     * avec un téléchargement.
+     */
+    fun isFoyerFile(url: String): Boolean = try {
         val u = URL(url)
         val base = URL(BASE)
         u.protocol == "https" && u.host.equals(base.host, ignoreCase = true) && (u.port == -1 || u.port == 443) &&
-            u.path.startsWith("/api/robot/photo/")
+            (u.path.startsWith("/api/robot/photo/") || u.path.startsWith("/api/robot/screensaver/"))
     } catch (_: Exception) {
         false
     }
@@ -182,7 +189,7 @@ object FoyerHttp {
                 c.connectTimeout = 8_000
                 c.readTimeout = 8_000
                 c.setRequestProperty("User-Agent", userAgent)
-                if (secret != null && hop == 0 && isFoyerPhoto(target.toString())) c.setRequestProperty("Authorization", "Bearer $secret")
+                if (secret != null && hop == 0 && isFoyerFile(target.toString())) c.setRequestProperty("Authorization", "Bearer $secret")
                 hop++
                 val code = c.responseCode
                 if (code in 300..399) {
@@ -200,6 +207,77 @@ object FoyerHttp {
         }
         throw IOException("trop de redirections")
     }
+
+    /**
+     * Un fichier de l'écran de veille (GIF, vidéo MP4, image), écrit directement dans [dir] sous
+     * « [stem].<extension> » sans passer par la mémoire : https seulement, jamais une adresse du
+     * réseau local, redirections vérifiées une à une (Foyer renvoie vers un lien signé du
+     * stockage), 15 Mo et 2 minutes au plus, et seulement un fichier du [kind] annoncé, reconnu à
+     * ses premiers octets. La clé du robot ne part qu'avec la première requête, vers Foyer.
+     */
+    fun downloadMedia(url: String, kind: String, userAgent: String, secret: String?, dir: File, stem: String): File {
+        val deadline = System.currentTimeMillis() + 120_000
+        var target = URL(url)
+        var hop = 0
+        repeat(4) {
+            if (target.protocol != "https") throw IOException("https uniquement")
+            if (InetAddress.getAllByName(target.host).any { isLocal(it) }) throw IOException("adresse locale refusée")
+            val c = open(target.toString())
+            try {
+                c.instanceFollowRedirects = false
+                c.connectTimeout = 10_000
+                c.readTimeout = 20_000
+                c.setRequestProperty("User-Agent", userAgent)
+                if (secret != null && hop == 0 && isFoyerFile(target.toString())) c.setRequestProperty("Authorization", "Bearer $secret")
+                hop++
+                val code = c.responseCode
+                if (code in 300..399) {
+                    val next = c.getHeaderField("Location") ?: throw IOException("redirection sans adresse")
+                    target = URL(target, next)
+                    return@repeat
+                }
+                if (code != 200) throw IOException("réponse $code")
+                val declared = c.contentLength
+                if (declared > MEDIA_MAX_BYTES) throw IOException("fichier trop lourd")
+                val tmp = File(dir, "$stem.part")
+                try {
+                    var size = 0L
+                    val head = ByteArray(16)
+                    var headSize = 0
+                    c.inputStream.use { input ->
+                        FileOutputStream(tmp).use { out ->
+                            val buf = ByteArray(32 * 1024)
+                            while (true) {
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                if (headSize < head.size) {
+                                    val k = minOf(n, head.size - headSize)
+                                    System.arraycopy(buf, 0, head, headSize, k)
+                                    headSize += k
+                                }
+                                size += n
+                                if (size > MEDIA_MAX_BYTES) throw IOException("fichier trop lourd")
+                                if (System.currentTimeMillis() > deadline) throw IOException("trop lent")
+                                out.write(buf, 0, n)
+                            }
+                        }
+                    }
+                    val ext = MediaSniff.ext(head.copyOf(headSize))
+                    if (!MediaSniff.fits(kind, ext)) throw IOException("pas un fichier $kind reconnu")
+                    val dest = File(dir, "$stem.$ext")
+                    if (!tmp.renameTo(dest)) throw IOException("enregistrement impossible")
+                    return dest
+                } finally {
+                    if (tmp.exists()) tmp.delete()
+                }
+            } finally {
+                c.disconnect()
+            }
+        }
+        throw IOException("trop de redirections")
+    }
+
+    const val MEDIA_MAX_BYTES = 15L * 1024 * 1024
 
     /** Boucle locale, réseau privé, lien local, CGNAT, adresses IPv6 uniques locales. */
     fun isLocal(a: InetAddress): Boolean {

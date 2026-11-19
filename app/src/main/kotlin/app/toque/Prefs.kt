@@ -281,6 +281,13 @@ class Prefs(context: Context) {
             p.edit().putString("foyerAppliedVersion", v).commit()
         }
 
+    /** Écran de veille choisi dans Foyer (JSON de ScreensaverConfig ; vide : l'horloge après 5 min). */
+    var screensaver: String
+        get() = p.getString("screensaver", "") ?: ""
+        set(v) {
+            p.edit().putString("screensaver", v).commit()
+        }
+
     /** Dernière version publiée plus récente que celle installée ("" : aucune), vue la nuit. */
     var updateAvailable: String
         get() = p.getString("updateAvailable", "") ?: ""

@@ -55,6 +55,11 @@ class MainActivity : Activity() {
     private var video: VideoPanel? = null
     private var lastKnobMs = 0L
     private lateinit var knobNav: KnobNav
+    private lateinit var screensaver: Screensaver
+    /** Le geste qui a fermé l'écran de veille ne va pas plus loin (doigt levé, touche relâchée). */
+    private var swallowTouch = false
+    private var swallowKey = -1
+    private var lastSeen: Snapshot? = null
     var knobListener: ((KeyEvent) -> Unit)? = null
 
     val prefs: Prefs get() = app.prefs
@@ -91,6 +96,8 @@ class MainActivity : Activity() {
         root.isFocusable = true
         root.isFocusableInTouchMode = true
         knobNav = KnobNav(this, root)
+        // Le cadre du bouton rotatif s'efface sous l'écran de veille.
+        screensaver = Screensaver(this, root) { knobNav.touch() }
 
         try {
             tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
@@ -117,12 +124,15 @@ class MainActivity : Activity() {
     override fun onStart() {
         super.onStart()
         unsubscribe = app.machine.onSnapshot { s ->
+            if (machineMoved(lastSeen, s)) screensaver.activity()
+            lastSeen = s
             topBar.update(s)
             machineBar.update(s)
             stack.lastOrNull()?.onSnapshot(s)
         }
         unsubscribeEvents = app.machine.onEvent { e -> onMachineEvent(e) }
         topBar.startClock()
+        screensaver.start()
     }
 
     override fun onResume() {
@@ -134,6 +144,7 @@ class MainActivity : Activity() {
     }
 
     override fun onStop() {
+        screensaver.stop()
         closeVideo()
         unsubscribe?.invoke()
         unsubscribeEvents?.invoke()
@@ -245,6 +256,13 @@ class MainActivity : Activity() {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             Foyer.of(app).interaction()
             knobNav.touch()
+            // Le doigt qui réveille l'écran ne touche rien dessous.
+            swallowTouch = screensaver.showing
+            screensaver.activity()
+        }
+        if (swallowTouch) {
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) swallowTouch = false
+            return true
         }
         return super.dispatchTouchEvent(event)
     }
@@ -264,6 +282,17 @@ class MainActivity : Activity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) Foyer.of(app).interaction()
+        // Un tour ou un appui réveille l'écran de veille, sans rien faire d'autre.
+        if (event.action == KeyEvent.ACTION_DOWN && screensaver.showing) {
+            screensaver.activity()
+            swallowKey = event.keyCode
+            return true
+        }
+        if (event.action == KeyEvent.ACTION_UP && event.keyCode == swallowKey) {
+            swallowKey = -1
+            return true
+        }
+        if (event.action == KeyEvent.ACTION_DOWN) screensaver.activity()
         knobListener?.let { l ->
             if (event.action == KeyEvent.ACTION_DOWN) l(event)
             return true
@@ -284,6 +313,11 @@ class MainActivity : Activity() {
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_SCROLL) {
             Foyer.of(app).interaction()
+            if (screensaver.showing) {
+                screensaver.activity()
+                return true
+            }
+            screensaver.activity()
             // Encodeur rotatif (AXIS_SCROLL) ou molette (AXIS_VSCROLL)
             val v = event.getAxisValue(AXIS_SCROLL).let { if (it == 0f) -event.getAxisValue(MotionEvent.AXIS_VSCROLL) else it }
             val now = System.currentTimeMillis()
@@ -314,6 +348,8 @@ class MainActivity : Activity() {
     // ------------------------------------------------------------------ évènements machine
 
     private fun onMachineEvent(e: MachineEvent) {
+        // Une liaison qui hésite avec la base ne compte pas comme quelqu'un au robot.
+        if (e.type != EventType.LINK_CHANGED) screensaver.activity()
         current?.onEvent(e)
         when (e.type) {
             EventType.JOB_FINISHED -> chime(2)
@@ -323,6 +359,34 @@ class MainActivity : Activity() {
             EventType.TURBO_END -> toast(e.message, Ui.TEXT2)
             else -> Unit
         }
+    }
+
+    // ------------------------------------------------------------------ écran de veille
+
+    /**
+     * L'écran de veille peut-il s'afficher maintenant ? Jamais pendant une cuisson (ni en pause,
+     * ni turbo), ni avec un défaut, une étape qui attend, un arrêt de sécurité affiché, un dialogue
+     * ouvert, une vidéo de recette, ou sur le réglage du bouton rotatif.
+     */
+    fun screensaverAllowed(): Boolean {
+        val s = snapshot
+        if (s.busy || s.jobActive || s.turboActive || s.hasFault) return false
+        if (Foyer.of(app).needsAttention()) return false
+        if (overlay.visibility == View.VISIBLE || video != null) return false
+        if (current is app.toque.ui.screens.KnobScreen) return false
+        return true
+    }
+
+    /** Réglages › « Voir l'écran de veille ». */
+    fun showScreensaver() = screensaver.showNow()
+
+    /** Quelque chose bouge à la machine (couvercle, bol, poids, cuisson, défaut) : quelqu'un est là. */
+    private fun machineMoved(before: Snapshot?, now: Snapshot): Boolean {
+        if (before == null) return false
+        return before.lidOpen != now.lidOpen || before.bowlDetected != now.bowlDetected ||
+            before.busy != now.busy || before.jobActive != now.jobActive || before.turboActive != now.turboActive ||
+            before.hasFault != now.hasFault ||
+            (now.hasSample && before.hasSample && kotlin.math.abs(now.weightG - before.weightG) >= 10)
     }
 
     fun chime(times: Int = 1) {
