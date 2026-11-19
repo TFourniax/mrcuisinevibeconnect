@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.os.Handler
 import android.os.Looper
+import app.toque.TimeSync
 import app.toque.ToqueApp
 import app.toque.core.i18n.tr
 import app.toque.core.machine.RootShell
@@ -176,7 +177,9 @@ class Updater(private val context: Context) {
     private fun network(e: IOException): Failure {
         log.write("maj", "réseau : $e")
         return when (e) {
-            is SSLException -> Failure(tr("Connexion sécurisée à GitHub impossible. Vérifie la date et l'heure du robot."))
+            is SSLException ->
+                if (TimeSync.clockPlausible()) Failure(tr("Connexion sécurisée à GitHub impossible : le robot ne reconnaît pas son certificat."))
+                else Failure(tr("Connexion sécurisée à GitHub impossible. Vérifie la date et l'heure du robot."))
             else -> Failure(tr("Pas de connexion à GitHub. Vérifie le Wi-Fi du robot."))
         }
     }
