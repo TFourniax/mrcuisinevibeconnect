@@ -50,6 +50,21 @@ class FoyerTest {
         assertEquals(2, f.pendingSteps)
     }
 
+    /** Un format plus récent de Foyer (champs inconnus, comme le lien de la vidéo) se lit pareil. */
+    @Test fun ignoresFieldsItDoesNotKnow() {
+        val newer = feed
+            .replace("\"format\":\"toque-recettes-1\"", "\"format\":\"toque-recettes-2\",\"feedVersion\":2,\"extra\":{\"a\":[1,2]}")
+            .replace("\"image\":\"https://example.test/r.jpg\"",
+                "\"image\":\"https://foyer-life.netlify.app/api/robot/photo/0b6f7c3e-1d2a-4c5b-9e8f-7a6b5c4d3e2f?v=1a2b3c4d\"," +
+                    "\"video\":\"https://www.instagram.com/reel/ABC123/\",\"videoKind\":{\"host\":\"instagram\"}")
+        assertTrue(newer != feed)
+        val f = FoyerFeed.parse(newer)
+        assertEquals(1, f.recipes.size)
+        assertEquals("Risotto", f.recipes[0].title)
+        assertTrue(f.recipes[0].image.startsWith("https://foyer-life.netlify.app/api/robot/photo/"))
+        assertEquals(2, f.pendingSteps)
+    }
+
     @Test fun nextPlan() {
         val plans = listOf(
             FoyerPlan("2026-11-20", "20:00", "Risotto", null),
