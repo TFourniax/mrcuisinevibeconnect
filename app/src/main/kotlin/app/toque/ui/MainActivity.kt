@@ -83,7 +83,7 @@ class MainActivity : Activity() {
         root.addView(overlay, Ui.flp())
         // Le panneau vidéo suit la hauteur de la barre machine.
         machineBar.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-            if (bottom - top != oldBottom - oldTop) placeVideo()
+            if (bottom - top != oldBottom - oldTop && video != null) machineBar.post { placeVideo() }
         }
         setContentView(root)
 
