@@ -63,6 +63,58 @@ object FoyerHttp {
         return tls.socketFactory
     }
 
+    /**
+     * Les connexions https de l'appli qui ne passent pas par [open] (le lecteur vidéo d'Android
+     * lit ses flux dans ce processus) font aussi confiance aux racines embarquées : les racines du
+     * système plus trois, jamais moins.
+     */
+    fun useAsDefault() {
+        factory?.let { HttpsURLConnection.setDefaultSSLSocketFactory(it) }
+    }
+
+    fun isInstagram(host: String): Boolean = host.equals("instagram.com", ignoreCase = true) || host.endsWith(".instagram.com", ignoreCase = true)
+
+    /**
+     * La page publique « à intégrer » d'un réel, lue depuis la maison : https et instagram.com
+     * seulement (redirections comprises, 3 au plus), jamais une adresse locale, 6 s, 3 Mo, et
+     * jamais la clé du robot.
+     */
+    fun instagramPage(url: String, userAgent: String): String {
+        val deadline = System.currentTimeMillis() + 6_000
+        var target = URL(url)
+        repeat(4) {
+            if (target.protocol != "https" || !isInstagram(target.host)) throw IOException("instagram.com uniquement")
+            if (InetAddress.getAllByName(target.host).any { isLocal(it) }) throw IOException("adresse locale refusée")
+            val c = open(target.toString())
+            try {
+                c.instanceFollowRedirects = false
+                c.connectTimeout = 6_000
+                c.readTimeout = 6_000
+                c.setRequestProperty("User-Agent", userAgent)
+                c.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+                c.setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en;q=0.5")
+                val code = c.responseCode
+                if (code in 300..399) {
+                    target = URL(target, c.getHeaderField("Location") ?: throw IOException("redirection sans adresse"))
+                    return@repeat
+                }
+                if (code != 200) throw IOException("réponse $code")
+                return String(c.inputStream.use { readAll(it, 3 * 1024 * 1024, deadline) }, Charsets.UTF_8)
+            } finally {
+                c.disconnect()
+            }
+        }
+        throw IOException("trop de redirections")
+    }
+
+    /** Une adresse de vidéo à lire : https, et aucune adresse du réseau local derrière son nom. */
+    fun safeMediaUrl(url: String): Boolean = try {
+        val u = URL(url)
+        u.protocol == "https" && InetAddress.getAllByName(u.host).none { isLocal(it) }
+    } catch (_: Exception) {
+        false
+    }
+
     private fun open(url: String): HttpsURLConnection {
         val c = URL(url).openConnection() as? HttpsURLConnection ?: throw IOException("https uniquement")
         factory?.let { c.sslSocketFactory = it }

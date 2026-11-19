@@ -15,12 +15,14 @@ import app.toque.recipes.Reviews
 import app.toque.ui.Icon
 import app.toque.ui.ImageLoader
 import app.toque.ui.MainActivity
+import app.toque.ui.PhoneLink
 import app.toque.ui.Screen
 import app.toque.ui.Ui
 
 /** Fiche recette : ingrédients à gauche, étapes à droite, « Cuisiner » pour le pas-à-pas. */
 class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
     override val title = recipe.title
+    override val recipeId: String get() = recipe.id
     private lateinit var favIcon: Icon
     private lateinit var favLabel: TextView
 
@@ -67,6 +69,20 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         fav.addView(favLabel, LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP).apply { leftMargin = Ui.u(8) })
         actions.addView(fav)
         left.addView(actions, Ui.lp(t = 14))
+
+        // La vidéo d'origine (un réel) : la revoir ici, ou sur un téléphone.
+        val video = Ui.horizontal(c)
+        if (recipe.video.isNotEmpty()) {
+            val watch = Ui.button(c, tr("Revoir la vidéo"), Ui.Style.SECONDARY, Icon.Kind.PLAY, height = 58, textSize = 17f) { a.openVideo(recipe) }
+            Ui.fitWords(watch.getChildAt(1) as TextView, 13f)
+            video.addView(watch, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(10) })
+        }
+        if (PhoneLink.available(a, recipe)) {
+            val phone = Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.LINK, height = 58, textSize = 17f) { b -> PhoneLink.send(a, recipe, b) }
+            Ui.fitWords(phone.getChildAt(1) as TextView, 13f)
+            video.addView(phone, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        }
+        if (video.childCount > 0) left.addView(video, Ui.lp(t = 10))
 
         val ing = Ui.vertical(c)
         ing.addView(section(tr("Ingrédients")))
