@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Process
 import app.toque.core.i18n.I18n
 import app.toque.foyer.Foyer
+import app.toque.foyer.FoyerHttp
 import app.toque.machine.MachineClient
 import app.toque.recipes.RecipeRepo
 import app.toque.ui.MainActivity
@@ -48,6 +49,10 @@ class ToqueApp : Application() {
             }
         }
         log.write("interface", "démarrage")
+        // Android 6 lacks the newer root certificates (GitHub, Let's Encrypt…): every https call of
+        // the app trusts the system's roots plus the bundled ones, from the start.
+        FoyerHttp.init(this)
+        FoyerHttp.useAsDefault()
         TimeSync.start(this, prefs, log)
         Foyer.start(this)
     }

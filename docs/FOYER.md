@@ -53,10 +53,14 @@ household. Either way the robot erases the household's recipes and meals and sho
   fish…, guessed from the title and category).
 - The robot's secret is made once; if it cannot be read, the robot stops instead of making a new
   one (which would unlink it silently).
-- Android 6 lacks the newer root certificates: connections to Foyer and to recipe photos also
-  trust ISRG Root X1, DigiCert Global Root G2 and GTS Root R1, bundled in
-  `app/src/main/assets/certs/foyer-roots.pem` (SHA-256 fingerprints listed in the file). Host
-  names are checked as usual.
+- Android 6 lacks the newer root certificates: since 1.0.5 every https call of Toque (Foyer,
+  recipe photos, GitHub for updates, reels) trusts the system's roots plus ISRG Root X1, DigiCert
+  Global Root G2 and G3, GTS Root R1, USERTrust ECC and RSA, and Sectigo Public Server
+  Authentication Root E46 and R46, bundled in `app/src/main/assets/certs/foyer-roots.pem` (taken
+  from Mozilla's store, SHA-256 fingerprints listed in the file). Host names are checked as usual.
+  Before 1.0.5 the update check could not reach GitHub from Android 6 ("Connexion sécurisée à
+  GitHub impossible"): such a robot is updated once from the Mac (`update` step), then it updates
+  itself.
 - Foyer can only add, change or remove recipes whose id starts with `foyer-`: the Lidl catalogue is
   never touched, and the Lidl syncs never touch household recipes (`recettes.db` column `origin`).
 
