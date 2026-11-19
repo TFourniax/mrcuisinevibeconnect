@@ -23,6 +23,7 @@ import app.toque.core.i18n.tr
 import app.toque.foyer.Foyer
 import app.toque.core.machine.EventType
 import app.toque.core.machine.JobSpec
+import app.toque.core.machine.JobState
 import app.toque.core.machine.MachineEvent
 import app.toque.core.machine.PauseReason
 import app.toque.core.machine.SafetyPolicy
@@ -99,8 +100,10 @@ class MainActivity : Activity() {
         knobNav = KnobNav(this, root)
         // Le cadre du bouton rotatif s'efface sous l'écran de veille.
         screensaver = Screensaver(this, root) { knobNav.touch() }
-        ring = RingLight(prefs, busy = { ringBusy() }, screensaverShown = { screensaver.showing }, lastActivityAt = { screensaver.lastActivityAt })
+        ring = RingLight(prefs, state = { ringState() }, screensaverShown = { screensaver.showing }, lastActivityAt = { screensaver.lastActivityAt })
         screensaver.onChange = { ring.update() }
+        // L'anneau RVB trouvé au démarrage : les réglages ouverts le montrent.
+        ring.onFound = { (current as? SettingsScreen)?.refreshRing() }
 
         try {
             tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
@@ -389,14 +392,44 @@ class MainActivity : Activity() {
 
     // ------------------------------------------------------------------ anneau lumineux
 
-    /** L'anneau reste allumé pendant une cuisson, une pause, un turbo, un défaut ou une étape qui attend. */
-    private fun ringBusy(): Boolean {
+    private var ringHeld: String? = null
+    private var ringDoneAt = 0L
+
+    /**
+     * Ce que fait le robot, pour l'anneau : alerte (défaut, arrêt de sécurité), une étape qui
+     * attend quelqu'un, une cuisson (ou pause, turbo), « c'est prêt » pendant 2 minutes, ou rien.
+     */
+    private fun ringState(): app.toque.core.ui.RingState {
         val s = snapshot
-        return s.busy || s.jobActive || s.turboActive || s.hasFault || Foyer.of(app).needsAttention()
+        val held = Foyer.of(app).tracker.heldState
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (held == "done" && ringHeld != "done") ringDoneAt = now
+        ringHeld = held
+        return when {
+            s.hasFault || held == "alert" || (s.state == JobState.PAUSED && s.pauseReason == PauseReason.SAFETY.name) -> app.toque.core.ui.RingState.ALERT
+            held == "waiting" -> app.toque.core.ui.RingState.WAITING
+            s.busy || s.jobActive || s.turboActive -> app.toque.core.ui.RingState.COOKING
+            held == "done" && now - ringDoneAt < app.toque.core.ui.RingPolicy.DONE_MS -> app.toque.core.ui.RingState.DONE
+            else -> app.toque.core.ui.RingState.IDLE
+        }
     }
 
-    /** L'anneau désigné ou son réglage a changé (Réglages, Outils › Anneau lumineux). */
+    /** L'anneau ou son réglage a changé (Réglages, Outils › Anneau lumineux). */
     fun ringChanged() = ring.reset()
+
+    /** Une couleur ou une force vient d'être choisie : l'anneau la montre quelques secondes. */
+    fun ringPreview() = ring.preview()
+
+    /** « Réinitialiser l'anneau » : blanc d'origine, réglages par défaut ; [done] sur le fil principal. */
+    fun ringResetAll(done: (Boolean) -> Unit) {
+        Thread({
+            val ok = RingLight.resetAll(prefs)
+            runOnUiThread {
+                ring.reset()
+                done(ok)
+            }
+        }, "toque-anneau-reinit").start()
+    }
 
     /** Quelque chose bouge à la machine (couvercle, bol, poids, cuisson, défaut) : quelqu'un est là. */
     private fun machineMoved(before: Snapshot?, now: Snapshot): Boolean {

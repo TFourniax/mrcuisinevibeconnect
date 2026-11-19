@@ -57,9 +57,13 @@ screen.
   animations (GIF, MP4 videos, pictures) added in Foyer › Settings › Monsieur Cuisine. Toque ships
   no pictures of its own; the files stay private to the household. Any touch, knob turn or move at
   the machine wakes it.
-- **The knob's light ring**, once found in Settings › Tools › Light ring (Toque lists the tablet's
-  lights and can watch which one the original app drives): on while someone uses the robot or it
-  cooks, off after the screensaver delay; or always on, or always off.
+- **The knob's light ring**, an RGB light (the `red`, `green` and `blue` LEDs) that Toque finds by
+  itself: its colour (white by default, like the original app, or orange, red, green, blue, purple,
+  cyan, yellow) and brightness in Settings › Light ring, optional colours by state (cooking orange,
+  a step waiting blue, ready green, alert blinking red), on while someone uses the robot or it
+  cooks and off after the screensaver delay, or always on or off; "Reset the ring" brings back the
+  original white. On a tablet without an RGB set, the ring is found once in Settings › Tools ›
+  Light ring.
 - **Lidl recipes, straight from monsieur-cuisine.com.** Toque downloads the official Monsieur
   Cuisine connect recipes (about 1,700 in French, with each step's machine settings) from the
   site's public API, nightly or on demand: no account, no server to run, no need for the stock app.

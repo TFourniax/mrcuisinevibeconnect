@@ -1,11 +1,56 @@
 package app.toque.core.ui
 
 /**
- * L'anneau lumineux autour du bouton rotatif. On ne sait pas d'avance comment la tablette le
- * commande : s'il apparaît parmi les voyants Linux (`/sys/class/leds/<nom>/brightness`), la
- * personne le désigne une fois (Réglages › Outils › Anneau lumineux) et Toque l'allume ou
- * l'éteint selon [RingPolicy]. Rien ne passe par la liaison série de la base moteur.
+ * L'anneau lumineux autour du bouton rotatif. Sur le Monsieur Cuisine Connect c'est une seule
+ * lumière RVB faite de trois voyants Linux (`/sys/class/leds/red`, `green`, `blue` : tous allumés
+ * = le blanc d'origine). Toque la trouve tout seul ([RingLeds.detect]) ; sur une tablette sans
+ * jeu RVB, la personne désigne un voyant (Réglages › Outils › Anneau lumineux). La couleur, la
+ * force et le moment où il s'allume suivent [RingPolicy]. Rien ne passe par la base moteur.
  */
+
+/** Ce que fait le robot, pour la couleur « selon l'état ». */
+enum class RingState { IDLE, COOKING, WAITING, DONE, ALERT }
+
+/** Une couleur proposée, en 0–255 par canal (avant la force choisie). */
+data class RingColor(val key: String, val r: Int, val g: Int, val b: Int)
+
+object RingColors {
+    // Le vert de ces voyants éclaire bien plus que le rouge : l'orange et le jaune en ont peu.
+    val WHITE = RingColor("white", 255, 255, 255)
+    val ORANGE = RingColor("orange", 255, 60, 0)
+    val RED = RingColor("red", 255, 0, 0)
+    val GREEN = RingColor("green", 0, 255, 0)
+    val BLUE = RingColor("blue", 0, 0, 255)
+    val VIOLET = RingColor("violet", 170, 0, 255)
+    val CYAN = RingColor("cyan", 0, 255, 255)
+    val YELLOW = RingColor("yellow", 255, 150, 0)
+    val ALL = listOf(WHITE, ORANGE, RED, GREEN, BLUE, VIOLET, CYAN, YELLOW)
+
+    /** Blanc par défaut, comme l'appli d'origine. */
+    fun of(key: String?): RingColor = ALL.firstOrNull { it.key == key } ?: WHITE
+}
+
+/** Force de l'anneau : part du maximum de chaque voyant. Forte par défaut (le blanc d'origine). */
+object RingIntensity {
+    const val LOW = "low"
+    const val MEDIUM = "medium"
+    const val HIGH = "high"
+
+    fun of(key: String?): String = when (key) {
+        LOW, MEDIUM -> key
+        else -> HIGH
+    }
+
+    fun factor(key: String?): Double = when (of(key)) {
+        LOW -> 0.2
+        MEDIUM -> 0.5
+        else -> 1.0
+    }
+}
+
+/** Ce que l'anneau doit montrer : allumé ou non, sa couleur, et s'il clignote. */
+data class RingLook(val on: Boolean, val color: RingColor, val blink: Boolean = false)
+
 object RingPolicy {
     /** Allumé quand on se sert du robot, éteint sinon (par défaut). */
     const val AUTO = "auto"
@@ -33,6 +78,89 @@ object RingPolicy {
         ALWAYS_ON -> true
         ALWAYS_OFF -> false
         else -> busy || (!screensaverShown && idleMs < idleLimitMs)
+    }
+
+    /** Combien de temps « c'est prêt » reste en vert, avec les couleurs selon l'état. */
+    const val DONE_MS = 2 * 60_000L
+
+    /**
+     * Ce que montre l'anneau. Allumé comme [lit] (une cuisson, une étape qui attend ou une alerte
+     * comptent comme « on s'en sert » ; « c'est prêt » aussi avec les couleurs selon l'état).
+     * Couleur choisie par défaut ; avec [byState] : orange en cuisson, bleu quand une étape
+     * attend quelqu'un, vert quand c'est prêt, rouge clignotant pour une alerte.
+     */
+    fun look(mode: String, colorKey: String?, byState: Boolean, state: RingState, screensaverShown: Boolean, idleMs: Long, idleLimitMs: Long): RingLook {
+        val chosen = RingColors.of(colorKey)
+        val busy = state == RingState.COOKING || state == RingState.WAITING || state == RingState.ALERT || (byState && state == RingState.DONE)
+        if (!lit(mode, busy, screensaverShown, idleMs, idleLimitMs)) return RingLook(false, chosen)
+        if (!byState) return RingLook(true, chosen)
+        return when (state) {
+            RingState.COOKING -> RingLook(true, RingColors.ORANGE)
+            RingState.WAITING -> RingLook(true, RingColors.BLUE)
+            RingState.DONE -> RingLook(true, RingColors.GREEN)
+            RingState.ALERT -> RingLook(true, RingColors.RED, blink = true)
+            RingState.IDLE -> RingLook(true, chosen)
+        }
+    }
+
+    /**
+     * Valeur à écrire sur un canal de maximum [max] pour la composante [component] (0–255) à la
+     * force [intensity] : arrondie, au moins 1 quand la composante n'est pas nulle.
+     */
+    fun level(component: Int, intensity: String?, max: Int): Int {
+        val c = component.coerceIn(0, 255)
+        if (c == 0 || max <= 0) return 0
+        val v = Math.round(c / 255.0 * RingIntensity.factor(intensity) * max).toInt()
+        return v.coerceIn(1, max)
+    }
+}
+
+/** Les trois voyants qui font l'anneau RVB. */
+data class RgbLeds(val red: String, val green: String, val blue: String) {
+    val names: List<String> get() = listOf(red, green, blue)
+
+    fun encode(): String = "$red,$green,$blue"
+
+    companion object {
+        fun decode(text: String?): RgbLeds? {
+            val parts = text?.split(',')?.map { it.trim() } ?: return null
+            if (parts.size != 3 || parts.any { !Leds.validName(it) || Leds.isScreen(it) } || parts.toSet().size != 3) return null
+            return RgbLeds(parts[0], parts[1], parts[2])
+        }
+    }
+}
+
+/** Trouve l'anneau RVB parmi les voyants : `red`/`green`/`blue`, `led_r`/`led_g`/`led_b`, `x:red`… */
+object RingLeds {
+    private val SEPARATORS = Regex("(?<=[:_.+-])|(?=[:_.+-])")
+    private val CHANNELS = mapOf("red" to 'r', "r" to 'r', "green" to 'g', "g" to 'g', "blue" to 'b', "b" to 'b')
+
+    /** Canal (r, g ou b) et « famille » du voyant (son nom, la couleur remplacée par *), ou null. */
+    fun channel(name: String): Pair<Char, String>? {
+        if (!Leds.validName(name) || Leds.isScreen(name)) return null
+        val tokens = name.lowercase().split(SEPARATORS).filter { it.isNotEmpty() }
+        for (i in tokens.indices.reversed()) {
+            val ch = CHANNELS[tokens[i]] ?: continue
+            return ch to tokens.mapIndexed { j, t -> if (j == i) "*" else t }.joinToString("")
+        }
+        return null
+    }
+
+    /**
+     * Le jeu RVB, ou null. Plusieurs familles complètes : celle qui parle d'anneau, de bouton ou
+     * de RVB d'abord, puis la plus courte (« red » plutôt que « led_red_2 »).
+     */
+    fun detect(names: Collection<String>): RgbLeds? {
+        val families = LinkedHashMap<String, MutableMap<Char, String>>()
+        for (name in names.distinct().sorted()) {
+            val (ch, family) = channel(name) ?: continue
+            families.getOrPut(family) { HashMap() }.putIfAbsent(ch, name)
+        }
+        val complete = families.filter { it.value.size == 3 }
+        if (complete.isEmpty()) return null
+        val hint = Regex("ring|knob|button|key|rgb")
+        val best = complete.entries.sortedWith(compareBy({ if (hint.containsMatchIn(it.key)) 0 else 1 }, { it.key.length }, { it.key })).first().value
+        return RgbLeds(best.getValue('r'), best.getValue('g'), best.getValue('b'))
     }
 }
 
@@ -72,6 +200,31 @@ object Leds {
         if (!validName(name) || value < 0 || value > 100_000) return null
         val d = "$ROOT/$name"
         return "[ -e $d/brightness ] && { echo none > $d/trigger 2>/dev/null; echo $value > $d/brightness; }"
+    }
+
+    private val TRIGGER = Regex("^[A-Za-z0-9_.:-]{1,40}$")
+
+    /** Remet un voyant comme il était : sa luminosité puis son déclencheur d'origine (un nom sûr), ou null. */
+    fun restoreCommand(name: String, brightness: Int, trigger: String): String? {
+        if (!validName(name) || isScreen(name) || brightness < 0 || brightness > 100_000) return null
+        val d = "$ROOT/$name"
+        val t = trigger.takeIf { it.isNotEmpty() && it != "none" && TRIGGER.matches(it) }
+        return "[ -e $d/brightness ] && { echo none > $d/trigger 2>/dev/null; echo $brightness > $d/brightness; " +
+            (if (t != null) "echo $t > $d/trigger 2>/dev/null; " else "") + "}"
+    }
+
+    /** L'état d'origine des voyants (hors écran), gardé une fois avant toute écriture : « nom=lum|déclencheur;… ». */
+    fun encodeOriginal(leds: List<Led>): String =
+        leds.filter { validName(it.name) && !isScreen(it.name) }.joinToString(";") { "${it.name}=${it.brightness}|${it.trigger}" }
+
+    fun decodeOriginal(text: String?): List<Led> = text.orEmpty().split(';').mapNotNull { part ->
+        val eq = part.indexOf('=')
+        if (eq <= 0) return@mapNotNull null
+        val name = part.substring(0, eq)
+        val rest = part.substring(eq + 1).split('|')
+        val brightness = rest.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
+        if (!validName(name) || isScreen(name)) return@mapNotNull null
+        Led(name, brightness.coerceIn(0, 100_000), 0, rest.getOrNull(1).orEmpty().take(40))
     }
 
     /**

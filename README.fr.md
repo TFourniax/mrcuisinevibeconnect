@@ -48,10 +48,13 @@ l'écran du robot.
   minute, ou les animations du foyer (GIF, vidéos MP4, images) ajoutées dans Foyer › Réglages ›
   Monsieur Cuisine. Toque ne fournit aucune image ; les fichiers restent privés au foyer. Un doigt,
   un tour de bouton ou un mouvement à la machine le referme.
-- **L'anneau lumineux du bouton**, une fois trouvé dans Réglages › Outils › Anneau lumineux (Toque
-  liste les voyants de la tablette et peut observer lequel l'appli d'origine commande) : allumé
-  quand on se sert du robot ou pendant une cuisson, éteint après le délai de l'écran de veille ;
-  ou toujours allumé, ou toujours éteint.
+- **L'anneau lumineux du bouton**, une lumière RVB (voyants `red`, `green` et `blue`) que Toque
+  trouve tout seul : sa couleur (blanc par défaut, comme l'appli d'origine, ou orange, rouge, vert,
+  bleu, violet, cyan, jaune) et sa force dans Réglages › Anneau lumineux, des couleurs selon l'état
+  si on veut (cuisson orange, étape qui attend bleu, prêt vert, alerte rouge qui clignote), allumé
+  quand on se sert du robot ou pendant une cuisson et éteint après le délai de l'écran de veille,
+  ou toujours allumé ou éteint ; « Réinitialiser l'anneau » remet le blanc d'origine. Sur une
+  tablette sans jeu RVB, l'anneau se trouve une fois dans Réglages › Outils › Anneau lumineux.
 - **Recettes Lidl, directement depuis monsieur-cuisine.com**. Toque télécharge les recettes
   officielles du Monsieur Cuisine connect (environ 1 700 en français, avec les réglages machine de
   chaque étape) par l'API publique du site, chaque nuit ou sur demande : aucun compte, aucun
