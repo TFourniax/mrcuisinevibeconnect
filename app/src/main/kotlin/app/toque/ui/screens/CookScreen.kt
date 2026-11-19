@@ -21,6 +21,7 @@ import app.toque.core.recipes.StepProgram
 import app.toque.ui.HoldButton
 import app.toque.ui.Icon
 import app.toque.ui.MainActivity
+import app.toque.ui.PhoneLink
 import app.toque.ui.ProgressLine
 import app.toque.ui.Screen
 import app.toque.ui.Ui
@@ -33,6 +34,10 @@ import app.toque.ui.Ui
  */
 class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : Screen(a) {
     override val title = recipe.title
+    override val recipeId: String get() = recipe.id
+    // La vidéo se met à la place du texte de l'étape : le panneau machine et les boutons du bas restent libres.
+    override val videoSide: Int get() = Gravity.START
+    override val videoBottomSpace: Int get() = 96
     private var index = startStep.coerceIn(0, maxOf(0, recipe.steps.size - 1))
     private val reviewed = HashSet<Int>()
     private val done = HashSet<Int>()
@@ -96,6 +101,14 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         val nav = Ui.horizontal(c)
         prevBtn = Ui.button(c, tr("Précédent"), Ui.Style.GHOST, Icon.Kind.BACK, height = 64) { go(index - 1) }
         nav.addView(prevBtn)
+        if (recipe.video.isNotEmpty()) {
+            nav.addView(Ui.button(c, tr("Revoir la vidéo"), Ui.Style.GHOST, Icon.Kind.PLAY, height = 64) { a.openVideo(recipe) },
+                Ui.lp(Ui.WRAP, Ui.WRAP, l = 12))
+        }
+        if (PhoneLink.available(a, recipe)) {
+            nav.addView(Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.LINK, height = 64) { b -> PhoneLink.send(a, recipe, b) },
+                Ui.lp(Ui.WRAP, Ui.WRAP, l = 12))
+        }
         nav.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(0, 1, 1f))
         nextBtn = Ui.button(c, tr("Suivant"), Ui.Style.SECONDARY, Icon.Kind.CHEVRON, height = 64) { next() }
         nextLabel = nextBtn.getChildAt(1) as TextView

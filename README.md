@@ -41,7 +41,8 @@ screen.
 - **Linked to Foyer, once** ([docs/FOYER.md](docs/FOYER.md)): the household's shared recipes show
   up by themselves, with the machine settings of each step when possible; the home screen shows
   tonight's planned meal; Foyer shows what the robot is doing and tells the phones when a dish is
-  ready. The link is made once with a 6-digit code and never needs redoing.
+  ready. A recipe saved from a reel can be watched again on the robot or sent to a phone. The link
+  is made once with a 6-digit code and never needs redoing.
 - **Dark interface in Foyer's colours**, designed for the robot's 7" screen and rotary knob, and
   smooth on its original tablet (1 GB RAM, Android 6): no heavy libraries, downsampled images,
   recycled views.

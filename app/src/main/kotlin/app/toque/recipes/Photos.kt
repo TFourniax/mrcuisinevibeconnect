@@ -15,6 +15,15 @@ object Photos {
     private const val MAX_SOURCE_PIXELS = 40_000_000L
 
     fun save(bytes: ByteArray, dir: File, name: String) {
+        val bmp = decode(bytes)
+        val tmp = File(dir, "$name.part")
+        FileOutputStream(tmp).use { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+        bmp.recycle()
+        if (!tmp.renameTo(File(dir, name))) tmp.delete()
+    }
+
+    /** Décode sans risque (taille et proportions vérifiées avant), réduit à [maxWidth] × [maxHeight] au plus. */
+    fun decode(bytes: ByteArray, maxWidth: Int = MAX_WIDTH, maxHeight: Int = MAX_HEIGHT): Bitmap {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         val w = bounds.outWidth
@@ -23,17 +32,14 @@ object Photos {
         if (w.toLong() * h > MAX_SOURCE_PIXELS || w > 20L * h || h > 20L * w) throw IOException(tr("image illisible"))
         // Réduction choisie sur les deux côtés : l'image décodée tient en quelques Mo.
         var sample = 1
-        while (w / (sample * 2) >= MAX_WIDTH || h / (sample * 2) >= MAX_HEIGHT) sample *= 2
+        while (w / (sample * 2) >= maxWidth || h / (sample * 2) >= maxHeight) sample *= 2
         var bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
             ?: throw IOException(tr("image illisible"))
-        if (bmp.width > MAX_WIDTH) {
-            val scaled = Bitmap.createScaledBitmap(bmp, MAX_WIDTH, bmp.height * MAX_WIDTH / bmp.width, true)
+        if (bmp.width > maxWidth) {
+            val scaled = Bitmap.createScaledBitmap(bmp, maxWidth, bmp.height * maxWidth / bmp.width, true)
             if (scaled !== bmp) bmp.recycle()
             bmp = scaled
         }
-        val tmp = File(dir, "$name.part")
-        FileOutputStream(tmp).use { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it) }
-        bmp.recycle()
-        if (!tmp.renameTo(File(dir, name))) tmp.delete()
+        return bmp
     }
 }

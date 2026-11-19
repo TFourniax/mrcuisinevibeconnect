@@ -15,6 +15,7 @@ import app.toque.core.foyer.StatusReport
 import app.toque.core.foyer.StatusTracker
 import app.toque.core.i18n.tr
 import app.toque.core.json.Json
+import app.toque.core.json.list
 import app.toque.core.json.obj
 import app.toque.core.json.str
 import app.toque.core.machine.EventType
@@ -170,6 +171,64 @@ class Foyer private constructor(private val app: ToqueApp) {
                 log.write("foyer", "cuisinée non envoyée : ${e.message}")
             }
         }
+    }
+
+    /** Ce que Foyer répond à « Voir sur le téléphone ». */
+    sealed class PhoneResult {
+        object Sent : PhoneResult()
+        /** Plusieurs téléphones du foyer peuvent la recevoir : à qui ? (identifiant, prénom) */
+        class Choose(val phones: List<Pair<String, String>>) : PhoneResult()
+        object NoPhone : PhoneResult()
+        object Limited : PhoneResult()
+        object NotLinked : PhoneResult()
+        object Failed : PhoneResult()
+    }
+
+    /**
+     * « Voir sur le téléphone » : Foyer envoie une notification qui rouvre la recette (et sa vidéo)
+     * sur le téléphone de [memberId], ou du seul membre qui a un téléphone. Hors du fil de l'écran ;
+     * [done] est appelé sur le fil de l'écran.
+     */
+    fun openOnPhone(recipeId: String, memberId: String?, done: (PhoneResult) -> Unit) {
+        if (!linked || !recipeId.startsWith(FoyerFeed.ID_PREFIX)) {
+            done(PhoneResult.NotLinked)
+            return
+        }
+        Thread {
+            val result = try {
+                val body = linkedMapOf<String, Any?>("recipeId" to recipeId)
+                if (memberId != null) body["memberId"] = memberId
+                val r = FoyerHttp.call("POST", "/api/robot/open", secret(), userAgent, Json.write(body))
+                val m = try {
+                    Json.parse(r.body).obj()
+                } catch (_: Exception) {
+                    emptyMap<String, Any?>()
+                }
+                val status = m.str("status")
+                when {
+                    r.code == 200 && status == "sent" -> PhoneResult.Sent
+                    r.code == 200 && status == "choose" -> {
+                        val phones = m["phones"].list().mapNotNull { p ->
+                            val o = p.obj()
+                            val id = o.str("id") ?: return@mapNotNull null
+                            id to (o.str("name")?.trim().orEmpty().ifEmpty { tr("Quelqu'un") })
+                        }
+                        if (phones.isEmpty()) PhoneResult.Failed else PhoneResult.Choose(phones)
+                    }
+                    r.code == 200 && status == "no_phone" -> PhoneResult.NoPhone
+                    r.code == 429 -> PhoneResult.Limited
+                    r.code == 401 -> PhoneResult.NotLinked
+                    else -> {
+                        log.write("foyer", "téléphone : réponse ${r.code} ${status.orEmpty()}")
+                        PhoneResult.Failed
+                    }
+                }
+            } catch (e: Exception) {
+                log.write("foyer", "téléphone : ${e.message}")
+                PhoneResult.Failed
+            }
+            main.post { done(result) }
+        }.apply { name = "toque-foyer-phone"; isDaemon = true }.start()
     }
 
     /** Oublie le lien de ce côté : nouveau secret, nouveau code (à relier de nouveau). */

@@ -32,6 +32,12 @@ abstract class Screen(val a: MainActivity) {
     open fun onKnob(delta: Int): Boolean = false
     open fun onKnobPress(): Boolean = false
     open fun canLeave(): Boolean = true
+    /** La recette affichée : le panneau vidéo d'une recette reste ouvert sur ses écrans à elle. */
+    open val recipeId: String? get() = null
+    /** Côté où le panneau vidéo se place sur cet écran (Gravity.START ou END). */
+    open val videoSide: Int get() = android.view.Gravity.END
+    /** Hauteur à laisser libre sous le panneau vidéo (boutons du bas de l'écran), en unités Ui. */
+    open val videoBottomSpace: Int get() = 0
 }
 
 /** Barre supérieure : retour, titre, état de la base, heure. */

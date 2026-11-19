@@ -28,6 +28,7 @@ import app.toque.core.machine.PauseReason
 import app.toque.core.machine.SafetyPolicy
 import app.toque.core.machine.Snapshot
 import app.toque.core.machine.Verdict
+import app.toque.core.recipes.Recipe
 import app.toque.recipes.LidlSync
 import app.toque.recipes.SyncService
 import app.toque.ui.screens.HomeScreen
@@ -51,6 +52,7 @@ class MainActivity : Activity() {
     private var unsubscribeEvents: (() -> Unit)? = null
     private var tone: ToneGenerator? = null
     private var toastView: TextView? = null
+    private var video: VideoPanel? = null
     private var lastKnobMs = 0L
     var knobListener: ((KeyEvent) -> Unit)? = null
 
@@ -79,6 +81,10 @@ class MainActivity : Activity() {
         overlay = FrameLayout(this)
         overlay.visibility = View.GONE
         root.addView(overlay, Ui.flp())
+        // Le panneau vidéo suit la hauteur de la barre machine.
+        machineBar.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) placeVideo()
+        }
         setContentView(root)
 
         try {
@@ -123,6 +129,7 @@ class MainActivity : Activity() {
     }
 
     override fun onStop() {
+        closeVideo()
         unsubscribe?.invoke()
         unsubscribeEvents?.invoke()
         topBar.stopClock()
@@ -187,6 +194,8 @@ class MainActivity : Activity() {
         val v = s.view
         (v.parent as? FrameLayout)?.removeView(v)
         content.addView(v, Ui.flp())
+        // La vidéo d'une recette reste ouverte de sa fiche à sa cuisson, pas au-delà.
+        video?.let { if (it.recipe.id != s.recipeId) closeVideo() else placeVideo() }
         topBar.setTitle(s.title, stack.size > 1)
         s.onShow()
         s.onSnapshot(snapshot)
@@ -199,6 +208,10 @@ class MainActivity : Activity() {
     override fun onBackPressed() {
         if (overlay.visibility == View.VISIBLE) {
             closeOverlay()
+            return
+        }
+        video?.let {
+            if (it.full) it.setFull(false) else closeVideo()
             return
         }
         back()
@@ -271,6 +284,46 @@ class MainActivity : Activity() {
             } catch (_: RuntimeException) {
             }
         }, i * 260L)
+    }
+
+    // ------------------------------------------------------------------ vidéo d'une recette
+
+    /** Ouvre la vidéo de [recipe] dans un panneau, à côté de la recette (plein écran en un appui). */
+    fun openVideo(recipe: Recipe) {
+        if (video?.recipe?.id == recipe.id) return
+        closeVideo()
+        val p = VideoPanel(this, recipe)
+        video = p
+        // Sous les dialogues et les messages, au-dessus de l'écran.
+        root.addView(p.view, 1, Ui.flp())
+        placeVideo()
+        p.start()
+    }
+
+    fun closeVideo() {
+        val p = video ?: return
+        video = null
+        p.release()
+        root.removeView(p.view)
+    }
+
+    /** Place le panneau : moitié d'écran du côté que l'écran courant laisse libre, ou tout l'écran. */
+    fun placeVideo() {
+        val p = video ?: return
+        val lp = if (p.full) {
+            Ui.flp()
+        } else {
+            val s = current
+            val side = s?.videoSide ?: Gravity.END
+            val width = ((if (root.width > 0) root.width else resources.displayMetrics.widthPixels) * 0.45f).toInt()
+            Ui.flp(width, Ui.MATCH, Gravity.TOP or side).apply {
+                topMargin = topBar.height.takeIf { it > 0 }?.plus(Ui.u(6)) ?: Ui.u(66)
+                bottomMargin = machineBar.height + Ui.u(12) + Ui.u(s?.videoBottomSpace ?: 0)
+                if (side == Gravity.START) leftMargin = Ui.u(16) else rightMargin = Ui.u(16)
+            }
+        }
+        p.view.layoutParams = lp
+        p.view.requestLayout()
     }
 
     // ------------------------------------------------------------------ dialogues et messages

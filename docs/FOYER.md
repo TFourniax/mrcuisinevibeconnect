@@ -9,7 +9,9 @@ linked to it once, then:
 - the **meals planned** in Foyer show on the home screen ("Ce soir · 20 h", one tap to cook);
 - Foyer shows **what the robot is doing** (Maison screen) and the phones are told when a dish is
   ready, a step waits for someone or the robot stopped for safety;
-- a household recipe cooked to the end is counted in Foyer ("déjà faite").
+- a household recipe cooked to the end is counted in Foyer ("déjà faite");
+- a recipe that comes from a **reel** can be watched again on the robot ("Revoir la vidéo": a panel
+  beside the recipe or the step, or full screen) or sent to a phone ("Voir sur le téléphone").
 
 The robot never starts anything from the phone: the motor is only driven by a person standing at
 the robot, with every safety rule of Toque.
@@ -58,6 +60,22 @@ household. Either way the robot erases the household's recipes and meals and sho
 - Foyer can only add, change or remove recipes whose id starts with `foyer-`: the Lidl catalogue is
   never touched, and the Lidl syncs never touch household recipes (`recettes.db` column `origin`).
 
+## Reels: on the robot, or on a phone
+
+Foyer sends each recipe's source link (`link`) and, for a social video, the same link as `video`.
+
+- **Revoir la vidéo** (recipe and cooking screens): the robot itself reads the reel's public
+  "embed" page (`https://www.instagram.com/p/<code>/embed/captioned/`), from home, without the
+  Foyer key: https and instagram.com only (redirects included), never a home-network address, 6 s,
+  3 MB. When the page gives the video's address (https, not a local address), Android's player
+  streams it from Instagram, in a panel on half the screen (the machine panel and the step buttons
+  stay free while cooking) or full screen; play/pause, ±10 s, sound. Nothing is downloaded to keep,
+  on the robot or by Foyer. Without an account Instagram does not always give the video, and
+  TikTok or YouTube are not read on the robot: the panel then shows the cover and the phone button.
+- **Voir sur le téléphone**: `POST /api/robot/open`. Foyer notifies the phone of the member with
+  notifications (if several, the robot asks whose); the notification opens the recipe in Foyer,
+  whose "Voir la vidéo" opens the reel in Instagram or the browser. 30 a day per robot.
+
 ## Machine settings of household recipes
 
 Foyer works them out once per recipe and keeps them while the recipe is unchanged:
@@ -81,6 +99,7 @@ robot checks it again before running it.
 | `POST /api/robot/status` | `{ state, recipeId, title, stepIndex, stepCount, stepText, tempC, speed, remainingSeconds, alert, notify }` (the end time is computed with the server's clock) |
 | `POST /api/robot/cooked` | `{ recipeId }` |
 | `GET /api/robot/photo/<recipe>?v=…` | The photo Foyer keeps for a shared household recipe (JPEG, PNG or WebP); 401 unlinked, 404 none |
+| `POST /api/robot/open` | `{ recipeId, memberId? }` → `{ status: "sent" }`, `{ status: "choose", phones: [{ id, name }] }`, `{ status: "no_phone" }`; 404 no link, 429 too many |
 
 401 means the robot is not (or no longer) linked: Toque shows a code again. The code is in
 `app/src/main/kotlin/app/toque/foyer/` (Android) and `core/.../foyer/` (feed reader and state

@@ -141,6 +141,10 @@ data class Recipe(
     /** Note moyenne sur 5 et nombre de notes sur monsieur-cuisine.com (0 : aucune). */
     val rating: Double = 0.0,
     val ratingCount: Int = 0,
+    /** Où la recette a été trouvée (adresse https), pour la rouvrir sur un téléphone ; vide sinon. */
+    val link: String = "",
+    /** La vidéo d'origine (réel Instagram, TikTok…), à revoir sur le robot ; vide sinon. */
+    val video: String = "",
 ) {
     val machineSteps: Int get() = steps.count { it.machine != null }
     val allIngredients: List<Ingredient> get() = ingredients.flatMap { it.items }
@@ -185,7 +189,10 @@ object RecipeCodec {
             if (s.needsReview) m["needsReview"] = true
             m
         },
-    )
+    ).apply {
+        if (r.link.isNotEmpty()) put("link", r.link)
+        if (r.video.isNotEmpty()) put("video", r.video)
+    }
 
     fun fromMap(m: Map<String, Any?>, fallbackSource: RecipeSource = RecipeSource.IMPORTED): Recipe? {
         val title = m.str("title")?.trim().orEmpty()
@@ -235,7 +242,15 @@ object RecipeCodec {
             author = m.str("author")?.trim().orEmpty(),
             rating = (m.double("rating") ?: 0.0).coerceIn(0.0, 5.0),
             ratingCount = (m.int("ratingCount") ?: 0).coerceAtLeast(0),
+            link = httpsOnly(m.str("link")),
+            video = httpsOnly(m.str("video")),
         )
+    }
+
+    /** Une adresse https raisonnable, sinon "" (jamais d'autre schéma à ouvrir ou à lire). */
+    fun httpsOnly(value: String?): String {
+        val v = value?.trim().orEmpty()
+        return if (v.length in 9..1000 && v.startsWith("https://", ignoreCase = true) && v.none { it.isWhitespace() || it == '"' || it == '<' || it == '>' }) v else ""
     }
 
     private fun parseMachine(m: Map<String, Any?>): StepMachine? {
