@@ -302,6 +302,41 @@ class Prefs(context: Context) {
             p.edit().putString("ringMode", v).commit()
         }
 
+    /** Les trois voyants de l'anneau RVB, trouvés tout seuls (« red,green,blue » ; "" : pas de jeu RVB). */
+    var ringRgb: String
+        get() = p.getString("ringRgb", "") ?: ""
+        set(v) {
+            p.edit().putString("ringRgb", v).commit()
+        }
+
+    /** Couleur de l'anneau (RingColors : « white » par défaut, comme l'appli d'origine). */
+    var ringColor: String
+        get() = p.getString("ringColor", "white") ?: "white"
+        set(v) {
+            p.edit().putString("ringColor", v).commit()
+        }
+
+    /** Force de l'anneau : « low », « medium » ou « high » (par défaut, comme l'appli d'origine). */
+    var ringIntensity: String
+        get() = p.getString("ringIntensity", "high") ?: "high"
+        set(v) {
+            p.edit().putString("ringIntensity", v).commit()
+        }
+
+    /** Couleurs selon l'état (cuisson orange, étape bleue, prêt vert, alerte rouge clignotant). */
+    var ringByState: Boolean
+        get() = p.getBoolean("ringByState", false)
+        set(v) {
+            p.edit().putBoolean("ringByState", v).commit()
+        }
+
+    /** État des voyants avant que Toque 1.0.9 y touche (Leds.encodeOriginal), pour « Réinitialiser l'anneau ». */
+    var ringOriginal: String
+        get() = p.getString("ringOriginal", "") ?: ""
+        set(v) {
+            p.edit().putString("ringOriginal", v).commit()
+        }
+
     /** Dernière version publiée plus récente que celle installée ("" : aucune), vue la nuit. */
     var updateAvailable: String
         get() = p.getString("updateAvailable", "") ?: ""

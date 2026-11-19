@@ -617,15 +617,25 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         if (!syncing) refreshSync()
     }
 
-    /** Anneau lumineux : le réglage une fois le voyant désigné, sinon comment le trouver. */
+    /** L'anneau RVB vient d'être trouvé au démarrage (MainActivity) : la section se redessine. */
+    fun refreshRing() = renderRing()
+
+    /**
+     * Anneau lumineux : couleur, force, quand il s'allume, couleurs selon l'état, et la remise à
+     * l'origine. Sans anneau trouvé ni voyant désigné : comment le trouver.
+     */
     private fun renderRing() {
         if (!::ringBox.isInitialized) return
         ringBox.removeAllViews()
+        val rgb = app.toque.core.ui.RgbLeds.decode(a.prefs.ringRgb)
         val led = a.prefs.ringLed
-        if (led.isEmpty()) {
+        if (rgb == null && led.isEmpty()) {
             ringBox.addView(Ui.text(c, tr("Toque ne sait pas encore comment la tablette commande l'anneau du bouton. Trouve-le une fois dans Outils › Anneau lumineux."), 16f, Ui.TEXT2)
                 .apply { setLineSpacing(0f, 1.15f) })
-            ringBox.addView(Ui.button(c, tr("Trouver l'anneau"), Ui.Style.SECONDARY, height = 52) { a.push(RingScreen(a)) }, Ui.lp(Ui.WRAP, Ui.WRAP, t = 10))
+            val row = Ui.horizontal(c)
+            row.addView(Ui.button(c, tr("Trouver l'anneau"), Ui.Style.SECONDARY, height = 52) { a.push(RingScreen(a)) }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
+            row.addView(resetRingButton(), Ui.lp(Ui.WRAP, Ui.WRAP))
+            ringBox.addView(row, Ui.lp(t = 10))
             return
         }
         val modes = listOf(
@@ -637,8 +647,86 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             a.prefs.ringMode = m
             a.ringChanged()
         }, Ui.lp(Ui.MATCH, Ui.u(58), t = 4))
-        ringBox.addView(Ui.text(c, tr("Éteint après le délai de l'écran de veille (2 minutes sans écran de veille), allumé dès qu'on touche le robot ou pendant une cuisson. Voyant : %s.", led),
-            15f, Ui.TEXT3).apply { setLineSpacing(0f, 1.15f) }, Ui.lp(t = 8))
+        if (rgb != null) {
+            ringBox.addView(Ui.text(c, tr("Couleur"), 16f, Ui.TEXT2), Ui.lp(t = 14))
+            val chosen = app.toque.core.ui.RingColors.of(a.prefs.ringColor)
+            for (rowColors in app.toque.core.ui.RingColors.ALL.chunked(4)) {
+                val row = Ui.horizontal(c)
+                for (color in rowColors) {
+                    row.addView(colorChip(color, color == chosen) {
+                        a.prefs.ringColor = color.key
+                        renderRing()
+                        a.ringPreview()
+                    }, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { setMargins(Ui.u(3), Ui.u(3), Ui.u(3), Ui.u(3)) })
+                }
+                ringBox.addView(row, Ui.lp(Ui.MATCH, Ui.WRAP, t = 4))
+            }
+            val levels = listOf(
+                app.toque.core.ui.RingIntensity.LOW to tr("Faible"),
+                app.toque.core.ui.RingIntensity.MEDIUM to tr("Moyenne"),
+                app.toque.core.ui.RingIntensity.HIGH to tr("Forte"),
+            )
+            ringBox.addView(Ui.text(c, tr("Force"), 16f, Ui.TEXT2), Ui.lp(t = 14))
+            ringBox.addView(dropdown(levels, app.toque.core.ui.RingIntensity.of(a.prefs.ringIntensity)) { k ->
+                a.prefs.ringIntensity = k
+                a.ringPreview()
+            }, Ui.lp(Ui.MATCH, Ui.u(58), t = 4))
+            ringBox.addView(toggle(tr("Couleurs selon l'état"), a.prefs.ringByState) { on ->
+                a.prefs.ringByState = on
+                a.ringChanged()
+            }, Ui.lp(t = 14))
+            ringBox.addView(Ui.text(c, tr("Cuisson : orange · une étape t'attend : bleu · c'est prêt : vert (2 minutes) · alerte : rouge qui clignote."), 15f, Ui.TEXT3)
+                .apply { setLineSpacing(0f, 1.15f) }, Ui.lp(t = 6))
+        }
+        val which = if (rgb != null) tr("Anneau trouvé tout seul : voyants %s, %s et %s.", rgb.red, rgb.green, rgb.blue) else tr("Voyant : %s.", led)
+        ringBox.addView(Ui.text(c, tr("Éteint après le délai de l'écran de veille (2 minutes sans écran de veille), allumé dès qu'on touche le robot ou pendant une cuisson.") + " " + which,
+            15f, Ui.TEXT3).apply { setLineSpacing(0f, 1.15f) }, Ui.lp(t = 10))
+        ringBox.addView(resetRingButton(), Ui.lp(Ui.WRAP, Ui.WRAP, t = 10))
+    }
+
+    /** Une couleur proposée : pastille et nom ; la choisie est entourée. */
+    private fun colorChip(color: app.toque.core.ui.RingColor, selected: Boolean, onPick: () -> Unit): View {
+        val chip = Ui.vertical(c, Gravity.CENTER_HORIZONTAL)
+        chip.setPadding(Ui.u(4), Ui.u(10), Ui.u(4), Ui.u(10))
+        chip.background = Ui.pressable(
+            Ui.round(if (selected) Ui.SURFACE3 else Ui.SURFACE2, 16f, if (selected) Ui.ACCENT else Ui.STROKE, if (selected) 2.5f else 1f), 16f,
+        )
+        val dot = View(c).apply { background = Ui.round(swatch(color.key), 15f, Ui.STROKE, 1f) }
+        chip.addView(dot, LinearLayout.LayoutParams(Ui.u(30), Ui.u(30)))
+        chip.addView(Ui.text(c, colorName(color.key), 14f, if (selected) Ui.TEXT else Ui.TEXT2), Ui.lp(Ui.WRAP, Ui.WRAP, t = 6))
+        chip.isClickable = true
+        chip.setOnClickListener { onPick() }
+        return chip
+    }
+
+    /** Couleur de la pastille à l'écran (proche de ce que montre l'anneau, pas la valeur des voyants). */
+    private fun swatch(key: String): Int = when (key) {
+        "orange" -> 0xFFFF8A2A.toInt()
+        "red" -> 0xFFFF3B30.toInt()
+        "green" -> 0xFF34C759.toInt()
+        "blue" -> 0xFF2F7BFF.toInt()
+        "violet" -> 0xFFA45BFF.toInt()
+        "cyan" -> 0xFF2BD9E8.toInt()
+        "yellow" -> 0xFFFFD23F.toInt()
+        else -> 0xFFFFFFFF.toInt()
+    }
+
+    private fun colorName(key: String): String = when (key) {
+        "orange" -> tr("Orange")
+        "red" -> tr("Rouge")
+        "green" -> tr("Vert")
+        "blue" -> tr("Bleu")
+        "violet" -> tr("Violet")
+        "cyan" -> tr("Cyan")
+        "yellow" -> tr("Jaune")
+        else -> tr("Blanc")
+    }
+
+    private fun resetRingButton(): View = Ui.button(c, tr("Réinitialiser l'anneau"), Ui.Style.GHOST, height = 52) {
+        a.ringResetAll { ok ->
+            a.toast(if (ok) tr("Anneau réinitialisé : blanc, comme à l'origine.") else tr("L'anneau n'a pas répondu (root ?)"), if (ok) Ui.OK else Ui.WARN)
+            renderRing()
+        }
     }
 
     override fun onSnapshot(s: Snapshot) {

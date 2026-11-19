@@ -193,13 +193,19 @@ class RingScreen(a: MainActivity) : Screen(a) {
     override fun build(): View {
         val root = Ui.vertical(c)
         root.setPadding(Ui.u(28), Ui.u(6), Ui.u(28), Ui.u(20))
-        root.addView(Ui.text(c, tr("Pour éteindre l'anneau du bouton quand personne ne se sert du robot, Toque doit savoir comment la tablette le commande. " +
-            "Essaie « Éteindre » sur chaque voyant : celui qui éteint l'anneau, désigne-le avec « C'est l'anneau »."), 17f, Ui.TEXT2).apply { setLineSpacing(0f, 1.15f) })
+        root.addView(Ui.text(c, tr("Les voyants que la tablette sait piloter. Toque trouve tout seul l'anneau RVB du Monsieur Cuisine (voyants red, green et blue) ; " +
+            "sinon, essaie « Éteindre » sur chaque voyant et désigne celui qui éteint l'anneau avec « C'est l'anneau »."), 17f, Ui.TEXT2).apply { setLineSpacing(0f, 1.15f) })
         status = Ui.text(c, "", 17f, Ui.TEXT).apply { setLineSpacing(0f, 1.15f) }
         root.addView(status, Ui.lp(t = 10))
         val actions = Ui.horizontal(c)
         actions.addView(Ui.button(c, tr("Observer l'appli d'origine"), Ui.Style.SECONDARY, Icon.Kind.SYNC, height = 54, textSize = 17f) { observe() }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
         actions.addView(Ui.button(c, tr("Actualiser"), Ui.Style.GHOST, height = 54, textSize = 17f) { load() }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
+        actions.addView(Ui.button(c, tr("Réinitialiser l'anneau"), Ui.Style.GHOST, height = 54, textSize = 17f) {
+            a.ringResetAll { ok ->
+                a.toast(if (ok) tr("Anneau réinitialisé : blanc, comme à l'origine.") else tr("L'anneau n'a pas répondu (root ?)"), if (ok) Ui.OK else Ui.WARN)
+                load()
+            }
+        }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
         if (a.prefs.ringLed.isNotEmpty()) {
             actions.addView(Ui.button(c, tr("Ne plus piloter l'anneau"), Ui.Style.GHOST, height = 54, textSize = 17f) {
                 // L'anneau est rendu allumé, comme avant que Toque s'en occupe.
@@ -244,8 +250,12 @@ class RingScreen(a: MainActivity) : Screen(a) {
     private fun render(leds: List<app.toque.core.ui.Led>) {
         list.removeAllViews()
         val chosen = a.prefs.ringLed
+        // L'anneau RVB : trouvé tout seul, ses trois voyants ne se désignent pas un par un.
+        val rgb = app.toque.core.ui.RingLeds.detect(leds.map { it.name })
         status.text = when {
             leds.isEmpty() -> tr("La tablette ne montre aucun voyant pilotable : l'anneau est sans doute câblé en direct.")
+            rgb != null -> tr("Anneau trouvé tout seul : une lumière RVB faite des voyants %s, %s et %s. Sa couleur se choisit dans Réglages › Anneau lumineux.",
+                rgb.red, rgb.green, rgb.blue)
             chosen.isNotEmpty() -> tr("Anneau : voyant « %s ». Réglages › Anneau lumineux choisit quand il s'allume.", chosen)
             else -> tr("%d voyants trouvés.", leds.size)
         }
@@ -254,7 +264,8 @@ class RingScreen(a: MainActivity) : Screen(a) {
             val head = Ui.horizontal(c)
             val info = tr("luminosité %d / %d", led.brightness, led.max) + (if (led.trigger.isNotEmpty() && led.trigger != "none") " · " + tr("déclencheur %s", led.trigger) else "")
             val texts = Ui.vertical(c)
-            texts.addView(Ui.text(c, led.name, 19f, if (led.name == chosen) Ui.ACCENT else Ui.TEXT, Ui.MEDIUM))
+            val ringPart = led.name == chosen || (rgb != null && led.name in rgb.names)
+            texts.addView(Ui.text(c, led.name, 19f, if (ringPart) Ui.ACCENT else Ui.TEXT, Ui.MEDIUM))
             texts.addView(Ui.text(c, info, 15f, Ui.TEXT3))
             head.addView(texts, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
             if (app.toque.core.ui.Leds.isScreen(led.name)) {
@@ -262,8 +273,10 @@ class RingScreen(a: MainActivity) : Screen(a) {
             } else {
                 head.addView(Ui.button(c, tr("Allumer"), Ui.Style.SECONDARY, height = 50, textSize = 16f) { set(led.name, true) }, Ui.lp(Ui.WRAP, Ui.WRAP, l = 8))
                 head.addView(Ui.button(c, tr("Éteindre"), Ui.Style.SECONDARY, height = 50, textSize = 16f) { set(led.name, false) }, Ui.lp(Ui.WRAP, Ui.WRAP, l = 8))
-                head.addView(Ui.button(c, tr("C'est l'anneau"), if (led.name == chosen) Ui.Style.PRIMARY else Ui.Style.GHOST, height = 50, textSize = 16f) { choose(led.name) },
-                    Ui.lp(Ui.WRAP, Ui.WRAP, l = 8))
+                if (rgb == null) {
+                    head.addView(Ui.button(c, tr("C'est l'anneau"), if (led.name == chosen) Ui.Style.PRIMARY else Ui.Style.GHOST, height = 50, textSize = 16f) { choose(led.name) },
+                        Ui.lp(Ui.WRAP, Ui.WRAP, l = 8))
+                }
             }
             card.addView(head)
             list.addView(card, Ui.lp(t = 10))
@@ -281,7 +294,7 @@ class RingScreen(a: MainActivity) : Screen(a) {
     }
 
     private fun choose(name: String) {
-        if (!app.toque.core.ui.Leds.validName(name) || app.toque.core.ui.Leds.isScreen(name)) return
+        if (!app.toque.core.ui.Leds.validName(name) || app.toque.core.ui.Leds.isScreen(name) || a.prefs.ringRgb.isNotEmpty()) return
         a.prefs.ringLed = name
         a.app.log.write("anneau", "anneau désigné : $name")
         a.toast(tr("Anneau enregistré. Réglages › Anneau lumineux choisit quand il s'allume."), Ui.OK)
@@ -320,7 +333,7 @@ class RingScreen(a: MainActivity) : Screen(a) {
             texts.addView(Ui.text(c, tr("%s · %d changements", name, count), 17f, Ui.TEXT))
             texts.addView(Ui.text(c, times, 14f, Ui.TEXT3))
             row.addView(texts, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
-            if (!app.toque.core.ui.Leds.isScreen(name)) {
+            if (!app.toque.core.ui.Leds.isScreen(name) && a.prefs.ringRgb.isEmpty()) {
                 row.addView(Ui.button(c, tr("C'est l'anneau"), Ui.Style.GHOST, height = 50, textSize = 16f) { choose(name) }, Ui.lp(Ui.WRAP, Ui.WRAP, l = 8))
             }
             card.addView(row, Ui.lp(t = 8))
