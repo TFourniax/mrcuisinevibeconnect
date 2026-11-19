@@ -196,10 +196,8 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
         unsub?.invoke()
     }
 
-    override fun onKnob(delta: Int): Boolean {
-        grid.smoothScrollBy(delta * Ui.u(240), 150)
-        return true
-    }
+    /** Au bouton rotatif : on arrive sur la première recette affichée (la grille défile au fil des tours). */
+    override val knobStart: View? get() = if (::grid.isInitialized && grid.childCount > 0) grid.getChildAt(0) else null
 
     private companion object {
         /** Un seul fil de recherche partagé par tous les écrans Recettes. */

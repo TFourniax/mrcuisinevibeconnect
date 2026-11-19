@@ -23,6 +23,7 @@ import app.toque.ui.Ui
 class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
     override val title = recipe.title
     override val recipeId: String get() = recipe.id
+    private var cookBtn: View? = null
     private lateinit var favIcon: Icon
     private lateinit var favLabel: TextView
 
@@ -60,9 +61,11 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         }
 
         val actions = Ui.horizontal(c)
-        actions.addView(Ui.button(c, tr("Cuisiner"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 66, textSize = 22f) {
+        val cook = Ui.button(c, tr("Cuisiner"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 66, textSize = 22f) {
             a.push(CookScreen(a, recipe, 0))
-        }, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(12) })
+        }
+        cookBtn = cook
+        actions.addView(cook, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(12) })
         val fav = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.STAR, height = 66) { toggleFavorite() }
         favIcon = fav.getChildAt(0) as Icon
         favLabel = Ui.text(c, "", 18f, Ui.TEXT, Ui.MEDIUM)
@@ -227,8 +230,6 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         favLabel.text = tr("Favori")
     }
 
-    override fun onKnobPress(): Boolean {
-        a.push(CookScreen(a, recipe, 0))
-        return true
-    }
+    /** Au bouton rotatif : on arrive sur « Cuisiner ». */
+    override val knobStart: View? get() = cookBtn
 }

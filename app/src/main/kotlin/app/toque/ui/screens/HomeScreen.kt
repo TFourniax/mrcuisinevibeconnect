@@ -19,6 +19,7 @@ import app.toque.core.update.Releases
 import app.toque.foyer.Foyer
 import app.toque.recipes.RecipeRepo
 import app.toque.ui.Icon
+import app.toque.ui.Knob
 import app.toque.ui.ImageLoader
 import app.toque.ui.MainActivity
 import app.toque.ui.Screen
@@ -60,7 +61,8 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         root.setPadding(Ui.u(24), Ui.u(6), Ui.u(24), Ui.u(22))
 
         // ---- Colonne de gauche : le repas prévu (ou la liaison), la reprise, la recherche
-        val left = Ui.vertical(c)
+        // (au bouton rotatif, chaque colonne se parcourt d'un bloc)
+        val left = Knob.region(Ui.vertical(c))
         lead = FrameLayout(c)
         left.addView(lead, LinearLayout.LayoutParams(Ui.MATCH, 0, 1f))
         resumeCard = Ui.horizontal(c)
@@ -92,7 +94,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         root.addView(left, LinearLayout.LayoutParams(0, Ui.MATCH, 0.42f).apply { rightMargin = Ui.u(20) })
 
         // ---- Colonne de droite : nos recettes, puis les outils
-        val right = Ui.vertical(c)
+        val right = Knob.region(Ui.vertical(c))
         val head = Ui.horizontal(c, Gravity.BOTTOM)
         cardsTitle = Ui.text(c, "", 24f, Ui.TEXT, Ui.MEDIUM)
         head.addView(cardsTitle, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))

@@ -12,6 +12,8 @@ import app.toque.core.machine.Programs
 import app.toque.core.machine.Snapshot
 import app.toque.ui.HoldButton
 import app.toque.ui.Icon
+import app.toque.ui.Knob
+import app.toque.ui.KnobAdjustable
 import app.toque.ui.MainActivity
 import app.toque.ui.Screen
 import app.toque.ui.Ui
@@ -28,6 +30,7 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
         lateinit var value: TextView
         lateinit var card: LinearLayout
         lateinit var start: View
+        val isValueReady: Boolean get() = this::value.isInitialized
     }
 
     private val progs = listOf(
@@ -57,10 +60,15 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
             card.addView(Ui.text(c, p.text, 16f, Ui.TEXT2).apply { setLineSpacing(0f, 1.15f) }, Ui.lp(t = 6))
             card.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
             val dur = Ui.horizontal(c)
-            dur.addView(Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.MINUS, height = 56) { selected = i; bump(p, -1) }, Ui.lp(Ui.u(64), Ui.WRAP))
+            // Au bouton rotatif, la durée se règle sur sa valeur : − et + ne sont pas des étapes.
+            dur.addView(Knob.skip(Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.MINUS, height = 56) { selected = i; bump(p, -1) }), Ui.lp(Ui.u(64), Ui.WRAP))
             p.value = Ui.text(c, "", 40f, Ui.TEXT, Ui.LIGHT).apply { gravity = Gravity.CENTER }
+            Knob.adjustable(p.value, object : KnobAdjustable {
+                override fun knobBegin() { selected = i; refresh() }
+                override fun knobAdjust(delta: Int) { selected = i; bump(p, delta) }
+            })
             dur.addView(p.value, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
-            dur.addView(Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.PLUS, height = 56) { selected = i; bump(p, 1) }, Ui.lp(Ui.u(64), Ui.WRAP))
+            dur.addView(Knob.skip(Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.PLUS, height = 56) { selected = i; bump(p, 1) }), Ui.lp(Ui.u(64), Ui.WRAP))
             card.addView(dur, Ui.lp(t = 10))
             p.start = Ui.button(c, tr("Démarrer"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 66) {
                 selected = i
@@ -69,6 +77,7 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
             card.addView(p.start, Ui.lp(t = 14))
             card.isClickable = true
             card.setOnClickListener { selected = i; refresh() }
+            Knob.skip(card)
             row.addView(card, LinearLayout.LayoutParams(0, Ui.MATCH, 1f).apply { if (i < progs.size - 1) rightMargin = Ui.u(16) })
         }
         root.addView(row, LinearLayout.LayoutParams(Ui.MATCH, 0, 1f))
@@ -103,13 +112,6 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
         turbo.alpha = if (turbo.isEnabled) 1f else 0.35f
     }
 
-    override fun onKnob(delta: Int): Boolean {
-        bump(progs[selected], delta)
-        return true
-    }
-
-    override fun onKnobPress(): Boolean {
-        if (!a.snapshot.busy) a.startJob(progs[selected].make(progs[selected].seconds * 1000L))
-        return true
-    }
+    /** Au bouton rotatif : on arrive sur la durée du programme choisi ; Démarrer se touche comme du doigt. */
+    override val knobStart: View? get() = progs.getOrNull(selected)?.takeIf { it.isValueReady }?.value
 }

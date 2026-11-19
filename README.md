@@ -46,6 +46,12 @@ screen.
 - **Dark interface in Foyer's colours**, designed for the robot's 7" screen and rotary knob, and
   smooth on its original tablet (1 GB RAM, Android 6): no heavy libraries, downsampled images,
   recycled views.
+- **The rotary knob works everywhere**, like on the stock app: turning moves a highlight from one
+  button to the next (lists scroll along), pressing taps it; on a value (time, temperature,
+  speed, a program's duration, a setting's choice), a press lets you change it by turning and a
+  second press confirms. The Monsieur Cuisine Connect's knob codes (F7, F6, F5) are recognised out
+  of the box; *Settings › Tools › Rotary knob* learns others. Starting the motor still takes a
+  press on a highlighted, visible start button, with every safety rule of a tap.
 - **Lidl recipes, straight from monsieur-cuisine.com.** Toque downloads the official Monsieur
   Cuisine connect recipes (about 1,700 in French, with each step's machine settings) from the
   site's public API, nightly or on demand: no account, no server to run, no need for the stock app.

@@ -36,6 +36,13 @@ l'écran du robot.
 - **Interface sombre**, pensée pour l'écran 7" et le bouton rotatif du robot, fluide sur sa
   tablette d'origine (1 Go de RAM, Android 6) : pas de bibliothèque lourde, images
   sous-échantillonnées, vues recyclées.
+- **Le bouton rotatif sert partout**, comme sur l'appli d'origine : tourner déplace un cadre d'un
+  bouton à l'autre (les listes défilent avec), appuyer le touche ; sur une valeur (durée,
+  température, vitesse, durée d'un programme, choix d'un réglage), un appui permet de la régler en
+  tournant, un second appui la valide. Les codes du bouton du Monsieur Cuisine Connect (F7, F6, F5)
+  sont reconnus d'office ; Réglages › Outils › Bouton rotatif en apprend d'autres. Démarrer le
+  moteur demande toujours d'appuyer sur un bouton de démarrage visible et encadré, avec toutes les
+  règles de sécurité d'un appui du doigt.
 - **Recettes Lidl, directement depuis monsieur-cuisine.com**. Toque télécharge les recettes
   officielles du Monsieur Cuisine connect (environ 1 700 en français, avec les réglages machine de
   chaque étape) par l'API publique du site, chaque nuit ou sur demande : aucun compte, aucun

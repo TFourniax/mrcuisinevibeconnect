@@ -166,6 +166,7 @@
   "Fuseau horaire inconnu : %s": "Unknown time zone: %s",
   "Fuseau horaire introuvable : vérifie le Wi-Fi.": "Time zone not found: check the Wi-Fi.",
   "Gauche : %s\nDroite : %s\nAppui : %s\n\nLes molettes (défilement) sont aussi reconnues automatiquement.": "Left: %s\nRight: %s\nPress: %s\n\nScroll wheels are also recognised automatically.",
+  "Partout dans Toque, tourner le bouton passe d'un bouton de l'écran à l'autre et appuyer le touche. Sur une valeur (durée, température, vitesse…), un appui permet de la régler en tournant, un second appui la valide.": "Throughout Toque, turning the knob moves from one button on the screen to the next and pressing it taps it. On a value (time, temperature, speed…), a press lets you change it by turning, and a second press confirms it.",
   "GitHub a répondu %d": "GitHub replied %d",
   "GitHub limite les vérifications : réessaie dans une heure": "GitHub is limiting checks: try again in an hour",
   "Hacher": "Chop",

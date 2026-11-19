@@ -11,8 +11,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import app.toque.core.i18n.tr
 
-/** Carte de réglage : libellé, grande valeur, boutons − / +, sélection pour le bouton rotatif. */
-class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c) {
+/**
+ * Carte de réglage : libellé, grande valeur, boutons − / +. Au bouton rotatif, un appui sur la
+ * carte entre dans le réglage, tourner fait − / +, un second appui en sort.
+ */
+class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), KnobAdjustable {
     private val valueView = Ui.text(c, "", 64f, Ui.TEXT, Ui.LIGHT)
     private val unitView = Ui.text(c, "", 22f, Ui.TEXT2, Ui.LIGHT)
     private val subView = Ui.ellipsize(Ui.text(c, "", 16f, Ui.TEXT3))
@@ -25,6 +28,7 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c) {
     /** Répétition à l'appui long (désactivée pendant une cuisson pour vitesse et température). */
     var repeatEnabled = true
     private var isSel = false
+    private var editable = true
 
     init {
         orientation = VERTICAL
@@ -66,8 +70,18 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c) {
     }
 
     fun setEditable(on: Boolean) {
+        editable = on
         Ui.setButtonEnabled(minus, on)
         Ui.setButtonEnabled(plus, on)
+    }
+
+    override fun knobBegin() = onSelect()
+
+    /** Les mêmes gestes que − et + : les limites et règles de l'écran s'appliquent. */
+    override fun knobAdjust(delta: Int) {
+        if (!editable) return
+        onSelect()
+        if (delta > 0) onPlus() else onMinus()
     }
 
     private fun refreshBg() {

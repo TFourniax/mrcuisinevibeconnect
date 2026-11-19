@@ -54,6 +54,7 @@ class MainActivity : Activity() {
     private var toastView: TextView? = null
     private var video: VideoPanel? = null
     private var lastKnobMs = 0L
+    private lateinit var knobNav: KnobNav
     var knobListener: ((KeyEvent) -> Unit)? = null
 
     val prefs: Prefs get() = app.prefs
@@ -86,6 +87,10 @@ class MainActivity : Activity() {
             if (bottom - top != oldBottom - oldTop && video != null) machineBar.post { placeVideo() }
         }
         setContentView(root)
+        // La racine peut prendre le focus : un champ de recherche ne le garde pas sans qu'on tape.
+        root.isFocusable = true
+        root.isFocusableInTouchMode = true
+        knobNav = KnobNav(this, root)
 
         try {
             tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
@@ -199,6 +204,7 @@ class MainActivity : Activity() {
         topBar.setTitle(s.title, stack.size > 1)
         s.onShow()
         s.onSnapshot(snapshot)
+        knobNav.reset()
     }
 
     fun refreshTitle() {
@@ -219,9 +225,41 @@ class MainActivity : Activity() {
 
     // ------------------------------------------------------------------ bouton rotatif
 
+    /** Un dialogue ou la vidéo en plein écran : le bouton ne parcourt qu'eux. */
+    val knobModal: Boolean get() = overlay.visibility == View.VISIBLE || video?.full == true
+
+    /** L'écran courant (son élément de départ est cherché là, pas dans la barre du haut). */
+    val knobContent: View get() = content
+
+    /** Les zones parcourues au bouton, dans l'ordre. */
+    fun knobAreas(): List<View> {
+        val v = video
+        return when {
+            overlay.visibility == View.VISIBLE -> listOf(overlay)
+            v != null && v.full -> listOf(v.view)
+            else -> listOfNotNull(topBar, content, v?.view, machineBar)
+        }
+    }
+
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) Foyer.of(app).interaction()
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            Foyer.of(app).interaction()
+            knobNav.touch()
+        }
         return super.dispatchTouchEvent(event)
+    }
+
+    /** -1 tourner à gauche, 1 à droite, 2 appui, 0 autre touche. Les codes réglés à la main l'emportent. */
+    private fun knobKey(k: Int): Int {
+        val left = prefs.knobLeft.let { if (it >= 0) it == k else k in DEFAULT_LEFT }
+        val right = prefs.knobRight.let { if (it >= 0) it == k else k in DEFAULT_RIGHT }
+        val press = prefs.knobPress.let { if (it >= 0) it == k else k in DEFAULT_PRESS }
+        return when {
+            left -> -1
+            right -> 1
+            press -> 2
+            else -> 0
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -230,21 +268,17 @@ class MainActivity : Activity() {
             if (event.action == KeyEvent.ACTION_DOWN) l(event)
             return true
         }
-        if (event.action == KeyEvent.ACTION_DOWN && overlay.visibility != View.VISIBLE) {
-            val k = event.keyCode
-            val left = prefs.knobLeft.let { if (it >= 0) it == k else k == KeyEvent.KEYCODE_DPAD_LEFT }
-            val right = prefs.knobRight.let { if (it >= 0) it == k else k == KeyEvent.KEYCODE_DPAD_RIGHT }
-            val press = prefs.knobPress.let {
-                if (it >= 0) it == k else k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER
-            }
-            val s = current
-            if (s != null && currentFocus !is android.widget.EditText) {
-                if (left && s.onKnob(-1)) return true
-                if (right && s.onKnob(1)) return true
-                if (press && s.onKnobPress()) return true
-            }
+        val kind = knobKey(event.keyCode)
+        if (kind == 0) return super.dispatchKeyEvent(event)
+        val focused = currentFocus
+        if (focused is android.widget.EditText) {
+            // En train de taper (clavier ouvert) : les touches restent au champ.
+            if (keyboardOpen()) return super.dispatchKeyEvent(event)
+            focused.clearFocus()
+            root.requestFocus()
         }
-        return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN && (kind != 2 || event.repeatCount == 0)) knob(kind)
+        return true
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -255,10 +289,26 @@ class MainActivity : Activity() {
             val now = System.currentTimeMillis()
             if (v != 0f && now - lastKnobMs > 40) {
                 lastKnobMs = now
-                if (current?.onKnob(if (v > 0) 1 else -1) == true) return true
+                knob(if (v > 0) 1 else -1)
+                return true
             }
         }
         return super.dispatchGenericMotionEvent(event)
+    }
+
+    /** Un geste du bouton : d'abord l'écran s'il le gère lui-même (réglage du bouton), sinon le parcours. */
+    private fun knob(kind: Int) {
+        val s = current
+        val own = !knobModal && s != null && if (kind == 2) s.onKnobPress() else s.onKnob(kind)
+        if (own) return
+        if (kind == 2) knobNav.press() else knobNav.turn(kind)
+    }
+
+    private fun keyboardOpen(): Boolean {
+        val r = android.graphics.Rect()
+        root.getWindowVisibleDisplayFrame(r)
+        val h = root.rootView.height
+        return h > 0 && h - r.height() > h / 5
     }
 
     // ------------------------------------------------------------------ évènements machine
@@ -364,11 +414,14 @@ class MainActivity : Activity() {
         overlay.visibility = View.VISIBLE
         overlay.alpha = 0f
         overlay.animate().alpha(1f).setDuration(120).start()
+        knobNav.reset()
     }
 
     fun closeOverlay() {
+        val was = overlay.visibility == View.VISIBLE
         overlay.visibility = View.GONE
         overlay.removeAllViews()
+        if (was) knobNav.reset()
     }
 
     /** Dialogue de confirmation. */
@@ -504,6 +557,14 @@ class MainActivity : Activity() {
 
         /** MotionEvent.AXIS_SCROLL (API 26), valeur fixe pour Android 6. */
         private const val AXIS_SCROLL = 26
+
+        /**
+         * Codes du bouton rotatif reconnus sans réglage : les flèches, et F7 / F6 / F5 envoyés par
+         * le bouton du Monsieur Cuisine Connect (relevés sur un SKMC 1200 B2).
+         */
+        val DEFAULT_LEFT = intArrayOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_F7)
+        val DEFAULT_RIGHT = intArrayOf(KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_F6)
+        val DEFAULT_PRESS = intArrayOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_F5)
         private val clockFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
 
         /** Heure affichée ; le fuseau peut changer en cours de route (réglage automatique). */

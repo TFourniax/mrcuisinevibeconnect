@@ -18,6 +18,7 @@ class ScaleScreen(a: MainActivity) : Screen(a) {
     private lateinit var value: TextView
     private lateinit var state: LinearLayout
     private var simulated = 0
+    private var tareBtn: View? = null
 
     override fun build(): View {
         val root = Ui.vertical(c, Gravity.CENTER_HORIZONTAL)
@@ -32,9 +33,11 @@ class ScaleScreen(a: MainActivity) : Screen(a) {
         root.addView(state, Ui.lp(Ui.WRAP, Ui.WRAP, t = 6))
         root.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
         val buttons = Ui.horizontal(c, Gravity.CENTER)
-        buttons.addView(Ui.button(c, tr("Tare (remise à zéro)"), Ui.Style.PRIMARY, Icon.Kind.SCALE, height = 76, textSize = 23f) {
+        val tare = Ui.button(c, tr("Tare (remise à zéro)"), Ui.Style.PRIMARY, Icon.Kind.SCALE, height = 76, textSize = 23f) {
             a.machine.tare()
-        })
+        }
+        tareBtn = tare
+        buttons.addView(tare)
         if (a.prefs.mode == Prefs.Mode.DEMO) {
             buttons.addView(Ui.spacer(c, w = 30))
             for (g in intArrayOf(100, 250)) {
@@ -69,8 +72,6 @@ class ScaleScreen(a: MainActivity) : Screen(a) {
         (state.getChildAt(0) as Icon).color = col
     }
 
-    override fun onKnobPress(): Boolean {
-        a.machine.tare()
-        return true
-    }
+    /** Au bouton rotatif : on arrive sur Tare. */
+    override val knobStart: View? get() = tareBtn
 }

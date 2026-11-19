@@ -29,8 +29,14 @@ abstract class Screen(val a: MainActivity) {
     open fun onHide() {}
     open fun onSnapshot(s: Snapshot) {}
     open fun onEvent(e: MachineEvent) {}
+    /**
+     * Bouton rotatif géré par l'écran lui-même (true : le parcours général n'a pas lieu). Par
+     * défaut, tourner passe d'un élément à l'autre et appuyer le touche (KnobNav).
+     */
     open fun onKnob(delta: Int): Boolean = false
     open fun onKnobPress(): Boolean = false
+    /** Élément où le cadre du bouton rotatif se pose en arrivant sur l'écran (sinon le premier). */
+    open val knobStart: View? get() = null
     open fun canLeave(): Boolean = true
     /** La recette affichée : le panneau vidéo d'une recette reste ouvert sur ses écrans à elle. */
     open val recipeId: String? get() = null
@@ -79,7 +85,8 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
         addView(home, LayoutParams(Ui.u(52), Ui.u(52)))
         lid.visibility = View.GONE
         temp.visibility = View.GONE
-        // Accès caché aux réglages Android : 5 appuis rapides sur l'heure.
+        // Accès caché aux réglages Android : 5 appuis rapides sur l'heure (pas une étape du bouton rotatif).
+        Knob.skip(clock)
         clock.setOnClickListener {
             val now = System.currentTimeMillis()
             if (now - adminFirst > 3_000) { adminFirst = now; adminTaps = 0 }

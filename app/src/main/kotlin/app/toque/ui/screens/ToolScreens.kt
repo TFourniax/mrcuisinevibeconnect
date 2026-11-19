@@ -127,6 +127,9 @@ class KnobScreen(a: MainActivity) : Screen(a) {
             refresh()
         })
         root.addView(row, Ui.lp(t = 30))
+        root.addView(Ui.text(c, tr("Partout dans Toque, tourner le bouton passe d'un bouton de l'écran à l'autre et appuyer le touche. " +
+            "Sur une valeur (durée, température, vitesse…), un appui permet de la régler en tournant, un second appui la valide."),
+            17f, Ui.TEXT3).apply { gravity = Gravity.CENTER; setLineSpacing(0f, 1.15f) }, Ui.lp(Ui.MATCH, Ui.WRAP, t = 28))
         refresh()
         return root
     }
@@ -156,7 +159,7 @@ class KnobScreen(a: MainActivity) : Screen(a) {
     private fun refresh() {
         fun name(k: Int, def: String) = if (k < 0) tr("%s (par défaut)", def) else KeyEvent.keyCodeToString(k).removePrefix("KEYCODE_")
         info.text = tr("Gauche : %s\nDroite : %s\nAppui : %s\n\nLes molettes (défilement) sont aussi reconnues automatiquement.",
-            name(a.prefs.knobLeft, "DPAD_LEFT"), name(a.prefs.knobRight, "DPAD_RIGHT"), name(a.prefs.knobPress, "DPAD_CENTER"))
+            name(a.prefs.knobLeft, "F7, DPAD_LEFT"), name(a.prefs.knobRight, "F6, DPAD_RIGHT"), name(a.prefs.knobPress, "F5, DPAD_CENTER"))
     }
 
     override fun onHide() {
