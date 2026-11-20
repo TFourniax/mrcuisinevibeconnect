@@ -16,8 +16,8 @@ android {
         // Pour publier une mise à jour : augmenter les deux valeurs puis pousser sur GitHub
         // (la version est publiée automatiquement, voir .github/workflows/release.yml).
         // 1.0 : première version reliée à Foyer (au-dessus de toutes celles du dépôt d'origine).
-        versionCode = 110
-        versionName = "1.0.10"
+        versionCode = 111
+        versionName = "1.0.11"
     }
 
     signingConfigs {
@@ -50,7 +50,11 @@ android {
     sourceSets["main"].java.srcDirs("src/main/kotlin")
 
     lint {
-        abortOnError = false
+        // Seul le contrôle Android 6 tourne (CI, `lintRelease`), et il bloque : une API plus
+        // récente fait planter le robot (1.0.10, Map.putIfAbsent). core est vérifié par AndroidApiTest.
+        checkOnly += setOf("NewApi")
+        checkDependencies = true
+        abortOnError = true
         checkReleaseBuilds = false
         disable += setOf("ExpiredTargetSdkVersion", "OldTargetApi")
     }

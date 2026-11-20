@@ -483,6 +483,7 @@
   "Ne plus piloter l'anneau": "Stop driving the ring",
   "Lecture des voyants…": "Reading the lights…",
   "La tablette ne montre aucun voyant pilotable : l'anneau est sans doute câblé en direct.": "The tablet shows no controllable light: the ring is probably wired directly.",
+  "Les voyants n'ont pas pu être lus sur cette tablette. Le reste de Toque n'est pas touché.": "The lights could not be read on this tablet. The rest of Toque is not affected.",
   "Anneau : voyant « %s ». Réglages › Anneau lumineux choisit quand il s'allume.": "Ring: light \"%s\". Settings › Light ring chooses when it is on.",
   "%d voyants trouvés.": "%d lights found.",
   "luminosité %d / %d": "brightness %d / %d",

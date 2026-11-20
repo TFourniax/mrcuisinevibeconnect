@@ -239,10 +239,21 @@ class RingScreen(a: MainActivity) : Screen(a) {
         loading = true
         status.text = tr("Lecture des voyants…")
         Thread {
-            val leds = app.toque.ui.RingLight.list()
+            val leds = try {
+                app.toque.ui.RingLight.list()
+            } catch (_: Throwable) {
+                emptyList()
+            }
             main.post {
                 loading = false
-                render(leds)
+                // Un outil de réglage ne doit jamais faire tomber Toque : en cas de souci, un message.
+                try {
+                    render(leds)
+                } catch (e: Throwable) {
+                    list.removeAllViews()
+                    status.text = tr("Les voyants n'ont pas pu être lus sur cette tablette. Le reste de Toque n'est pas touché.")
+                    a.app.log.write("anneau", "écran Anneau lumineux : ${e.javaClass.simpleName} ${e.message.orEmpty().take(120)}")
+                }
             }
         }.start()
     }

@@ -172,7 +172,9 @@ object RingLeds {
         val families = LinkedHashMap<String, MutableMap<Char, String>>()
         for (name in names.distinct().sorted()) {
             val (ch, family) = channel(name) ?: continue
-            families.getOrPut(family) { HashMap() }.putIfAbsent(ch, name)
+            // Pas de Map.putIfAbsent : il n'existe qu'à partir d'Android 7 (1.0.10 plantait ici).
+            val channels = families.getOrPut(family) { HashMap() }
+            if (ch !in channels) channels[ch] = name
         }
         val complete = families.filter { it.value.size == 3 }
         if (complete.isEmpty()) return null
