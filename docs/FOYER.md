@@ -74,8 +74,9 @@ Codex, Hermès, a home-made harness…, local or in the cloud), so whoever cooks
 waits for an answer or has finished. Hidden when no agent has reported for 36 hours; its dot is
 orange when an agent waits for you (or an error not seen yet), green when one has finished since
 the card was last opened, blue while some run. A tap opens a small card under the icon (one line
-per agent: name, cloud or local, title and project, state, how long; the one waiting first; six at
-most); a tap beside it, its cross, the knob (the cross is its only stop) or Back close it.
+per agent: the agent, its project, the task, then its state and for how long; the one waiting
+first; six at most); a tap beside it, its cross (also with the knob), or Back close it. The icon
+itself is touch only: the knob passes it by, as in 1.0.12.
 
 - Agents report to Foyer's database, not to the robot (see Foyer's `docs/agents.md`): each session
   is one row `public.agent_status` (household, agent, session, state working | waiting | done |

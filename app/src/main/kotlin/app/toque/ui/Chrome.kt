@@ -242,6 +242,8 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
         agentsBtn.isClickable = true
         agentsBtn.contentDescription = tr("Agents")
         agentsBtn.setOnClickListener { a.openAgents() }
+        // Au toucher seulement : la molette passe dessus sans s'y arrêter (comme en 1.0.12).
+        Knob.skip(agentsBtn)
         addView(agentsBtn, LayoutParams(Ui.u(48), Ui.u(48)))
         agentsBtn.visibility = View.GONE
 

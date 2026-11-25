@@ -85,22 +85,18 @@ class AgentsCard(private val a: MainActivity) {
         dot.background = Ui.round(color, 5f)
         row.addView(dot, LinearLayout.LayoutParams(Ui.u(10), Ui.u(10)).apply { rightMargin = Ui.u(12) })
 
+        // Dans l'ordre voulu : l'agent, le projet, puis la tâche ; l'état à droite.
         val middle = Ui.vertical(a)
         val first = Ui.horizontal(a, Gravity.CENTER_VERTICAL)
-        first.addView(Ui.ellipsize(Ui.text(a, Agents.name(r.agent), 16f, Ui.TEXT, Ui.SEMIBOLD)), LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP))
-        val meta = listOfNotNull(
-            when (r.location) {
-                "cloud" -> tr("Cloud")
-                "local" -> tr("Local")
-                else -> null
-            },
-            r.who.takeIf { showWho && it.isNotEmpty() },
-        ).joinToString(" · ")
-        if (meta.isNotEmpty()) first.addView(Ui.ellipsize(Ui.text(a, meta, 13f, Ui.TEXT3)), Ui.lp(Ui.WRAP, Ui.WRAP, l = 8))
+        first.addView(Ui.text(a, Agents.name(r.agent), 16f, Ui.TEXT, Ui.SEMIBOLD), LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP))
+        val project = listOf(r.project, r.who.takeIf { showWho }.orEmpty()).filter { it.isNotEmpty() }.joinToString(" · ")
+        if (project.isNotEmpty()) {
+            first.addView(Ui.ellipsize(Ui.text(a, project, 15f, Ui.TEXT2, Ui.MEDIUM)),
+                LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { leftMargin = Ui.u(10) })
+        }
         middle.addView(first)
-        val what = listOf(r.title, r.project).filter { it.isNotEmpty() }.distinct().joinToString(" · ")
-        if (what.isNotEmpty()) {
-            val t = Ui.text(a, what, 14f, Ui.TEXT2)
+        if (r.title.isNotEmpty()) {
+            val t = Ui.text(a, r.title, 14f, Ui.TEXT2)
             t.maxLines = 1
             t.ellipsize = TextUtils.TruncateAt.END
             middle.addView(t, Ui.lp(t = 2))
@@ -117,7 +113,7 @@ class AgentsCard(private val a: MainActivity) {
         }, Ui.lp(Ui.WRAP, Ui.WRAP, t = 2))
         row.addView(right, Ui.lp(Ui.WRAP, Ui.WRAP, l = 12))
         // Lu d'un bloc par un lecteur d'écran.
-        row.contentDescription = listOf(Agents.name(r.agent), what, Agents.stateLabel(r, now), Agents.timeLabel(r, now))
+        row.contentDescription = listOf(Agents.name(r.agent), r.project, r.title, Agents.stateLabel(r, now), Agents.timeLabel(r, now))
             .filter { it.isNotEmpty() }.joinToString(", ")
         return row
     }
