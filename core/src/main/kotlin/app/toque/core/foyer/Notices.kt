@@ -53,8 +53,12 @@ object NoticeLog {
     fun add(events: List<NoticeEvent>, e: NoticeEvent, nowMs: Long): List<NoticeEvent> =
         prune(listOf(e) + events.filter { it.key != e.key }, nowMs)
 
+    /**
+     * Garde les [MAX] plus récents de moins de [KEEP_MS]. Un évènement « dans le futur » reste :
+     * le robot n'a pas de pile d'horloge et se croit en 2010 jusqu'à la mise à l'heure.
+     */
     fun prune(events: List<NoticeEvent>, nowMs: Long): List<NoticeEvent> =
-        events.filter { nowMs - it.atMs in 0 until KEEP_MS }.take(MAX)
+        events.filter { nowMs - it.atMs < KEEP_MS }.take(MAX)
 
     /** Marque lu l'évènement [key], ou tous si [key] est null. */
     fun markRead(events: List<NoticeEvent>, key: String? = null): List<NoticeEvent> =

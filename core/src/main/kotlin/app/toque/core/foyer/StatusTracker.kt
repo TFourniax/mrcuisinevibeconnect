@@ -1,5 +1,6 @@
 package app.toque.core.foyer
 
+import app.toque.core.machine.JobKind
 import app.toque.core.machine.JobState
 import app.toque.core.machine.PauseReason
 import app.toque.core.machine.Snapshot
@@ -136,7 +137,8 @@ class StatusTracker(private val clock: () -> Long, private val graceMs: Long = 4
                 title = g?.title ?: s.jobLabel.ifBlank { null },
                 tempC = temp.takeIf { it > 0 },
                 speed = s.jobSpeed.takeIf { it > 0 },
-                endsAtMs = if (s.totalMs > 0 && s.remainingMs > 0) now + s.remainingMs else null,
+                // « Chauffer l'eau » finit à la température, pas au bout de ses 15 min : heure inconnue.
+                endsAtMs = if (s.totalMs > 0 && s.remainingMs > 0 && s.kind != JobKind.WATER) now + s.remainingMs else null,
             )
         }
         val h = held

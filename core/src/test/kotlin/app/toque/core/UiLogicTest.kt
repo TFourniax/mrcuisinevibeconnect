@@ -118,6 +118,8 @@ class UiLogicTest {
         assertEquals(log, NoticeLog.decode(NoticeLog.encode(log)))
         assertEquals(emptyList<NoticeEvent>(), NoticeLog.decode("pas du json"))
         // Après trois jours, il ne reste que le plus récent ; « tout marquer comme lu ».
+        // Au démarrage, horloge pas encore à l'heure (2010) : rien n'est effacé.
+        assertEquals(log, NoticeLog.prune(log, 0))
         val later = NoticeLog.prune(log, 4 * day)
         assertEquals(listOf("recipes:a"), later.map { it.key })
         assertEquals(0, NoticeLog.unread(NoticeLog.markRead(later)))

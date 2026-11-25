@@ -98,11 +98,33 @@ class ProgramsTest {
         assertEquals(JobState.FINISHED, b.snap.state)
         assertTrue("fini à la température, bien avant 15 min ($seconds s)", seconds < 200)
         assertTrue(b.events.any { it.type == EventType.JOB_FINISHED })
-        // L'eau a bien atteint 80 °C avant l'arrêt.
+        // Arrêt à 2 °C de la consigne : une sonde réelle se stabilise souvent un degré en dessous.
+        assertEquals(78, Programs.water(80).untilTempC)
+        assertEquals(68, Programs.water(70).untilTempC)
         assertTrue(b.snap.actualTempC >= 78)
         // 100 °C : arrêt à 97 °C, que la sonde atteint même si elle n'affiche pas 100.
         assertEquals(97, Programs.water(100).untilTempC)
         assertEquals(Mcc.levelForCelsius(100), Programs.water(100).phases[0].setting.temperatureLevel)
+    }
+
+    @Test fun heatingWaterThatNeverGetsThereStopsAtFifteenMinutes() {
+        // La sonde plafonne sous la température d'arrêt (base simulée : elle s'arrête à la consigne).
+        val b = Bench().ready()
+        assertTrue(b.c.startJob(Programs.water(80).copy(untilTempC = 85)).ok)
+        var seconds = 0
+        while (b.snap.state != JobState.FINISHED && seconds < 20 * 60) {
+            b.step(1_000)
+            seconds++
+        }
+        assertEquals(JobState.FINISHED, b.snap.state)
+        assertTrue("fin au plafond de 15 min ($seconds s)", seconds in 15 * 60 - 2..15 * 60 + 5)
+    }
+
+    @Test fun heatingWaterStopTemperatureMustBeInTheTable() {
+        for (bad in listOf(-1, 131)) {
+            assertTrue(SafetyPolicy.checkJob(Programs.water(80).copy(untilTempC = bad), 20).any { it.code == "until_temp" })
+        }
+        assertTrue(SafetyPolicy.checkJob(Programs.water(80), 20).none { it.code == "until_temp" })
     }
 
     @Test fun blendRampsUpWithoutStopping() {

@@ -90,6 +90,8 @@ class FoyerTest {
         assertEquals(100, cooking.tempC)
         assertEquals(1, cooking.speed)
         assertEquals(now + 300_000, cooking.endsAtMs)
+        // « Chauffer l'eau » s'arrête à la température : pas d'heure de fin annoncée à Foyer.
+        assertNull(StatusTracker({ now }).current(running.copy(jobKind = "WATER", jobLabel = "Chauffer l'eau")).endsAtMs)
 
         val waiting = tracker.onJobFinished("Cuisson manuelle")
         assertEquals(StatusReport("waiting", "foyer-x", "Risotto", 3, 6, "Ajouter le riz."), waiting)

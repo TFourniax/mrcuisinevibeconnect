@@ -57,9 +57,6 @@ enum class JobKind(private val fr: String) {
             TURBO -> Operation.TURBO
             MANUAL, SIMMER, RICE, WATER, BLEND, SMOOTHIE, PREWASH -> Operation.STANDARD
         }
-
-    /** Réglage libre (cuisson manuelle) ou programme aux règles de la cuisson manuelle. */
-    val manualRules: Boolean get() = operation == Operation.STANDARD
 }
 
 data class Phase(val setting: Setting, val durationMs: Long)
@@ -282,12 +279,13 @@ object Programs {
     fun eggs(durationMs: Long = 9 * 60_000L) = single(JobKind.EGGS, Setting(Operation.STEAM, 0, 17, CW), durationMs)
 
     /**
-     * Chauffer l'eau à [celsius] (70, 80, 90 ou 100) : vitesse 1, fin dès que la sonde l'atteint
-     * (97 °C pour l'ébullition, que la sonde n'affiche pas toujours), 15 min au plus.
+     * Chauffer l'eau à [celsius] (70, 80, 90 ou 100) : vitesse 1, fin dès que la sonde arrive à
+     * 2 °C de la consigne (une sonde réelle se stabilise souvent un degré en dessous ; 97 °C pour
+     * l'ébullition, que la sonde n'affiche pas toujours), 15 min au plus quoi qu'il arrive.
      */
     fun water(celsius: Int) = single(
         JobKind.WATER, Setting(Operation.STANDARD, 1, level(celsius), CW), Limits.MAX_MS_WATER,
-        untilTempC = if (celsius >= 100) 97 else celsius,
+        untilTempC = if (celsius >= 100) 97 else celsius - 2,
     )
 
     /** Mixer : 5 s à vitesse 5, 5 s à 7, puis 10 jusqu'au bout (20 s au moins). */
