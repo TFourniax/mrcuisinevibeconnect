@@ -346,6 +346,9 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
         wasLive = live
         val busy = s.busy
         val own = showsLive(s) && !s.turboActive
+        // Barre « en cours » affichée ici (un autre programme, ou le OK de fin) : cartes serrées.
+        val barHere = (s.jobActive || s.turboActive) && !showsLive(s)
+        for (card in listOf(timeCard, tempCard, speedCard)) card.compact(barHere)
         liveRow.visibility = if (own) View.VISIBLE else View.GONE
         startBtn.visibility = if (own || (busy && s.state != JobState.PAUSED)) View.GONE else View.VISIBLE
         (startBtn.getChildAt(1) as TextView).shown = tr("Démarrer")

@@ -454,6 +454,11 @@ def functional_checks():
     check("Œufs à la coque : 7 min", wait_for(lambda: text_in("7 min", (650, 62, 1000, 510)), 6))
     tap(text="Démarrer", pause=3)
     check("Programme Œufs lancé", wait_for(lambda: has_desc("Arrêter"), 10))
+    # Cuisson ouverte pendant le programme : la barre « en cours » est là, les cartes restent entières.
+    nav("Cuisson")
+    shot("28-cuisson-pendant-un-programme")
+    check("Cuisson pendant un programme : − et + visibles", wait_for(lambda: has_desc("Plus") and has_desc("Moins"), 6))
+    nav("Programmes")
     end_job()
 
     # Chauffer l'eau à 80 °C : s'arrête tout seul en arrivant à la température.

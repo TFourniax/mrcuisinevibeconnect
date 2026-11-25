@@ -66,6 +66,16 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), K
         refreshBg()
     }
 
+    /**
+     * Carte serrée (la barre « en cours » d'un autre programme prend la hauteur) : la valeur et
+     * ses − et + restent, la jauge ou les raccourcis et la ligne d'aide s'effacent.
+     */
+    fun compact(on: Boolean) {
+        val v = if (on) View.GONE else View.VISIBLE
+        if (extra.visibility != v) extra.visibility = v
+        if (subView.visibility != v) subView.visibility = v
+    }
+
     fun set(value: String, unit: String = "", sub: String = "", color: Int = Ui.TEXT) {
         valueView.shown = value
         valueView.setTextColor(color)
