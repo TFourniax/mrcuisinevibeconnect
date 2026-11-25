@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import app.toque.core.i18n.tr
 
 /**
  * Carte de réglage : libellé, grande valeur, ligne d'aide, une jauge facultative ([extra]) et les
@@ -52,6 +53,8 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), K
         val buttons = Ui.horizontal(c)
         minus = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.MINUS, height = 56, textSize = 20f) { onSelect(); onMinus() }
         plus = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.PLUS, height = 56, textSize = 20f) { onSelect(); onPlus() }
+        minus.contentDescription = tr("Moins")
+        plus.contentDescription = tr("Plus")
         repeatOnHold(minus, { repeatEnabled }) { onMinus() }
         repeatOnHold(plus, { repeatEnabled }) { onPlus() }
         buttons.addView(minus, LayoutParams(Ui.u(68), Ui.u(56)))

@@ -65,13 +65,17 @@ jobs:
         if: always() && github.event_name == 'push'
         run: |
           [ -d ui-check-out ] || exit 0
-          rm -rf docs/ui-check && mkdir -p docs/ui-check
-          cp -r ui-check-out/* docs/ui-check/
           git config user.name "toque-ui-check"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/ui-check
-          git commit -m "UI check: captures for ${GITHUB_SHA::7} [skip ci]" || exit 0
+          # Toujours repartir de la branche telle qu'elle est (un autre parcours a pu y déposer ses
+          # captures entre-temps) : les captures de celui-ci remplacent le dossier, sans conflit.
           for i in 1 2 3; do
-            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break
+            git fetch -q origin "${GITHUB_REF_NAME}"
+            git reset -q --hard FETCH_HEAD
+            rm -rf docs/ui-check && mkdir -p docs/ui-check
+            cp -r ui-check-out/* docs/ui-check/
+            git add -A docs/ui-check
+            git commit -q -m "UI check: captures for ${GITHUB_SHA::7} [skip ci]" || exit 0
+            git push origin "HEAD:${GITHUB_REF_NAME}" && break
             sleep 5
           done

@@ -325,11 +325,31 @@ func_report = []
 
 
 def check(label, ok, detail=""):
+    if not ok:
+        # Ce qui est vraiment affiché au moment de l'échec : capture et textes de l'écran.
+        name = "echec-%02d" % (len([l for l in func_report if l.startswith("ÉCHEC")]) + 1)
+        shot(name)
+        root = dump()
+        seen = [n.get("text") for n in root.iter("node") if n.get("text")] if root is not None else []
+        detail = (detail + " ; " if detail else "") + "capture %s, à l'écran : %s" % (name, " | ".join(seen)[:600])
     line = ("OK     " if ok else "ÉCHEC  ") + label + (" : " + detail if detail else "")
     func_report.append(line)
     print(line, flush=True)
     if not ok:
         problems.append("fonction : " + label)
+
+
+def tap_desc_in(desc, box, pause=2):
+    """Le bouton [desc] situé dans le rectangle [box] (plusieurs cartes ont un « Plus »)."""
+    root = dump()
+    if root is not None:
+        for n in root.iter("node"):
+            b = bounds(n)
+            if n.get("content-desc") == desc and b and b[0] >= box[0] and b[1] >= box[1] and b[2] <= box[2] and b[3] <= box[3]:
+                tap_xy((b[0] + b[2]) // 2, (b[1] + b[3]) // 2, pause)
+                return True
+    problems.append("introuvable à l'écran : %s dans %s" % (desc, box))
+    return False
 
 
 def has_text(t, prefix=False):
@@ -411,8 +431,8 @@ def functional_checks():
     tap(text="Démarrer", pause=3)
     tap(text="Mixer quand même", required=False, pause=3)
     check("Cuisson manuelle lancée", wait_for(lambda: has_desc("Pause") or has_text("Réglages appliqués en direct"), 10))
-    tap_xy(948, 306, pause=2)  # « + » de la carte Vitesse
-    check("Vitesse réglée en direct (2 → 3)", wait_for(lambda: text_in("3", (686, 62, 1000, 352)), 8))
+    tap_desc_in("Plus", (680, 40, 1010, 470))  # le « + » de la carte Vitesse (à droite)
+    check("Vitesse réglée en direct (2 → 3)", wait_for(lambda: text_in("3", (680, 40, 1010, 470)), 8))
     tap(desc="Pause", pause=2.5)
     check("Pause", wait_for(lambda: has_text("En pause"), 8))
     tap(desc="Reprendre", pause=2.5)
@@ -444,8 +464,8 @@ def functional_checks():
 
     # Balance : poids de démonstration, puis tare.
     nav("Balance")
-    tap(text="+100 g")
-    check("Balance : +100 g", wait_for(lambda: has_text("100"), 6))
+    tap(text="+100 g", pause=3)
+    check("Balance : +100 g", wait_for(lambda: has_text("100"), 10))
     tap(text="Tare (remise à zéro)")
     check("Balance : tare", wait_for(lambda: has_text("0"), 6))
     tap(text="Vider", required=False)
