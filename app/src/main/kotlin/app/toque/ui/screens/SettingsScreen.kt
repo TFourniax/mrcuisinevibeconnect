@@ -644,7 +644,8 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             ringBox.addView(Ui.text(c, tr("Toque ne sait pas encore comment la tablette commande l'anneau du bouton. Trouve-le une fois dans Outils › Anneau lumineux."), 16f, Ui.TEXT2)
                 .apply { setLineSpacing(0f, 1.15f) })
             val row = Ui.horizontal(c)
-            row.addView(Ui.button(c, tr("Trouver l'anneau"), Ui.Style.SECONDARY, height = 52) { a.push(RingScreen(a)) }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
+            // Côte à côte dans la colonne : texte en 16 pour que « Réinitialiser l'anneau » tienne sur une ligne.
+            row.addView(Ui.button(c, tr("Trouver l'anneau"), Ui.Style.SECONDARY, height = 52, textSize = 16f) { a.push(RingScreen(a)) }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
             row.addView(resetRingButton(), Ui.lp(Ui.WRAP, Ui.WRAP))
             ringBox.addView(row, Ui.lp(t = 10))
             return
@@ -733,7 +734,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         else -> tr("Blanc")
     }
 
-    private fun resetRingButton(): View = Ui.button(c, tr("Réinitialiser l'anneau"), Ui.Style.GHOST, height = 52) {
+    private fun resetRingButton(): View = Ui.button(c, tr("Réinitialiser l'anneau"), Ui.Style.GHOST, height = 52, textSize = 16f) {
         a.ringResetAll { ok ->
             a.toast(if (ok) tr("Anneau réinitialisé : blanc, comme à l'origine.") else tr("L'anneau n'a pas répondu (root ?)"), if (ok) Ui.OK else Ui.WARN)
             renderRing()

@@ -75,12 +75,16 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
 
         // La vidéo d'origine (un réel) : la revoir ici, ou sur un téléphone.
         val video = Ui.horizontal(c)
+        val phoneToo = PhoneLink.available(a, recipe)
         if (recipe.video.isNotEmpty()) {
             val watch = Ui.button(c, tr("Revoir la vidéo"), Ui.Style.GHOST, Icon.Kind.VIDEO, height = 52, textSize = 15f) { a.openVideo(recipe) }
             Ui.fitWords(watch.getChildAt(1) as TextView, 13f)
-            video.addView(watch, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(10) })
+            // Avec « Voir sur le téléphone » (plus long) : la vidéo à sa largeur, le reste au téléphone,
+            // pour que les deux libellés tiennent sur une ligne.
+            video.addView(watch, (if (phoneToo) LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP) else LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+                .apply { rightMargin = Ui.u(10) })
         }
-        if (PhoneLink.available(a, recipe)) {
+        if (phoneToo) {
             val phone = Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.PHONE, height = 52, textSize = 15f) { b -> PhoneLink.send(a, recipe, b) }
             Ui.fitWords(phone.getChildAt(1) as TextView, 13f)
             video.addView(phone, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))

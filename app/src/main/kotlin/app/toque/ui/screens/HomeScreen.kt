@@ -381,11 +381,15 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             liveChips?.let { row ->
                 row.removeAllViews()
                 val t = if (s.jobTempLevel > 0) Mcc.celsiusForLevel(s.jobTempLevel) else 0
-                // Trois puces au plus sur ~300 px : taille 14 pour qu'elles tiennent sur une ligne.
-                if (t > 0) row.addView(Ui.chip(c, if (s.kind == JobKind.STEAM || s.kind == JobKind.EGGS) tr("Vapeur %d °C", t) else "$t °C",
-                    Icon.Kind.THERMO, Ui.ACCENT, Ui.ACCENT_DIM, 14f), Ui.lp(Ui.WRAP, Ui.WRAP, r = 6))
-                if (s.jobSpeed > 0) row.addView(Ui.chip(c, tr("Vitesse %d", s.jobSpeed), Icon.Kind.SPEED, Ui.TEXT, size = 14f), Ui.lp(Ui.WRAP, Ui.WRAP, r = 6))
-                if (s.jobReverse) row.addView(Ui.chip(c, tr("Inverse"), Icon.Kind.REVERSE, Ui.COOL, size = 14f), Ui.lp(Ui.WRAP, Ui.WRAP))
+                // Trois puces au plus sur ~300 px : taille 14 et marges serrées pour qu'elles tiennent.
+                fun add(chip: LinearLayout, last: Boolean) {
+                    chip.setPadding(Ui.u(9), Ui.u(6), Ui.u(11), Ui.u(6))
+                    row.addView(chip, Ui.lp(Ui.WRAP, Ui.WRAP, r = if (last) 0 else 5))
+                }
+                if (t > 0) add(Ui.chip(c, if (s.kind == JobKind.STEAM || s.kind == JobKind.EGGS) tr("Vapeur %d °C", t) else "$t °C",
+                    Icon.Kind.THERMO, Ui.ACCENT, Ui.ACCENT_DIM, 14f), last = s.jobSpeed == 0 && !s.jobReverse)
+                if (s.jobSpeed > 0) add(Ui.chip(c, tr("Vitesse %d", s.jobSpeed), Icon.Kind.SPEED, Ui.TEXT, size = 14f), last = !s.jobReverse)
+                if (s.jobReverse) add(Ui.chip(c, tr("Inverse"), Icon.Kind.REVERSE, Ui.COOL, size = 14f), last = true)
             }
         }
         val stateLine = if (st == JobState.RUNNING) "" else Live.stateText(s)
@@ -604,11 +608,11 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val thumb = FrameLayout(c)
         Ui.clip(thumb, 14f)
         thumb.background = Ui.gradient(Ui.placeholderColors(e.title), 14f)
-        thumb.addView(Ui.dishIcon(c, e.title, e.category), Ui.flp(Ui.u(36), Ui.u(36), Gravity.CENTER))
+        thumb.addView(Ui.dishIcon(c, e.title, e.category), Ui.flp(Ui.u(32), Ui.u(32), Gravity.CENTER))
         val img = ImageView(c).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         thumb.addView(img, Ui.flp())
         ImageLoader.load(img, a.app.recipes.imageFile(e.image), Ui.u(140))
-        card.addView(thumb, LinearLayout.LayoutParams(Ui.u(70), Ui.u(70)).apply { rightMargin = Ui.u(12) })
+        card.addView(thumb, LinearLayout.LayoutParams(Ui.u(62), Ui.u(62)).apply { rightMargin = Ui.u(10) })
         val col = Ui.vertical(c)
         col.addView(Ui.ellipsize(Ui.text(c, e.title, 14f, Ui.TEXT, Ui.SEMIBOLD).apply { setLineSpacing(0f, 1.1f) }, 2))
         val meta = listOfNotNull(

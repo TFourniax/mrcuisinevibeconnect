@@ -230,6 +230,20 @@ def main():
     tap_xy(512, 300, pause=2)
     shot("20-apres-veille")
 
+    # L'outil de l'anneau lumineux (le bloc est juste sous l'écran de veille dans les Réglages).
+    if tap(text="Trouver l'anneau", required=False, pause=3):
+        shot("21-anneau-lumineux")
+        tap(desc="Retour", fallback=(36, 29))
+
+    # Le panneau vidéo d'une recette (hors réseau ici : il doit s'ouvrir et se fermer sans planter).
+    nav("Recettes")
+    tap(text="Crêpes de la Chandeleur")
+    tap(text="Revoir la vidéo", pause=4)
+    shot("22-video")
+    key(4)
+    wait(2)
+    shot("23-apres-video")
+
     bad, log = crashed()
     with open(os.path.join(OUT, "logcat-crash.txt"), "w") as f:
         f.write(log)
