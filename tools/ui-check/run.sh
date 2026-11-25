@@ -19,34 +19,43 @@ adb shell svc wifi disable || true
 adb shell svc data disable || true
 
 adb install -r "$APK"
-# Premier lancement : Toque crée ses dossiers, puis on l'arrête pour poser les données.
-adb shell am start -n app.toque/.ui.MainActivity
-sleep 6
 
 python3 tools/ui-check/seed.py "$SEED"
 adb push "$SEED/toque.xml" /data/local/tmp/toque.xml
 adb push "$SEED/recettes.db" /data/local/tmp/recettes.db
 
-# Pose les données (Toque arrêté), relance, et vérifie que Toque les a bien gardées. Une copie
-# de secours (.bak) laissée par un arrêt en pleine écriture remplacerait nos réglages : on l'efface.
+# Toque est aussi l'écran d'accueil du système (il remplace le lanceur du robot) : arrêté de force,
+# Android le relance aussitôt, avec ses anciens réglages en mémoire, qu'il réécrit ensuite
+# par-dessus les nôtres. Les données sont donc posées avant le premier lancement, puis, s'il faut
+# recommencer, paquet désactivé le temps de la copie (rien ne peut le relancer).
+copy_seed() {
+  adb shell "run-as app.toque sh -c 'mkdir -p shared_prefs databases && rm -f shared_prefs/toque.xml.bak databases/recettes.db-journal && cat /data/local/tmp/toque.xml > shared_prefs/toque.xml && cat /data/local/tmp/recettes.db > databases/recettes.db'"
+}
 seeded=no
 for attempt in 1 2 3; do
-  adb shell am force-stop app.toque
-  sleep 1
-  adb shell "run-as app.toque sh -c 'mkdir -p shared_prefs databases && rm -f shared_prefs/toque.xml.bak databases/recettes.db-journal && cat /data/local/tmp/toque.xml > shared_prefs/toque.xml && cat /data/local/tmp/recettes.db > databases/recettes.db'"
+  if [ "$attempt" -gt 1 ]; then
+    adb shell pm disable app.toque || adb shell am force-stop app.toque
+    sleep 1
+    copy_seed
+    adb shell pm enable app.toque || true
+  else
+    copy_seed
+  fi
   adb logcat -c
   adb shell am start -n app.toque/.ui.MainActivity
-  sleep 6
-  echo "--- essai $attempt : fichiers de Toque après relance ---"
+  sleep 8
+  echo "--- essai $attempt : fichiers de Toque après lancement ---"
   adb shell "run-as app.toque ls -l shared_prefs databases" || true
   adb shell "run-as app.toque cat shared_prefs/toque.xml" > "$SEED/after.xml" || true
-  if grep -q 'name="foyerHousehold"' "$SEED/after.xml"; then
+  adb shell uiautomator dump /sdcard/ui.xml > /dev/null || true
+  adb exec-out cat /sdcard/ui.xml > "$SEED/ui.xml" || true
+  if grep -q 'name="foyerHousehold"' "$SEED/after.xml" && grep -q 'text="Accueil"' "$SEED/ui.xml"; then
     seeded=yes
     break
   fi
-  echo "!! réglages de démonstration perdus (essai $attempt) ; Toque a écrit :"
+  echo "!! données de démonstration pas prises (essai $attempt) ; réglages écrits par Toque :"
   cat "$SEED/after.xml"
-  adb logcat -d -v brief | grep -i -E "SharedPreferences|toque" | tail -40 || true
+  grep -o 'text="[^"]*"' "$SEED/ui.xml" | head -20 || true
 done
 echo "données de démonstration posées : $seeded"
 python3 tools/ui-check/tour.py "$OUT"
