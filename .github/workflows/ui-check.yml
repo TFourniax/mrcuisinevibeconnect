@@ -33,7 +33,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Debug APK (débogable : les données de démonstration s'y posent)
+      - name: "Debug APK (débogable, pour y poser les données de démonstration)"
         run: ./gradlew --no-daemon :app:assembleDebug
 
       - name: KVM pour l'émulateur
