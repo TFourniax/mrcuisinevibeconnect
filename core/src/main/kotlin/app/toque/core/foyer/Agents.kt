@@ -181,7 +181,8 @@ object Agents {
         val lines = shown(runs, now)
         if (lines.isEmpty()) return Signal.NONE
         return when {
-            lines.any { it.state == WAITING || (it.state == ERROR && it.since > seen) } -> Signal.NEEDS_YOU
+            // Une attente oubliée (session laissée ouverte la nuit) ne colore plus l'icône après 12 h.
+            lines.any { (it.state == WAITING && now - it.since < KEEP_ENDED_MS) || (it.state == ERROR && it.since > seen) } -> Signal.NEEDS_YOU
             lines.any { it.state == DONE && it.since > seen } -> Signal.DONE
             lines.any { it.state == WORKING && !stale(it, now) } -> Signal.WORKING
             else -> Signal.QUIET

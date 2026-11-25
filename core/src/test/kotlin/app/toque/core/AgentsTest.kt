@@ -89,6 +89,9 @@ class AgentsTest {
         val waiting = run(Agents.WAITING, 30 * min)
         // Un agent qui attend reste signalé tant qu'il attend, carte vue ou non.
         assertEquals(Signal.NEEDS_YOU, Agents.signal(listOf(working, done, waiting), now, now))
+        // Une attente oubliée depuis 13 h reste dans la carte, sans colorer l'icône.
+        assertEquals(Signal.QUIET, Agents.signal(listOf(run(Agents.WAITING, 13 * hour, 13 * hour)), now, 0))
+        assertEquals(1, Agents.shown(listOf(run(Agents.WAITING, 13 * hour, 13 * hour)), now).size)
         val error = run(Agents.ERROR, 3 * min)
         assertEquals(Signal.NEEDS_YOU, Agents.signal(listOf(error), now, 0))
         assertEquals(Signal.QUIET, Agents.signal(listOf(error), now, now))
