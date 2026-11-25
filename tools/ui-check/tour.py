@@ -127,12 +127,19 @@ NAV = {"Accueil": (125, 555), "Recettes": (318, 555), "Cuisson": (512, 555), "Pr
 
 
 def nav(name):
-    tap(text=name, fallback=NAV[name])
+    # Par l'étiquette de l'onglet : le mot seul existe aussi ailleurs (la carte « Balance » de Cuisson).
+    tap(desc=name, fallback=NAV[name])
 
 
 def crashed():
     log = sh("logcat -d -v brief AndroidRuntime:E *:S")
     return "FATAL EXCEPTION" in log, log
+
+
+def cook_or_resume():
+    """La grande carte de l'accueil : « Cuisiner » le repas prévu, ou « Reprendre » la recette entamée."""
+    if not tap(text="Cuisiner", required=False):
+        tap(text="Reprendre")
 
 
 def screens(theme):
@@ -164,9 +171,11 @@ def main():
     wait(8)
     screens("clair")
 
-    # Une recette guidée : Cuisiner depuis le repas prévu, Lancer, Pause, Arrêter.
+    # Une recette guidée : Cuisiner depuis le repas prévu, Lancer, Pause, Arrêter. Pendant une
+    # cuisson, l'arbre des vues se lit mal (le temps change chaque seconde) : positions de secours
+    # relevées sur les captures 1024×600.
     nav("Accueil")
-    tap(text="Cuisiner")
+    cook_or_resume()
     shot("10-recette-guidee-clair")
     tap(text="Lancer", pause=4)
     shot("11-recette-guidee-en-cours-clair")
@@ -175,20 +184,22 @@ def main():
         nav("Accueil")
     wait(2)
     shot("12-accueil-en-cours-clair")
-    tap(text="Pause", pause=2.5)
+    tap(text="Pause", fallback=(113, 460), pause=2.5)
     shot("13-accueil-en-pause-clair")
-    tap(text="Arrêter", pause=2.5)
+    tap(text="Arrêter", fallback=(257, 460), pause=2.5)
     shot("14-accueil-arrete-clair")
     tap(text="OK", required=False)
 
     # Un programme : Prélaver depuis Programmes, puis la barre « en cours » ailleurs.
     nav("Programmes")
     tap(text="Prélaver")
-    tap(text="Démarrer", pause=4)
+    tap(text="Démarrer", pause=2)
+    # Bol encore chaud après la recette : Toque demande confirmation avant de mixer (sécurité).
+    tap(text="Mixer quand même", required=False, pause=4)
     shot("15-programme-en-cours-clair")
     nav("Recettes")
     shot("16-barre-en-cours-recettes-clair")
-    tap(desc="Arrêter", pause=2.5)
+    tap(desc="Arrêter", fallback=(960, 486), pause=2.5)
     tap(text="OK", required=False)
 
     # Bouton rotatif : le cadre se pose et avance.
@@ -203,7 +214,7 @@ def main():
     tap(desc="Passer en thème sombre", fallback=(892, 29), pause=3)
     screens("sombre")
     nav("Accueil")
-    tap(text="Cuisiner")
+    cook_or_resume()
     shot("18-recette-guidee-sombre")
     tap(desc="Retour", fallback=(36, 29))
     nav("Accueil")

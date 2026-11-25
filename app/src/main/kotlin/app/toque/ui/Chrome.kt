@@ -293,7 +293,7 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
         lid.visibility = if (s.hasSample && s.lidOpen) View.VISIBLE else View.GONE
         if (s.hasSample) {
             temp.visibility = View.VISIBLE
-            Ui.chipText(temp).text = "${s.actualTempC} °C"
+            Ui.chipText(temp).shown = "${s.actualTempC} °C"
             val hot = s.actualTempC >= 40
             val col = if (hot) Ui.tempColor(s.actualTempC) else Ui.TEXT2
             // ~10 échantillons par seconde : on ne redessine que ce qui change.
@@ -457,8 +457,8 @@ class TimerRing(c: Context) : FrameLayout(c) {
     fun set(progress: Float, value: String, sub: String, color: Int = Ui.ACCENT) {
         this.progress = progress.coerceIn(0f, 1f)
         arcColor = color
-        this.value.text = value
-        this.sub.text = sub
+        this.value.shown = value
+        this.sub.shown = sub
         arc.invalidate()
     }
 }
@@ -536,26 +536,26 @@ class LiveBar(private val a: MainActivity) : FrameLayout(a) {
         faultRow.visibility = if (s.hasFault) View.VISIBLE else View.GONE
         jobRow.visibility = if (!s.hasFault && showJob) View.VISIBLE else View.GONE
         if (s.hasFault) {
-            faultText.text = s.faultMessage
+            faultText.shown = s.faultMessage
             return
         }
         if (!showJob) return
         kindIcon.set(Live.kindIcon(if (s.turboActive) JobKind.TURBO else s.kind))
         if (s.turboActive) {
-            label.text = "Turbo"
-            sub.text = Live.stateText(s)
+            label.shown = "Turbo"
+            sub.shown = Live.stateText(s)
             sub.setTextColor(Ui.TEXT2)
-            time.text = ""
+            time.shown = ""
             progress.progress = 0f
             setButtons(running = false, ended = false, turbo = true)
             return
         }
-        label.text = s.jobLabel
+        label.shown = s.jobLabel
         val st = s.state
         val settings = Live.settingsText(s)
-        sub.text = if (st == JobState.RUNNING && settings.isNotEmpty()) settings else Live.stateText(s)
+        sub.shown = if (st == JobState.RUNNING && settings.isNotEmpty()) settings else Live.stateText(s)
         sub.setTextColor(if (st == JobState.RUNNING) Ui.TEXT2 else Live.stateColor(s))
-        time.text = Live.bigValue(s)
+        time.shown = Live.bigValue(s)
         progress.progress = Live.progress(s)
         progress.color = if (s.jobTempLevel > 0) Ui.ACCENT else Ui.COOL
         val ended = st == JobState.FINISHED || st == JobState.ABORTED

@@ -33,6 +33,7 @@ import app.toque.ui.Section
 import app.toque.ui.StepSegments
 import app.toque.ui.TimerRing
 import app.toque.ui.Ui
+import app.toque.ui.shown
 
 /**
  * Accueil centré sur le foyer. À gauche, une seule grande carte, choisie dans cet ordre : le
@@ -204,7 +205,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
     private fun recipeMeta(r: Recipe): String = listOfNotNull(
         if (r.totalMinutes > 0) tr("%d min", r.totalMinutes) else null,
         if (r.servings > 0) tr("%d pers.", r.servings) else null,
-        if (r.machineSteps > 0) tr("%d étapes au robot", r.machineSteps) else null,
+        if (r.machineSteps > 0) (if (r.machineSteps == 1) tr("1 étape au robot") else tr("%d étapes au robot", r.machineSteps)) else null,
     ).joinToString(" · ")
 
     private fun planCard(plan: FoyerPlan, today: String): View {
@@ -353,14 +354,14 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val g = foyer.tracker.guided
         val st = s.state
         val step = if (recipe != null && g != null) " · " + tr("étape %d sur %d", g.stepIndex + 1, g.stepCount) else ""
-        liveOverline?.text = (when {
+        liveOverline?.shown = (when {
             s.turboActive -> "Turbo"
             st == JobState.PAUSED -> tr("En pause")
             st == JobState.FINISHED -> tr("Terminé")
             st == JobState.ABORTED -> tr("Arrêté")
             else -> tr("En cours")
         } + step).uppercase(I18n.locale)
-        liveTitle?.text = recipe?.title ?: if (s.turboActive) "Turbo" else s.jobLabel
+        liveTitle?.shown = recipe?.title ?: if (s.turboActive) "Turbo" else s.jobLabel
         if (recipe != null && g != null) liveSegments?.set(g.stepCount, g.stepIndex)
         val total = if (s.totalMs > 0) Ui.duration(((s.totalMs + 999) / 1000).toInt()) else ""
         val sub = when {
@@ -370,7 +371,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             else -> ""
         }
         liveRing?.set(Live.progress(s), Live.bigValue(s), sub, if (s.jobTempLevel > 0) Ui.ACCENT else Ui.COOL)
-        liveText?.text = when {
+        liveText?.shown = when {
             recipe != null && g != null -> recipe.steps.getOrNull(g.stepIndex)?.let { it.text.ifBlank { it.machine?.summary ?: "" } } ?: ""
             else -> ProgramCatalog.of(s.kind)?.prep ?: Live.settingsText(s)
         }
@@ -380,14 +381,15 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             liveChips?.let { row ->
                 row.removeAllViews()
                 val t = if (s.jobTempLevel > 0) Mcc.celsiusForLevel(s.jobTempLevel) else 0
+                // Trois puces au plus sur ~300 px : taille 14 pour qu'elles tiennent sur une ligne.
                 if (t > 0) row.addView(Ui.chip(c, if (s.kind == JobKind.STEAM || s.kind == JobKind.EGGS) tr("Vapeur %d °C", t) else "$t °C",
-                    Icon.Kind.THERMO, Ui.ACCENT, Ui.ACCENT_DIM), Ui.lp(Ui.WRAP, Ui.WRAP, r = 8))
-                if (s.jobSpeed > 0) row.addView(Ui.chip(c, tr("Vitesse %d", s.jobSpeed), Icon.Kind.SPEED, Ui.TEXT), Ui.lp(Ui.WRAP, Ui.WRAP, r = 8))
-                if (s.jobReverse) row.addView(Ui.chip(c, tr("Inverse"), Icon.Kind.REVERSE, Ui.COOL), Ui.lp(Ui.WRAP, Ui.WRAP))
+                    Icon.Kind.THERMO, Ui.ACCENT, Ui.ACCENT_DIM, 14f), Ui.lp(Ui.WRAP, Ui.WRAP, r = 6))
+                if (s.jobSpeed > 0) row.addView(Ui.chip(c, tr("Vitesse %d", s.jobSpeed), Icon.Kind.SPEED, Ui.TEXT, size = 14f), Ui.lp(Ui.WRAP, Ui.WRAP, r = 6))
+                if (s.jobReverse) row.addView(Ui.chip(c, tr("Inverse"), Icon.Kind.REVERSE, Ui.COOL, size = 14f), Ui.lp(Ui.WRAP, Ui.WRAP))
             }
         }
         val stateLine = if (st == JobState.RUNNING) "" else Live.stateText(s)
-        liveState?.text = stateLine
+        liveState?.shown = stateLine
         liveState?.setTextColor(Live.stateColor(s))
         liveState?.visibility = if (stateLine.isEmpty()) View.GONE else View.VISIBLE
         val ended = st == JobState.FINISHED || st == JobState.ABORTED

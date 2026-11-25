@@ -26,6 +26,7 @@ import app.toque.ui.ProgressLine
 import app.toque.ui.Screen
 import app.toque.ui.StepSegments
 import app.toque.ui.Ui
+import app.toque.ui.shown
 
 /**
  * Cuisine pas à pas. Chaque étape « machine » se lance d'un appui ; à la fin du programme,
@@ -366,7 +367,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     override fun onSnapshot(s: Snapshot) {
         val w = recipe.steps.getOrNull(index)?.weigh
         if (w != null) {
-            weighValue.text = if (s.hasSample) "${s.weightG} g" else "—"
+            weighValue.shown = if (s.hasSample) "${s.weightG} g" else "—"
             weighBar.progress = if (w.grams > 0) s.weightG.toFloat() / w.grams else 0f
             weighBar.color = if (s.weightG > w.grams * 1.05f) Ui.WARN else Ui.ACCENT
         }
@@ -394,20 +395,20 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         bigTime?.let { t ->
             val counting = mine && (s.state == JobState.RUNNING || s.state == JobState.STARTING || s.state == JobState.PAUSED)
             t.visibility = if (counting) View.VISIBLE else View.GONE
-            if (counting) t.text = Ui.clock(s.remainingMs)
+            if (counting) t.shown = Ui.clock(s.remainingMs)
         }
         if (!mine && ps != null) {
             if (index in done) {
                 ps.setTextColor(Ui.OK)
-                ps.text = tr("Étape terminée")
+                ps.shown = tr("Étape terminée")
             } else {
                 ps.setTextColor(Ui.WARN)
-                ps.text = panelInfo
+                ps.shown = panelInfo
             }
         }
         if (mine && ps != null) {
             ps.setTextColor(Ui.TEXT2)
-            ps.text = when (s.state) {
+            ps.shown = when (s.state) {
                 JobState.RUNNING, JobState.STARTING -> tr("En cours… reste %s", Ui.clock(s.remainingMs))
                 JobState.STOPPING -> tr("Arrêt du moteur…")
                 JobState.PAUSED -> tr("En pause")

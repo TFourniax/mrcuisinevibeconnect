@@ -25,6 +25,7 @@ import app.toque.ui.SpeedBars
 import app.toque.ui.TempGauge
 import app.toque.ui.Ui
 import app.toque.ui.ValueCard
+import app.toque.ui.shown
 
 /**
  * Cuisson manuelle. Les réglages incompatibles sont corrigés à la saisie (vitesse limitée en
@@ -292,13 +293,13 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
 
         val v = SafetyPolicy.checkJob(spec(), if (a.snapshot.hasSample) a.snapshot.actualTempC else null)
             .filter { it.code != SafetyPolicy.HOT_BLEND }
-        hint.text = v.firstOrNull()?.message ?: if (a.snapshot.hot && speed >= 4) tr("Contenu chaud : confirmation demandée") else ""
+        hint.shown = v.firstOrNull()?.message ?: if (a.snapshot.hot && speed >= 4) tr("Contenu chaud : confirmation demandée") else ""
         hint.visibility = if (hint.text.isEmpty()) View.GONE else View.VISIBLE
         Ui.setButtonEnabled(startBtn, v.isEmpty())
     }
 
     override fun onSnapshot(s: Snapshot) {
-        weight.text = if (s.hasSample) "${s.weightG} g" else "—"
+        weight.shown = if (s.hasSample) "${s.weightG} g" else "—"
         val manualJob = s.kind?.name == "MANUAL" && (s.state == JobState.RUNNING || s.state == JobState.STARTING || s.state == JobState.PAUSED)
         live = manualJob && s.state != JobState.PAUSED
         tempCard.repeatEnabled = !live
@@ -318,10 +319,10 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
         wasLive = live
         val busy = s.busy
         startBtn.visibility = if (busy && s.state != JobState.PAUSED) View.GONE else View.VISIBLE
-        (startBtn.getChildAt(1) as TextView).text = if (s.state == JobState.PAUSED && manualJob) tr("Reprendre") else tr("Démarrer")
+        (startBtn.getChildAt(1) as TextView).shown = if (s.state == JobState.PAUSED && manualJob) tr("Reprendre") else tr("Démarrer")
         turbo.isEnabled = !busy || s.turboActive
         turbo.alpha = if (turbo.isEnabled) 1f else 0.35f
-        if (live) hint.text = tr("Réglages appliqués en direct")
+        if (live) hint.shown = tr("Réglages appliqués en direct")
         else if (!busy) refreshHintOnly()
         hint.setTextColor(if (live) Ui.OK else Ui.WARN)
         hint.visibility = if (hint.text.isEmpty()) View.GONE else View.VISIBLE
@@ -339,7 +340,7 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
     private fun refreshHintOnly() {
         val v = SafetyPolicy.checkJob(spec(), if (a.snapshot.hasSample) a.snapshot.actualTempC else null)
             .filter { it.code != SafetyPolicy.HOT_BLEND }
-        hint.text = v.firstOrNull()?.message ?: if (a.snapshot.hot && speed >= 4) tr("Contenu chaud : confirmation demandée") else ""
+        hint.shown = v.firstOrNull()?.message ?: if (a.snapshot.hot && speed >= 4) tr("Contenu chaud : confirmation demandée") else ""
     }
 
     /** Au bouton rotatif : on arrive sur la durée ; Démarrer se touche comme du doigt (jamais d'un seul appui). */

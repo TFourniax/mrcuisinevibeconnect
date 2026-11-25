@@ -262,7 +262,7 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
             val parts = ArrayList<String>()
             if (e.ratingCount > 0) parts += "★ " + String.format(I18n.locale, "%.1f", e.rating)
             if (e.totalMinutes > 0) parts += "${e.totalMinutes} min"
-            if (e.machineSteps > 0) parts += tr("%d étapes au robot", e.machineSteps)
+            if (e.machineSteps > 0) parts += if (e.machineSteps == 1) tr("1 étape au robot") else tr("%d étapes au robot", e.machineSteps)
             else if (e.category.isNotBlank()) parts += e.category
             meta.text = parts.joinToString(" · ")
             star.visibility = if (a.app.recipes.isFavorite(e.id)) View.VISIBLE else View.GONE

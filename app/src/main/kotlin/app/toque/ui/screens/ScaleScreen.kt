@@ -12,6 +12,7 @@ import app.toque.ui.MainActivity
 import app.toque.ui.Screen
 import app.toque.ui.Section
 import app.toque.ui.Ui
+import app.toque.ui.shown
 
 /** Balance intégrée : grand affichage, tare au doigt ou par appui sur le bouton rotatif. */
 class ScaleScreen(a: MainActivity) : Screen(a) {
@@ -59,17 +60,17 @@ class ScaleScreen(a: MainActivity) : Screen(a) {
 
     override fun onSnapshot(s: Snapshot) {
         if (!s.hasSample) {
-            value.text = "—"
-            Ui.chipText(state).text = tr("Base non connectée")
+            value.shown = "—"
+            Ui.chipText(state).shown = tr("Base non connectée")
             return
         }
-        value.text = s.weightG.toString()
+        value.shown = s.weightG.toString()
         val (txt, col) = when {
             s.scaleState == "overload" -> tr("Surcharge") to Ui.DANGER
             s.scaleStable -> tr("Stable") to Ui.OK
             else -> tr("Mesure…") to Ui.TEXT2
         }
-        Ui.chipText(state).text = txt
+        Ui.chipText(state).shown = txt
         Ui.chipText(state).setTextColor(col)
         (state.getChildAt(0) as Icon).color = col
     }

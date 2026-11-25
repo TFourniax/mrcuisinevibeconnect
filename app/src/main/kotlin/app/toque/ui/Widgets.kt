@@ -64,11 +64,11 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), K
     }
 
     fun set(value: String, unit: String = "", sub: String = "", color: Int = Ui.TEXT) {
-        valueView.text = value
+        valueView.shown = value
         valueView.setTextColor(color)
-        unitView.text = unit
+        unitView.shown = unit
         unitView.setTextColor(color)
-        subView.text = sub
+        subView.shown = sub
     }
 
     fun select(sel: Boolean) {

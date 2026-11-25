@@ -25,6 +25,16 @@ import app.toque.R
 import app.toque.core.recipes.DishKind
 
 /**
+ * Texte d'une vue rafraîchie à chaque instantané de la machine (une dizaine par seconde en
+ * cuisson) : posé seulement s'il change, car chaque setText relance une mise en page.
+ */
+var TextView.shown: CharSequence
+    get() = text
+    set(v) {
+        if (!TextUtils.equals(text, v)) text = v
+    }
+
+/**
  * Thèmes (clair le jour, sombre le soir : les couleurs de Foyer), police Montserrat et
  * utilitaires de mise en page, à l'échelle d'un écran de référence 1024×600.
  */
@@ -355,7 +365,8 @@ object Ui {
         row.setPadding(u(12), u(7), u(14), u(7))
         row.background = round(bg, 40f)
         if (icon != null) row.addView(Icon(c, icon, color), LinearLayout.LayoutParams(u(size * 1.15f), u(size * 1.15f)).apply { rightMargin = u(6) })
-        row.addView(text(c, label, size, color, MEDIUM))
+        // Une puce ne se coupe jamais au milieu d'un mot : trop étroite, elle se termine par « … ».
+        row.addView(ellipsize(text(c, label, size, color, MEDIUM)))
         return row
     }
 

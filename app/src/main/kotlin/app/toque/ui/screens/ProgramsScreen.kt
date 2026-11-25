@@ -86,7 +86,10 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
         val circle = FrameLayout(c)
         circle.addView(Icon(c, Live.kindIcon(def.kind), Ui.ACCENT).apply { weight = 1.6f }, Ui.flp(Ui.u(38), Ui.u(38), Gravity.CENTER))
         t.addView(circle, LinearLayout.LayoutParams(Ui.u(84), Ui.u(84)))
-        t.addView(Ui.fitWords(Ui.text(c, def.label, 15f, Ui.TEXT, Ui.SEMIBOLD).apply { gravity = Gravity.CENTER; setLineSpacing(0f, 1.05f) }, 12f),
+        t.addView(Ui.fitWords(Ui.text(c, def.label, 15f, Ui.TEXT, Ui.SEMIBOLD).apply {
+            // Deux lignes réservées pour tous : « Chauffer l'eau » sur deux lignes ne décale plus son icône.
+            gravity = Gravity.CENTER; setLineSpacing(0f, 1.05f); minLines = 2
+        }, 12f),
             Ui.lp(Ui.MATCH, Ui.WRAP, t = 10))
         t.addView(Ui.ellipsize(Ui.text(c, def.note, 13f, Ui.TEXT2).apply { gravity = Gravity.CENTER }), Ui.lp(Ui.MATCH, Ui.WRAP, t = 3))
         t.isClickable = true
@@ -190,7 +193,9 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
         startBtn = start
         detail.addView(start, Ui.lp(Ui.MATCH, Ui.WRAP))
         (turbo.parent as? LinearLayout)?.removeView(turbo)
-        detail.addView(turbo, Ui.lp(Ui.MATCH, Ui.u(48), t = 8))
+        // Turbo à côté des programmes où la lame tourne librement ; pas avec les œufs ou le riz dans
+        // le panier, la vapeur ou l'eau à chauffer (et la place sert aux choix). Toujours dans Cuisson.
+        if (def.kind !in NO_TURBO) detail.addView(turbo, Ui.lp(Ui.MATCH, Ui.u(48), t = 8))
     }
 
     private fun bump(dir: Int) {
@@ -228,6 +233,8 @@ class ProgramsScreen(a: MainActivity) : Screen(a) {
     override val knobStart: View? get() = durationView ?: startBtn
 
     companion object {
+        private val NO_TURBO = setOf(JobKind.STEAM, JobKind.EGGS, JobKind.RICE, JobKind.WATER)
+
         /** Programme à montrer au prochain affichage de l'écran. */
         private var pending: JobKind? = null
 
