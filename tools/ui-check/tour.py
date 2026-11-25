@@ -188,7 +188,7 @@ def close(a, b, tol=4):
     return all(abs(x - y) <= tol for x, y in zip(a, b))
 
 
-def knob_audit(name, steps=45, slow=False):
+def knob_audit(name, steps=45, slow=False, raw=False):
     """Tourne la molette jusqu'au bout dans les deux sens et compare avec tout ce qui se touche."""
     sh("logcat -c")
     turn(steps, KNOB_RIGHT, slow)
@@ -203,6 +203,8 @@ def knob_audit(name, steps=45, slow=False):
         if not any(close(box, b) and lab == l for l, b in order):
             order.append((lab, box))
     lines = ["== %s : %d éléments au bouton" % (name, len(order))]
+    if raw:
+        lines += ["   (brut) %s %s %s" % e for e in knob_events()]
     lines += ["   %2d. %s" % (i + 1, lab) for i, (lab, _) in enumerate(order)]
     root = dump()
     if root is None:
@@ -295,7 +297,7 @@ def knob_tour():
     knob_audit("Fiche recette")
     key(4)
     nav("Recettes")
-    knob_audit("Recettes", steps=30, slow=True)
+    knob_audit("Recettes", steps=30, slow=True, raw=True)
     nav("Programmes")
     progs = knob_audit("Programmes")
     # La durée du programme choisi (« 1 min 30 s », « 9 min »…), réglable au bouton.
