@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Vérification de l'interface sur l'émulateur Android 6 (lancé par .github/workflows/ui-check.yml) :
 # écran 1024×600 comme le robot, réseau coupé (rien ne part vers Foyer ni GitHub), données de
-# démonstration (tools/ui-check/seed.py), puis le parcours (tools/ui-check/tour.py).
+# démonstration (tools/ui-check/seed.py), puis le parcours (tools/ui-check/tour.py) ; enfin, réseau
+# rallumé, une seule question à la base de Foyer (statut des agents) depuis Android 6.
 set -euo pipefail
 OUT=${1:-ui-check}
 APK=app/build/outputs/apk/debug/app-debug.apk
@@ -59,3 +60,28 @@ for attempt in 1 2 3; do
 done
 echo "données de démonstration posées : $seeded"
 python3 tools/ui-check/tour.py "$OUT"
+
+# Après le parcours (hors réseau), le réseau revient le temps d'une question à la base de Foyer
+# avec un faux secret (version de test, journal ToqueAgents) : une réponse 200 prouve qu'Android 6
+# accepte le certificat de la base avec les racines embarquées.
+adb shell svc wifi enable || true
+adb shell svc data enable || true
+sleep 10
+line=""
+for attempt in 1 2 3; do
+  adb shell am start -n app.toque/.ui.MainActivity --ez app.toque.PROBE_AGENTS true > /dev/null
+  for _ in $(seq 1 15); do
+    line=$(adb logcat -d -v brief -s ToqueAgents:I | grep "probe|" | tail -1 || true)
+    [ -n "$line" ] && break
+    sleep 2
+  done
+  case "$line" in *"probe|200|"*) break ;; esac
+  # Réseau pas encore prêt : on attend un peu et on redemande.
+  adb logcat -c
+  sleep 10
+done
+echo "${line:-pas de réponse}" | tee "$OUT/connexion-foyer.txt"
+case "$line" in
+  *"probe|200|"*) echo "Android 6 joint la base de Foyer en https" ;;
+  *) echo "Android 6 ne joint pas la base de Foyer"; exit 1 ;;
+esac

@@ -127,6 +127,12 @@ NAV = {"Accueil": (125, 555), "Recettes": (318, 555), "Cuisson": (512, 555), "Pr
 
 
 def nav(name):
+    # Plein écran (recette guidée ouverte par un appui à la molette…) : la barre du bas est cachée,
+    # on revient d'abord en arrière, deux fois au plus.
+    for _ in range(2):
+        if find(desc=name) is not None:
+            break
+        key(4, pause=1.5)
     # Par l'étiquette de l'onglet : le mot seul existe aussi ailleurs (la carte « Balance » de Cuisson).
     tap(desc=name, fallback=NAV[name])
 
@@ -506,30 +512,9 @@ def functional_checks():
     tap(desc="Agents", prefix=True, fallback=(844, 29))
     tap(desc="Fermer")
     check("Carte des agents fermée par la croix", wait_for(lambda: not has_text("Hermès"), 6))
-    agents_probe()
 
     with open(os.path.join(OUT, "fonctionnel.txt"), "w") as f:
         f.write("\n".join(func_report) + "\n")
-
-
-def agents_probe():
-    """
-    Version de test : Toque demande le statut des agents à la base de Foyer avec un faux secret.
-    Une réponse 200 (liste vide) prouve qu'Android 6 accepte le certificat de la base avec les
-    racines embarquées. Le résultat est aussi dans connexion-foyer.txt.
-    """
-    sh("am start -n %s/.ui.MainActivity --ez app.toque.PROBE_AGENTS true" % PKG)
-    line = ""
-    end = time.time() + 45
-    while time.time() < end and not line:
-        found = [l for l in sh("logcat -d -v brief -s ToqueAgents:I").splitlines() if "probe|" in l]
-        if found:
-            line = found[-1].strip()
-        else:
-            wait(2)
-    with open(os.path.join(OUT, "connexion-foyer.txt"), "w") as f:
-        f.write((line or "pas de réponse en 45 s") + "\n")
-    check("Android 6 joint la base de Foyer en https (statut des agents)", "probe|200|" in line, line[-240:])
 
 
 def cook_or_resume():

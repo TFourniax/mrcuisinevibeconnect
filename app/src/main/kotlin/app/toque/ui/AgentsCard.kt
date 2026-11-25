@@ -108,7 +108,9 @@ class AgentsCard(private val a: MainActivity) {
         row.addView(middle, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
 
         val right = Ui.vertical(a, Gravity.END)
-        right.addView(Ui.text(a, Agents.stateLabel(r, now), 14f, color, Ui.MEDIUM).apply { gravity = Gravity.END })
+        // Largeur propre (pas « toute la colonne ») : la colonne prend le plus long des deux textes.
+        right.addView(Ui.text(a, Agents.stateLabel(r, now), 14f, color, Ui.MEDIUM).apply { gravity = Gravity.END },
+            Ui.lp(Ui.WRAP, Ui.WRAP))
         right.addView(Ui.text(a, Agents.timeLabel(r, now), 13f, Ui.TEXT3).apply {
             gravity = Gravity.END
             maxLines = 1
