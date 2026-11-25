@@ -296,9 +296,13 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
             Ui.chipText(temp).text = "${s.actualTempC} °C"
             val hot = s.actualTempC >= 40
             val col = if (hot) Ui.tempColor(s.actualTempC) else Ui.TEXT2
-            Ui.chipText(temp).setTextColor(col)
-            (temp.getChildAt(0) as Icon).color = col
-            temp.background = Ui.round(if (hot) Ui.ACCENT_DIM else Ui.SURFACE3, 40f)
+            // ~10 échantillons par seconde : on ne redessine que ce qui change.
+            if (col != lastTempColor) {
+                lastTempColor = col
+                Ui.chipText(temp).setTextColor(col)
+                (temp.getChildAt(0) as Icon).color = col
+                temp.background = Ui.round(if (hot) Ui.ACCENT_DIM else Ui.SURFACE3, 40f)
+            }
         } else temp.visibility = View.GONE
         val demo = a.prefs.mode == Prefs.Mode.DEMO
         val (label, color) = when {
@@ -310,10 +314,18 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
             s.link == LinkState.LOST -> tr("Liaison perdue") to Ui.DANGER
             else -> tr("Base absente") to Ui.TEXT3
         }
-        stateText.text = label
-        stateDot.background = Ui.round(color, 4f)
-        stateText.setTextColor(if (s.hasFault || s.link == LinkState.LOST) Ui.DANGER else Ui.TEXT2)
+        if (label != lastState || color != lastStateColor) {
+            lastState = label
+            lastStateColor = color
+            stateText.text = label
+            stateDot.background = Ui.round(color, 4f)
+            stateText.setTextColor(if (s.hasFault || s.link == LinkState.LOST) Ui.DANGER else Ui.TEXT2)
+        }
     }
+
+    private var lastTempColor = 0
+    private var lastState = ""
+    private var lastStateColor = 0
 }
 
 /** Barre du bas : les cinq sections, toujours là (sauf en plein écran). */

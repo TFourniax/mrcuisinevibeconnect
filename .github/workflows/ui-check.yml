@@ -13,16 +13,16 @@ on:
     branches: ['claude/**']
   workflow_dispatch:
 
-concurrency:
-  group: ui-check-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: write
 
 jobs:
   ui:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ui-check]')
+    # Au niveau du travail : un commit sans [ui-check] (travail sauté) n'annule pas un parcours en cours.
+    concurrency:
+      group: ui-check-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
