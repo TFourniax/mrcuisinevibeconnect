@@ -164,12 +164,22 @@ class TempGauge(c: Context) : View(c) {
 class SpeedBars(c: Context) : View(c) {
     private var speed = 0
     private var max = 10
+    /** Vitesse réelle du moteur pendant une cuisson (-1 : à l'arrêt, seule la consigne compte). */
+    private var actual = -1
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val r = RectF()
 
     fun set(speed: Int, max: Int) {
+        if (speed == this.speed && max == this.max) return
         this.speed = speed
         this.max = max
+        invalidate()
+    }
+
+    /** En marche : les barres pleines suivent le moteur, la consigne pas encore atteinte reste pâle. */
+    fun setActual(level: Int) {
+        if (level == actual) return
+        actual = level
         invalidate()
     }
 
@@ -180,7 +190,12 @@ class SpeedBars(c: Context) : View(c) {
             val h = height * (0.3f + 0.07f * (i - 1))
             val x = (i - 1) * (w + gap)
             r.set(x, height - h, x + w, height.toFloat())
-            paint.color = if (i <= speed) Ui.ACCENT else Ui.SURFACE3
+            paint.color = when {
+                actual >= 0 && i <= actual -> Ui.ACCENT
+                actual >= 0 && i <= speed -> Ui.ACCENT_DIM
+                actual < 0 && i <= speed -> Ui.ACCENT
+                else -> Ui.SURFACE3
+            }
             paint.alpha = if (i > max) 110 else 255
             canvas.drawRoundRect(r, Ui.uf(3f), Ui.uf(3f), paint)
         }

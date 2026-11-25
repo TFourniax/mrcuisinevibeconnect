@@ -66,12 +66,15 @@ object Knob {
 /** Le cadre lumineux posé sur l'élément choisi au bouton rotatif ; ne capte aucun toucher. */
 class FocusRing(c: Context) : View(c) {
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Ui.ACCENT }
-    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Ui.ACCENT_DIM }
+    // Voile translucide (jamais ACCENT_DIM, opaque en clair) : la valeur réglée reste lisible dessous.
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = veil() }
+
+    private fun veil() = (Ui.ACCENT and 0x00FFFFFF) or 0x29000000
 
     /** Le thème a changé : le cadre prend l'accent du nouveau. */
     fun restyle() {
         stroke.color = Ui.ACCENT
-        fill.color = (Ui.ACCENT and 0x00FFFFFF) or 0x29000000
+        fill.color = veil()
         invalidate()
     }
     private val r = RectF()

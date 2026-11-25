@@ -65,6 +65,7 @@ class MainActivity : Activity() {
     private var unsubscribe: (() -> Unit)? = null
     private var unsubscribeEvents: (() -> Unit)? = null
     private var unsubscribeNotices: (() -> Unit)? = null
+    private var unsubscribeRecipes: (() -> Unit)? = null
     private var tone: ToneGenerator? = null
     private var toastView: TextView? = null
     private var video: VideoPanel? = null
@@ -118,6 +119,7 @@ class MainActivity : Activity() {
         SyncService.schedule(this)
         // « À savoir » : nouveautés du foyer, mise à jour ; la pastille de la cloche suit.
         unsubscribeNotices = Notices.watch(this) { refreshBadge() }
+        unsubscribeRecipes = app.recipes.onChange { liveCache = null }
         push(HomeScreen(this))
         if (reopenSettings) {
             reopenSettings = false
@@ -169,6 +171,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         unsubscribeNotices?.invoke()
+        unsubscribeRecipes?.invoke()
         tone?.release()
         super.onDestroy()
     }
@@ -371,7 +374,9 @@ class MainActivity : Activity() {
      */
     fun checkTheme() {
         if (wantDark() == Ui.isDark) return
-        if (overlay.visibility == View.VISIBLE || keyboardOpen() || video != null || knobNav.adjustingNow) return
+        // Pas au milieu d'un geste : Turbo maintenu (la reconstruction le relâcherait), clavier,
+        // fenêtre, vidéo, réglage au bouton.
+        if (overlay.visibility == View.VISIBLE || keyboardOpen() || video != null || knobNav.adjustingNow || snapshot.turboActive) return
         applyTheme()
     }
 
@@ -396,9 +401,18 @@ class MainActivity : Activity() {
         topBar.update(snapshot)
         liveBar.update(snapshot)
         knobNav.restyle()
-        if (top != null) show(top)
+        themeReplay = true
+        try {
+            if (top != null) show(top)
+        } finally {
+            themeReplay = false
+        }
         reopen?.let { openVideo(it) }
     }
+
+    /** Vrai pendant que [applyTheme] réaffiche l'écran courant (pas un vrai retour sur l'écran). */
+    var themeReplay = false
+        private set
 
     override fun onBackPressed() {
         if (overlay.visibility == View.VISIBLE) {
@@ -760,8 +774,12 @@ class MainActivity : Activity() {
     fun liveRecipe(): Recipe? {
         val g = Foyer.of(app).tracker.guided ?: return null
         if (prefs.guidedRecipe != g.recipeId) return null
-        return app.recipes.get(g.recipeId)
+        // Appelé à chaque instantané (une dizaine par seconde en cuisson) : la recette est lue
+        // une fois (base + JSON), puis gardée jusqu'au prochain changement des recettes.
+        liveCache?.let { if (it.first == g.recipeId) return it.second }
+        return app.recipes.get(g.recipeId).also { liveCache = g.recipeId to it }
     }
+    private var liveCache: Pair<String, Recipe?>? = null
 
     /** L'écran courant montre déjà le programme en cours (« Voir » n'a rien à ouvrir). */
     fun liveShownHere(): Boolean {

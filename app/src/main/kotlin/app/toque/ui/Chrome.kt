@@ -51,6 +51,18 @@ abstract class Screen(val a: MainActivity) {
         built = null
     }
 
+    /**
+     * Tâches différées sur le fil principal, sans passer par [view] : la vue peut avoir été jetée
+     * (changement de thème) ou être en construction, et un fil de fond (synchro, téléchargement)
+     * ne doit jamais la reconstruire.
+     */
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    fun post(r: Runnable) { handler.post(r) }
+    fun post(block: () -> Unit) { handler.post(block) }
+    fun postDelayed(r: Runnable, ms: Long) { handler.postDelayed(r, ms) }
+    fun postDelayed(block: () -> Unit, ms: Long) { handler.postDelayed(block, ms) }
+    fun removeCallbacks(r: Runnable) { handler.removeCallbacks(r) }
+
     open fun onShow() {}
     open fun onHide() {}
     open fun onSnapshot(s: Snapshot) {}
@@ -307,9 +319,11 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
         val demo = a.prefs.mode == Prefs.Mode.DEMO
         val (label, color) = when {
             s.hasFault -> tr("Alerte") to Ui.DANGER
+            // Comme avant : la base simulée reste signalée, même pendant une cuisson.
+            demo && s.link == LinkState.READY -> tr("Démo") to Ui.COOL
             s.busy && s.state == JobState.PAUSED -> tr("En pause") to Ui.WARN
             s.busy -> tr("En cuisson") to Ui.ACCENT
-            s.link == LinkState.READY -> (if (demo) tr("Démo") else tr("Prête")) to (if (demo) Ui.COOL else Ui.OK)
+            s.link == LinkState.READY -> tr("Prête") to Ui.OK
             s.link == LinkState.ARMING -> tr("Connexion…") to Ui.WARN
             s.link == LinkState.LOST -> tr("Liaison perdue") to Ui.DANGER
             else -> tr("Base absente") to Ui.TEXT3
@@ -553,21 +567,24 @@ class LiveBar(private val a: MainActivity) : FrameLayout(a) {
         label.shown = s.jobLabel
         val st = s.state
         val settings = Live.settingsText(s)
-        sub.shown = if (st == JobState.RUNNING && settings.isNotEmpty()) settings else Live.stateText(s)
+        // En marche : les réglages, précédés de la phase ou du changement de sens quand il y en a.
+        val detail = if (s.waitingStop || s.phaseCount > 1) Live.stateText(s) else ""
+        sub.shown = if (st == JobState.RUNNING && settings.isNotEmpty()) listOf(detail, settings).filter { it.isNotEmpty() }.joinToString(" · ")
+            else Live.stateText(s)
         sub.setTextColor(if (st == JobState.RUNNING) Ui.TEXT2 else Live.stateColor(s))
         time.shown = Live.bigValue(s)
         progress.progress = Live.progress(s)
         progress.color = if (s.jobTempLevel > 0) Ui.ACCENT else Ui.COOL
         val ended = st == JobState.FINISHED || st == JobState.ABORTED
         setButtons(running = st != JobState.PAUSED, ended = ended, turbo = false)
-        viewBtn.visibility = if (a.liveShownHere()) View.GONE else View.VISIBLE
     }
 
     private fun setButtons(running: Boolean, ended: Boolean, turbo: Boolean) {
         pauseBtn.visibility = if (ended || turbo) View.GONE else View.VISIBLE
         stopBtn.visibility = if (ended) View.GONE else View.VISIBLE
         okBtn.visibility = if (ended) View.VISIBLE else View.GONE
-        viewBtn.visibility = if (turbo) View.GONE else View.VISIBLE
+        // Posée une seule fois par instantané (deux changements de visibilité = une mise en page).
+        viewBtn.visibility = if (turbo || a.liveShownHere()) View.GONE else View.VISIBLE
         (pauseBtn.getChildAt(0) as Icon).set(if (running) Icon.Kind.PAUSE else Icon.Kind.PLAY)
         pauseBtn.contentDescription = if (running) tr("Pause") else tr("Reprendre")
     }

@@ -142,6 +142,35 @@ def cook_or_resume():
         tap(text="Reprendre")
 
 
+def flip(name):
+    """Lune ou soleil : l'écran courant est refait dans l'autre thème."""
+    if not tap(desc="Passer en thème sombre", required=False, pause=3):
+        tap(desc="Passer en thème clair", fallback=(892, 29), pause=3)
+    shot(name)
+
+
+def theme_flips():
+    nav("Recettes")
+    tap(text="Toutes", required=False)
+    tap(desc="Chercher", fallback=(400, 89), required=False)
+    sh("input text carotte")
+    key(66)  # Entrée : ferme le clavier
+    wait(2)
+    flip("24-theme-recettes-recherche")
+    expect("Soupe de carottes au cumin")
+    tap(text="Soupe de carottes au cumin")
+    wait(2)
+    flip("25-theme-fiche-lidl")
+    expect("Soupe de carottes au cumin")
+    key(4)
+    nav("Programmes")
+    tap(text="Œufs")
+    flip("26-theme-programmes")
+    nav("Cuisson")
+    flip("27-theme-cuisson")
+    nav("Accueil")
+
+
 def screens(theme):
     """Tous les écrans principaux dans le thème courant."""
     nav("Accueil")
@@ -229,6 +258,10 @@ def main():
     shot("19-ecran-de-veille")
     tap_xy(512, 300, pause=2)
     shot("20-apres-veille")
+
+    # Changer de thème sur des écrans qui gardent un état (la lune refait toute l'interface) :
+    # Recettes avec une recherche tapée, une fiche Lidl (avis en ligne), Programmes, Cuisson.
+    theme_flips()
 
     # L'outil de l'anneau lumineux (le bloc est juste sous l'écran de veille dans les Réglages).
     if tap(text="Trouver l'anneau", required=False, pause=3):

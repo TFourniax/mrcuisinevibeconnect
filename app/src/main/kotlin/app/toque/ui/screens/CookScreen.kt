@@ -39,7 +39,9 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     override val recipeId: String get() = recipe.id
     // La vidéo se met à la place du texte de l'étape : le panneau machine et les boutons du bas restent libres.
     override val videoSide: Int get() = Gravity.START
-    override val videoBottomSpace: Int get() = 86
+    // Le panneau s'arrête au-dessus de « Revoir la vidéo / Voir sur le téléphone » et des boutons
+    // d'étape (136 px de bas de colonne) : on peut envoyer la recette au téléphone pendant la vidéo.
+    override val videoBottomSpace: Int get() = 136
     /** Cuisine pas à pas : plein écran, sans barre du bas (comme le mode magasin de Foyer). */
     override val fullScreen: Boolean get() = true
     private var index = startStep.coerceIn(0, maxOf(0, recipe.steps.size - 1))
@@ -432,7 +434,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             if (index != finished) go(finished)
             // Étapes non réunissables en un programme (vapeur puis réglage…) : la suivante part seule.
             val chain = a.prefs.chainSteps && continues(finished + 1)
-            view.postDelayed({
+            postDelayed({
                 if (index == finished) {
                     a.machine.clearFinished()
                     if (index < recipe.steps.size - 1) {

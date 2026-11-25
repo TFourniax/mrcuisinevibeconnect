@@ -117,6 +117,12 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         steps.addView(section(tr("Étapes")))
         for ((i, s) in recipe.steps.withIndex()) steps.addView(stepRow(i, s), Ui.lp(t = 12))
         McOnline.apiIdOf(recipe.id)?.let { apiId ->
+            // Vues neuves à chaque construction (le thème peut refaire l'écran) ; un chargement
+            // en cours pour l'ancienne interface est ignoré à son retour.
+            reviewsBox = Ui.vertical(c)
+            reviewsState = Ui.text(c, "", 16f, Ui.TEXT3)
+            moreButton = null
+            loading = false
             steps.addView(reviewsBox, Ui.lp(t = 22))
             reviewsBox.addView(section(if (recipe.ratingCount > 0)
                 tr("Avis · %s/5 (%d notes)", rating(recipe.rating), recipe.ratingCount) else tr("Avis")))
@@ -135,8 +141,8 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
 
     // ------------------------------------------------------------------ avis
 
-    private val reviewsBox by lazy { Ui.vertical(c) }
-    private val reviewsState by lazy { Ui.text(c, "", 16f, Ui.TEXT3) }
+    private lateinit var reviewsBox: LinearLayout
+    private lateinit var reviewsState: TextView
     private var moreButton: View? = null
     private var loading = false
 
@@ -145,13 +151,15 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         loading = true
         reviewsState.visibility = View.VISIBLE
         reviewsState.text = tr("Chargement des avis…")
+        val box = reviewsBox
         Thread {
             val result = try {
                 Reviews.load(apiId, page)
             } catch (e: Exception) {
                 null
             }
-            reviewsBox.post {
+            post {
+                if (box !== reviewsBox) return@post
                 loading = false
                 if (result == null) {
                     reviewsState.text = tr("Avis indisponibles (pas de connexion ?)")

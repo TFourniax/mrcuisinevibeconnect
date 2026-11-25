@@ -432,7 +432,7 @@ object Ui {
 
     /** Couleur liée à une température : froid -> bleu, tiède -> ambre, chaud -> accent, très chaud -> rouge. */
     fun tempColor(c: Int): Int = when {
-        c >= 100 -> DANGER
+        c >= 90 -> DANGER
         c >= 60 -> ACCENT
         c >= 40 -> WARN
         else -> COOL

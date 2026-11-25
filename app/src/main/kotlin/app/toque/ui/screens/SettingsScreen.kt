@@ -377,7 +377,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                     problems += tr("impossible de couper l'appli d'origine du moteur")
                 sync.forceStop()
             }
-            view.post {
+            post {
                 if (problems.isNotEmpty()) {
                     a.confirm(tr("Machine réelle indisponible"), problems.joinToString("\n") { "• $it" }, "OK", tr("Fermer")) {}
                 } else save()
@@ -399,7 +399,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                     val sync = LidlSync(a, a.prefs, a.app.recipes, a.app.log)
                     sync.setVendorHardware(true)
                     val launch = sync.components().launch
-                    view.post {
+                    post {
                         if (launch != null) a.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         else a.toast(tr("Appli d'origine introuvable"), Ui.WARN)
                     }
@@ -417,9 +417,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         syncing = true
         syncText.text = tr("Synchronisation en cours… (quelques minutes)")
         Thread {
-            val r = if (online) OnlineSync(a, a.prefs, a.app.recipes, a.app.log).sync { msg -> view.post { syncText.text = msg } }
-            else LidlSync(a, a.prefs, a.app.recipes, a.app.log).importNow { msg -> view.post { syncText.text = msg } }
-            view.post {
+            val r = if (online) OnlineSync(a, a.prefs, a.app.recipes, a.app.log).sync { msg -> post { syncText.text = msg } }
+            else LidlSync(a, a.prefs, a.app.recipes, a.app.log).importNow { msg -> post { syncText.text = msg } }
+            post {
                 syncing = false
                 refreshSync()
                 a.toast(r.message, if (r.ok) Ui.OK else Ui.WARN)
@@ -547,17 +547,17 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         Thread {
             try {
                 val r = updater.latest()
-                view.post {
+                post {
                     release = r
                     upd = if (updater.isNewer(r)) Upd.AVAILABLE else Upd.UP_TO_DATE
                     renderUpdate()
                     if (upd == Upd.AVAILABLE) installUpdate()
                 }
             } catch (e: Updater.Failure) {
-                view.post { upd = Upd.ERROR; updMessage = e.message ?: tr("Erreur"); renderUpdate() }
+                post { upd = Upd.ERROR; updMessage = e.message ?: tr("Erreur"); renderUpdate() }
             } catch (e: Exception) {
                 a.app.log.crash("maj", e)
-                view.post { upd = Upd.ERROR; updMessage = tr("Erreur inattendue : %s", e.message); renderUpdate() }
+                post { upd = Upd.ERROR; updMessage = tr("Erreur inattendue : %s", e.message); renderUpdate() }
             }
         }.start()
     }
@@ -583,14 +583,14 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                 renderUpdate()
                 Thread {
                     try {
-                        val file = updater.download(r) { p -> view.post { updPercent = p; renderUpdate() } }
-                        view.post { upd = Upd.INSTALLING; renderUpdate() }
+                        val file = updater.download(r) { p -> post { updPercent = p; renderUpdate() } }
+                        post { upd = Upd.INSTALLING; renderUpdate() }
                         updater.install(file)
                     } catch (e: Updater.Failure) {
-                        view.post { updateFailed(e.message ?: tr("Erreur")) }
+                        post { updateFailed(e.message ?: tr("Erreur")) }
                     } catch (e: Exception) {
                         a.app.log.crash("maj", e)
-                        view.post { updateFailed(tr("Erreur inattendue : %s", e.message)) }
+                        post { updateFailed(tr("Erreur inattendue : %s", e.message)) }
                     }
                 }.start()
             }

@@ -113,6 +113,9 @@ object Notices {
     private const val HEADER = "v1"
 
     private fun track(a: MainActivity) {
+        // Pas de pile d'horloge : au démarrage le robot se croit en 2010 jusqu'à la mise à
+        // l'heure. Rien n'est noté ni élagué avant (les dates seraient fausses).
+        if (!app.toque.TimeSync.clockPlausible()) return
         val p = a.prefs
         val app = a.app
         val now = System.currentTimeMillis()
@@ -168,6 +171,9 @@ object Notices {
     // ------------------------------------------------------------------ la liste
 
     private fun readKeys(a: MainActivity): Set<String> = a.prefs.noticeRead.split('\n').filter { it.isNotEmpty() }.toSet()
+
+    /** Les dernières mises à jour vues seulement (une ligne par version : la liste ne grossit pas). */
+    private fun keepRead(keys: Set<String>): String = keys.toList().takeLast(5).joinToString("\n")
 
     private fun installedVersion(a: MainActivity): String =
         try { a.packageManager.getPackageInfo(a.packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
@@ -231,7 +237,7 @@ object Notices {
     fun markRead(a: MainActivity, key: String) {
         val p = a.prefs
         p.noticeLog = NoticeLog.encode(NoticeLog.markRead(NoticeLog.decode(p.noticeLog), key))
-        if (key.startsWith("update:")) p.noticeRead = (readKeys(a) + key).joinToString("\n")
+        if (key.startsWith("update:")) p.noticeRead = keepRead(readKeys(a) + key)
         fire()
     }
 
@@ -239,7 +245,7 @@ object Notices {
         val p = a.prefs
         val keys = items(a).filter { it.unread }.map { it.key }
         p.noticeLog = NoticeLog.encode(NoticeLog.markRead(NoticeLog.decode(p.noticeLog)))
-        p.noticeRead = (readKeys(a) + keys.filter { it.startsWith("update:") }).joinToString("\n")
+        p.noticeRead = keepRead(readKeys(a) + keys.filter { it.startsWith("update:") })
         fire()
     }
 

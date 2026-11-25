@@ -79,20 +79,21 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
             setSingleLine()
             imeOptions = EditorInfo.IME_ACTION_SEARCH or EditorInfo.IME_FLAG_NO_EXTRACT_UI
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            // Interface refaite (changement de thème) : la recherche en cours reste. Posée avant
+            // l'écouteur, qui sinon la relancerait pendant la construction de l'écran.
+            if (query.isNotEmpty()) setText(query)
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, st: Int, c1: Int, a1: Int) {}
                 override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c1: Int) {}
                 override fun afterTextChanged(s: Editable?) {
                     query = s?.toString() ?: ""
-                    view.removeCallbacks(runSearch)
-                    view.postDelayed(runSearch, 120)
+                    removeCallbacks(runSearch)
+                    postDelayed(runSearch, 120)
                 }
             })
             setOnEditorActionListener { _, _, _ -> a.hideKeyboard(); true }
         }
         field.addView(input, LinearLayout.LayoutParams(0, Ui.MATCH, 1f))
-        // Interface refaite (changement de thème) : la recherche en cours reste.
-        if (query.isNotEmpty()) input.setText(query)
         val clear = Icon(c, Icon.Kind.CLOSE, Ui.TEXT2)
         clear.setPadding(Ui.u(10), Ui.u(10), Ui.u(10), Ui.u(10))
         clear.setOnClickListener { input.setText("") }
@@ -168,7 +169,7 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
         val index = a.app.recipes.index
         searchExec.execute {
             val hits = if (q.contains(',')) index.withIngredients(q.split(','), f) else index.search(q, f)
-            view.post {
+            post {
                 if (gen != generation) return@post
                 results = hits
                 adapter.notifyDataSetChanged()
@@ -195,7 +196,8 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
         buildChips()
         search()
         unsub = a.app.recipes.onChange { buildChips(); search() }
-        if (focusSearch) view.postDelayed({
+        // Le clavier s'ouvre quand on arrive sur l'écran, pas quand le thème le redessine.
+        if (focusSearch && !a.themeReplay) postDelayed({
             input.requestFocus()
             (c.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
         }, 150)

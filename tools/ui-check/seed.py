@@ -21,11 +21,12 @@ now = datetime.now(timezone.utc)
 now_ms = int(time.time() * 1000)
 
 
-def recipe(rid, title, minutes, servings, tags, steps, ingredients=None, link="", video="", category=""):
+def recipe(rid, title, minutes, servings, tags, steps, ingredients=None, link="", video="", category="",
+           source="foyer", rating=0.0, rating_count=0):
     r = {
         "id": rid, "title": title, "category": category, "tags": tags, "servings": servings,
-        "prepMinutes": 10, "totalMinutes": minutes, "difficulty": 1, "source": "foyer", "image": "",
-        "favorite": False, "notes": "", "author": "", "rating": 0.0, "ratingCount": 0,
+        "prepMinutes": 10, "totalMinutes": minutes, "difficulty": 1, "source": source, "image": "",
+        "favorite": False, "notes": "", "author": "", "rating": rating, "ratingCount": rating_count,
         "ingredients": ingredients or [], "steps": steps,
     }
     if link:
@@ -79,6 +80,11 @@ recipes = [
     recipe("foyer-smoothie", "Smoothie fraise-banane", 5, 2, [], [
         {"text": "Mixe le tout.", "machine": machine(seconds=60, speed=10)},
     ], category="Boisson"),
+    # Une recette du site Lidl (identifiant « web- ») : sa fiche a une rubrique d'avis en ligne.
+    recipe("web-12345", "Soupe de carottes au cumin", 30, 4, [], [
+        {"text": "Mixe les carottes.", "machine": machine(seconds=10, speed=5)},
+        {"text": "Fais cuire.", "machine": machine(seconds=1200, speed=1, temp=100)},
+    ], category="Soupe", source="imported", rating=4.5, rating_count=12),
 ]
 
 db_path = os.path.join(out, "recettes.db")
@@ -88,7 +94,8 @@ db = sqlite3.connect(db_path)
 db.execute("CREATE TABLE recipes (id TEXT PRIMARY KEY, title TEXT NOT NULL, json TEXT NOT NULL, updated INTEGER NOT NULL, origin TEXT NOT NULL DEFAULT 'lidl')")
 db.execute("CREATE TABLE favorites (id TEXT PRIMARY KEY)")
 for r in recipes:
-    db.execute("INSERT INTO recipes VALUES (?, ?, ?, ?, 'foyer')", (r["id"], r["title"], json.dumps(r, ensure_ascii=False), now_ms))
+    origin = "foyer" if r["source"] == "foyer" else "lidl"
+    db.execute("INSERT INTO recipes VALUES (?, ?, ?, ?, ?)", (r["id"], r["title"], json.dumps(r, ensure_ascii=False), now_ms, origin))
 db.execute("INSERT INTO favorites VALUES ('foyer-crepes')")
 db.execute("PRAGMA user_version = 2")
 db.commit()
@@ -122,7 +129,7 @@ strings = {
     "foyerPlans": plans_json,
     "noticePlans": plans_json,
     "noticeLog": json.dumps(log, ensure_ascii=False, separators=(",", ":")),
-    "noticeRecipes": "\n".join(["v1"] + [r["id"] for r in recipes]),
+    "noticeRecipes": "\n".join(["v1"] + [r["id"] for r in recipes if r["source"] == "foyer"]),
     "updateAvailable": "1.0.99",
     "lastSyncResult": "1 240 recettes Lidl à jour",
 }

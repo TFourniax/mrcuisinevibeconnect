@@ -37,8 +37,9 @@ import app.toque.ui.shown
 
 /**
  * Accueil centré sur le foyer. À gauche, une seule grande carte, choisie dans cet ordre : le
- * programme en cours (avec Pause et Arrêter), la recette à reprendre, le repas prévu dans Foyer,
- * le code de liaison, sinon une invitation à cuisiner ; en dessous, les recettes à tester. À
+ * programme en cours (avec Pause et Arrêter), le code de liaison, le repas prévu dans Foyer, la
+ * recette à reprendre, sinon une invitation à cuisiner. Une recette à reprendre qui n'a pas la
+ * grande carte a sa bande juste en dessous (comme avant) ; puis les recettes à tester. À
  * droite : « À savoir » (deux messages non lus au plus, le reste sous la cloche), puis « Cette
  * semaine » (les repas prévus dans Foyer) ou, sans repas prévu, des raccourcis vers les programmes.
  */
@@ -50,6 +51,8 @@ class HomeScreen(a: MainActivity) : Screen(a) {
     private enum class Lead { LIVE, RESUME, PLAN, LINK, IDLE }
 
     private lateinit var lead: FrameLayout
+    private lateinit var resumeStrip: LinearLayout
+    private lateinit var resumeText: TextView
     private lateinit var recipesHead: LinearLayout
     private lateinit var recipesTitle: TextView
     private lateinit var recipesMore: TextView
@@ -65,7 +68,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         override fun run() {
             // « Ce soir » devient « Demain »… : on relit le repas prévu de temps en temps.
             if (leadKind != Lead.LIVE) refresh()
-            view.postDelayed(this, 60_000)
+            postDelayed(this, 60_000)
         }
     }
 
@@ -91,6 +94,21 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val left = Knob.region(Ui.vertical(c))
         lead = FrameLayout(c)
         left.addView(lead, LinearLayout.LayoutParams(Ui.MATCH, 0, 1f))
+        // La recette à reprendre, quand la grande carte montre autre chose (repas prévu, liaison).
+        resumeStrip = Ui.horizontal(c, Gravity.CENTER_VERTICAL)
+        resumeStrip.setPadding(Ui.u(16), Ui.u(10), Ui.u(12), Ui.u(10))
+        resumeStrip.background = Ui.pressable(Ui.round(Ui.ACCENT_DIM, 18f), 18f)
+        resumeStrip.addView(Icon(c, Icon.Kind.PLAY, Ui.ACCENT), LinearLayout.LayoutParams(Ui.u(20), Ui.u(20)).apply { rightMargin = Ui.u(10) })
+        resumeText = Ui.ellipsize(Ui.text(c, "", 15f, Ui.TEXT, Ui.SEMIBOLD))
+        resumeStrip.addView(resumeText, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        resumeStrip.addView(Icon(c, Icon.Kind.CHEVRON, Ui.TEXT2), LinearLayout.LayoutParams(Ui.u(18), Ui.u(18)))
+        resumeStrip.isClickable = true
+        resumeStrip.setOnClickListener {
+            val r = a.app.recipes.get(a.prefs.guidedRecipe)
+            if (r != null) a.push(CookScreen(a, r, a.prefs.guidedStep)) else { a.prefs.guidedRecipe = ""; refresh() }
+        }
+        resumeStrip.visibility = View.GONE
+        left.addView(resumeStrip, Ui.lp(Ui.MATCH, Ui.WRAP, t = 10))
         recipesHead = Ui.horizontal(c)
         recipesTitle = Ui.text(c, "", 17f, Ui.TEXT, Ui.SEMIBOLD)
         recipesHead.addView(recipesTitle, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
@@ -114,27 +132,31 @@ class HomeScreen(a: MainActivity) : Screen(a) {
 
     // ------------------------------------------------------------------ choix de la grande carte
 
-    private fun leadFor(s: Snapshot): Lead {
-        if (s.jobActive || s.turboActive) return Lead.LIVE
-        val p = a.prefs
-        if (p.guidedRecipe.isNotEmpty() && a.app.recipes.get(p.guidedRecipe) != null) return Lead.RESUME
-        if (p.foyerEnabled && !foyer.linked) return Lead.LINK
-        val (today, now) = Foyer.todayAndTime()
-        if (FoyerFeed.nextPlan(foyer.plans, today, now) != null) return Lead.PLAN
-        return Lead.IDLE
+    /**
+     * Comme avant la refonte : le repas prévu et le code de liaison passent devant une recette à
+     * reprendre (qui garde sa bande en dessous). [plan] et [resume] sont lus une seule fois par
+     * l'appelant : une synchro Foyer ou la minute qui tourne ne changent rien entre deux lectures.
+     */
+    private fun leadFor(s: Snapshot, plan: FoyerPlan?, resume: Recipe?): Lead = when {
+        s.jobActive || s.turboActive -> Lead.LIVE
+        a.prefs.foyerEnabled && !foyer.linked -> Lead.LINK
+        plan != null -> Lead.PLAN
+        resume != null -> Lead.RESUME
+        else -> Lead.IDLE
     }
 
     private fun refresh() {
         val s = a.snapshot
-        val kind = leadFor(s)
         val p = a.prefs
         val (today, now) = Foyer.todayAndTime()
         val plan = FoyerFeed.nextPlan(foyer.plans, today, now)
+        val resume = p.guidedRecipe.takeIf { it.isNotEmpty() }?.let { a.app.recipes.get(it) }
+        val kind = leadFor(s, plan, resume)
         // Clé de ce qu'affiche la carte : elle n'est refaite que si ça change.
         val key = when (kind) {
             Lead.LIVE -> "live:" + (a.liveRecipe()?.id ?: s.jobKind)
             Lead.RESUME -> "resume:${p.guidedRecipe}:${p.guidedStep}"
-            Lead.PLAN -> "plan:$plan:${plan?.recipeId?.let { a.app.recipes.get(it)?.image }}:${PlanText.label(plan!!, today)}"
+            Lead.PLAN -> "plan:$plan:${plan?.recipeId?.let { a.app.recipes.get(it)?.image }}:${plan?.let { PlanText.label(it, today) }}"
             Lead.LINK -> "link:${p.foyerCode}"
             Lead.IDLE -> "idle:${greetingKey()}"
         }
@@ -143,20 +165,27 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             leadKind = kind
             lead.removeAllViews()
             clearLive()
-            val v = when (kind) {
-                Lead.LIVE -> liveCard()
-                Lead.RESUME -> resumeCard()
-                Lead.PLAN -> planCard(plan!!, today)
-                Lead.LINK -> linkCard(p.foyerCode)
-                Lead.IDLE -> idleCard()
+            val v = when {
+                kind == Lead.LIVE -> liveCard()
+                kind == Lead.RESUME && resume != null -> resumeCard(resume)
+                kind == Lead.PLAN && plan != null -> planCard(plan, today)
+                kind == Lead.LINK -> linkCard(p.foyerCode)
+                else -> idleCard()
             }
             lead.addView(v, Ui.flp())
         }
         val live = kind == Lead.LIVE
+        val strip = if (!live && kind != Lead.RESUME) resume else null
+        resumeStrip.visibility = if (strip != null) View.VISIBLE else View.GONE
+        if (strip != null) {
+            val step = p.guidedStep.coerceIn(0, maxOf(0, strip.steps.size - 1))
+            resumeText.shown = tr("Reprendre « %s » · étape %d sur %d", strip.title, step + 1, strip.steps.size)
+        }
         recipesHead.visibility = if (live) View.GONE else View.VISIBLE
         recipesRow.visibility = if (live) View.GONE else View.VISIBLE
         if (!live) renderRecipes()
-        renderRight(live, plan)
+        // « Cette semaine » ne saute le repas prévu que si la grande carte le montre.
+        renderRight(live, if (kind == Lead.PLAN) plan else null)
         if (live) updateLive(s)
     }
 
@@ -219,8 +248,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         )
     }
 
-    private fun resumeCard(): View {
-        val r = a.app.recipes.get(a.prefs.guidedRecipe)!!
+    private fun resumeCard(r: Recipe): View {
         val step = a.prefs.guidedStep.coerceIn(0, maxOf(0, r.steps.size - 1))
         return photoCard(
             r, r.title, null, tr("À reprendre · étape %d sur %d", step + 1, r.steps.size), r.title,
@@ -392,7 +420,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
                 if (s.jobReverse) add(Ui.chip(c, tr("Inverse"), Icon.Kind.REVERSE, Ui.COOL, size = 14f), last = true)
             }
         }
-        val stateLine = if (st == JobState.RUNNING) "" else Live.stateText(s)
+        val stateLine = if (st == JobState.RUNNING && !s.waitingStop && s.phaseCount <= 1) "" else Live.stateText(s)
         liveState?.shown = stateLine
         liveState?.setTextColor(Live.stateColor(s))
         liveState?.visibility = if (stateLine.isEmpty()) View.GONE else View.VISIBLE
@@ -404,7 +432,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         livePause?.let { b ->
             val paused = st == JobState.PAUSED
             (b.getChildAt(0) as Icon).set(if (paused) Icon.Kind.PLAY else Icon.Kind.PAUSE)
-            (b.getChildAt(1) as TextView).text = if (paused) tr("Reprendre") else tr("Pause")
+            (b.getChildAt(1) as TextView).shown = if (paused) tr("Reprendre") else tr("Pause")
         }
     }
 
@@ -651,8 +679,8 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         if (!counted) foyer.showing(true)
         counted = true
         foyer.syncSoon()
-        view.removeCallbacks(tick)
-        view.postDelayed(tick, 60_000)
+        removeCallbacks(tick)
+        postDelayed(tick, 60_000)
     }
 
     override fun onHide() {
@@ -664,7 +692,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         unsubNotices = null
         if (counted) foyer.showing(false)
         counted = false
-        view.removeCallbacks(tick)
+        removeCallbacks(tick)
     }
 
     /** Au bouton rotatif : on arrive sur l'action de la grande carte. */
