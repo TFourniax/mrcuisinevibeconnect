@@ -249,8 +249,11 @@ To see the interface without a robot, put `[ui-check]` in a commit message on a 
 `.github/workflows/ui-check.yml` boots an Android 6 emulator at 1024×600, seeds demo data
 (`tools/ui-check/seed.py`: household recipes, a meal tonight, "À savoir" messages), walks every
 screen in light and dark (`tools/ui-check/tour.py`: a guided step started, paused and stopped, a
-programme, the knob, the screensaver, the ring tool, the video panel) and fails on a crash or a
-missing element. Captures and view trees are committed to `docs/ui-check/` on that branch (read
+programme, the knob, the screensaver, the ring tool, the video panel), turns the knob with the
+robot's own keys (F7/F6/F5) through every screen and compares it with every clickable element
+(`molette.txt`; the debug APK logs each knob focus under the tag ToqueKnob), runs 23 checks of
+what 1.0.11 did, each with an expected result (`fonctionnel.txt`), and fails on a crash, a
+missing element or a failed check. Captures and view trees are committed to `docs/ui-check/` on that branch (read
 them there: artifact downloads are blocked from cloud sessions); delete that folder before merging.
 Toque is also the HOME app: force-stopped, Android restarts it at once, so the seed is written
 before the first launch.
