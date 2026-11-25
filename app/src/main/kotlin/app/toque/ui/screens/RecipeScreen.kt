@@ -27,6 +27,14 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
     private lateinit var favIcon: Icon
     private lateinit var favLabel: TextView
 
+    /** Bouton serré (marges et texte plus petits) : deux côte à côte sur les ~400 px de la colonne. */
+    private fun compact(b: LinearLayout): LinearLayout {
+        b.setPadding(Ui.u(16), 0, Ui.u(18), 0)
+        (b.getChildAt(0).layoutParams as LinearLayout.LayoutParams).rightMargin = Ui.u(8)
+        Ui.fitWords(b.getChildAt(1) as TextView, 12f)
+        return b
+    }
+
     override fun build(): View {
         val root = Ui.horizontal(c, Gravity.TOP)
         root.setPadding(Ui.u(24), Ui.u(4), Ui.u(24), Ui.u(6))
@@ -77,16 +85,14 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         val video = Ui.horizontal(c)
         val phoneToo = PhoneLink.available(a, recipe)
         if (recipe.video.isNotEmpty()) {
-            val watch = Ui.button(c, tr("Revoir la vidéo"), Ui.Style.GHOST, Icon.Kind.VIDEO, height = 52, textSize = 15f) { a.openVideo(recipe) }
-            Ui.fitWords(watch.getChildAt(1) as TextView, 13f)
+            val watch = compact(Ui.button(c, tr("Revoir la vidéo"), Ui.Style.GHOST, Icon.Kind.VIDEO, height = 52, textSize = 14f) { a.openVideo(recipe) })
             // Avec « Voir sur le téléphone » (plus long) : la vidéo à sa largeur, le reste au téléphone,
             // pour que les deux libellés tiennent sur une ligne.
             video.addView(watch, (if (phoneToo) LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP) else LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
                 .apply { rightMargin = Ui.u(10) })
         }
         if (phoneToo) {
-            val phone = Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.PHONE, height = 52, textSize = 15f) { b -> PhoneLink.send(a, recipe, b) }
-            Ui.fitWords(phone.getChildAt(1) as TextView, 13f)
+            val phone = compact(Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.PHONE, height = 52, textSize = 14f) { b -> PhoneLink.send(a, recipe, b) })
             video.addView(phone, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         }
         if (video.childCount > 0) left.addView(video, Ui.lp(t = 10))
