@@ -498,14 +498,14 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             for (k in 0 until 2) {
                 val kind = kinds[r * 2 + k]
                 val def = ProgramCatalog.of(kind) ?: continue
-                val tile = Ui.horizontal(c)
-                tile.setPadding(Ui.u(10), Ui.u(10), Ui.u(10), Ui.u(10))
+                // Icône en haut, nom et durée en bas : la tuile se lit d'un coup d'œil quelle que soit sa hauteur.
+                val tile = Ui.vertical(c)
+                tile.setPadding(Ui.u(14), Ui.u(14), Ui.u(12), Ui.u(12))
                 tile.background = Ui.pressable(Ui.round(Ui.SURFACE2, 18f, Ui.STROKE, 1f), 18f)
-                tile.addView(Ui.iconCircle(c, Live.kindIcon(kind), 40, 20), LinearLayout.LayoutParams(Ui.u(40), Ui.u(40)).apply { rightMargin = Ui.u(10) })
-                val col = Ui.vertical(c)
-                col.addView(Ui.ellipsize(Ui.text(c, def.label, 15f, Ui.TEXT, Ui.SEMIBOLD)))
-                col.addView(Ui.ellipsize(Ui.text(c, def.note, 13f, Ui.TEXT2)), Ui.lp(t = 2))
-                tile.addView(col, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+                tile.addView(Ui.iconCircle(c, Live.kindIcon(kind), 46, 22), LinearLayout.LayoutParams(Ui.u(46), Ui.u(46)))
+                tile.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
+                tile.addView(Ui.ellipsize(Ui.text(c, def.label, 16f, Ui.TEXT, Ui.SEMIBOLD)), Ui.lp(Ui.MATCH, Ui.WRAP, t = 6))
+                tile.addView(Ui.ellipsize(Ui.text(c, def.note, 13f, Ui.TEXT2)), Ui.lp(Ui.MATCH, Ui.WRAP, t = 2))
                 tile.isClickable = true
                 tile.setOnClickListener {
                     ProgramsScreen.select(kind)
