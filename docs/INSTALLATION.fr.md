@@ -426,6 +426,16 @@ Rien n'est écrit tant que le Mac ne joint pas le robot. Dans l'ordre :
 
 ## 6. Revenir en arrière
 
+- **Revenir à la version précédente de Toque** (une mise à jour ne convient pas) : le robot
+  n'installe jamais une version plus ancienne. On republie donc le code de la version qui
+  marchait sous un numéro plus grand, par exemple la 1.0.11 sous le nom 1.0.13 : branche partie de
+  l'étiquette `v1.0.11`, seuls `versionCode` et `versionName` changent dans
+  `app/build.gradle.kts`, fusion dans `main`, et la publication part toute seule. Ensuite, sur le
+  robot : Réglages › Mises à jour (un toucher). Si Toque ne démarre plus : depuis le Mac,
+  `bash tools/setup/toque-setup.sh update --ip <IP du robot>` (câble et étape `wifi` d'abord si
+  l'accès Wi-Fi a été fermé). Les recettes, la liaison à Foyer et les réglages restent : chaque
+  version garde le même format de données. Chaque version publiée reste téléchargeable dans les
+  « Releases » du dépôt (`Toque-1.0.11.apk`…).
 - **Revenir à l'appli d'origine** (en gardant le root) : dans Toque, Réglages › Outils ›
   « Revenir à l'appli d'origine », ou depuis le Mac `bash tools/restore-robot.sh --uninstall`.
   Toque ne modifie ni le système ni l'appli d'origine : il désactive seulement son service moteur,

@@ -415,6 +415,15 @@ Nothing is written as long as the Mac cannot reach the robot. In order:
 
 ## 6. Undo
 
+- **Back to the previous Toque version** (an update does not suit you): the robot never installs an
+  older version. Republish the code that worked under a higher number instead, for example 1.0.11
+  as 1.0.13: a branch from the `v1.0.11` tag, only `versionCode` and `versionName` changed in
+  `app/build.gradle.kts`, merged into `main`, and the release publishes itself. Then on the robot:
+  Settings › Updates (one tap). If Toque no longer starts: from the Mac,
+  `bash tools/setup/toque-setup.sh update --ip <robot IP>` (cable and the `wifi` step first if
+  ADB over Wi-Fi was closed). Recipes, the Foyer link and settings stay: every version keeps the
+  same data format. Every published version stays downloadable from the repository's Releases
+  (`Toque-1.0.11.apk`…).
 - **Back to the stock app** (keeping root): in Toque, Settings › Tools › "Back to the stock app",
   or from the Mac `bash tools/restore-robot.sh --uninstall`. Toque changes neither the system nor
   the stock app: it only disables the stock motor service, which both methods undo.
