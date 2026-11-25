@@ -61,6 +61,32 @@ class AgentsTest {
         assertEquals(emptyList<AgentRun>(), Agents.decode(""))
     }
 
+    /**
+     * Réponse réelle de la base de Foyer (25/11, foyer d'essai effacé ensuite) : Claude Code qui
+     * attend une permission, Codex qui a fini, Hermès en cours, envoyés par foyer-agent.
+     */
+    @Test fun readsALiveAnswerFromFoyer() {
+        val live = """[{"agent":"hermes","session_key":"telegram","location":"local","state":"working","title":"Courses de la semaine","project":"life-app","link":null,"who":"Essai","state_since":"2026-11-25T20:12:05.752807+00:00","updated_at":"2026-11-25T20:12:05.752807+00:00"}, 
+ {"agent":"codex","session_key":"cx-1","location":"local","state":"done","title":"Corrige le minuteur des œufs","project":"mrcuisinevibeconnect","link":null,"who":"Essai","state_since":"2026-11-25T20:12:05.224405+00:00","updated_at":"2026-11-25T20:12:05.224405+00:00"}, 
+ {"agent":"claude","session_key":"cc-1","location":"local","state":"waiting","title":"Ajoute le statut des agents sur le robot","project":"life-app","link":null,"who":"Essai","state_since":"2026-11-25T20:12:04.562369+00:00","updated_at":"2026-11-25T20:12:04.562369+00:00"}]"""
+        val runs = Agents.parse(live)
+        assertEquals(3, runs.size)
+        val at = Agents.parseIso("2026-11-25T20:12:10Z")!!
+        val shown = Agents.shown(runs, at)
+        assertEquals(listOf("claude", "hermes", "codex"), shown.map { it.agent })
+        val claude = shown[0]
+        assertEquals(Agents.WAITING, claude.state)
+        assertEquals("life-app", claude.project)
+        assertEquals("Ajoute le statut des agents sur le robot", claude.title)
+        assertEquals("T'attend", Agents.stateLabel(claude, at))
+        assertEquals("à l'instant", Agents.timeLabel(claude, at))
+        assertEquals("Corrige le minuteur des œufs", shown[2].title)
+        assertEquals("mrcuisinevibeconnect", shown[2].project)
+        assertEquals("Hermès", Agents.name(shown[1].agent))
+        assertEquals(Agents.Signal.NEEDS_YOU, Agents.signal(runs, at, 0))
+        assertEquals("1 t'attend · 1 en cours · 1 terminé", Agents.summary(shown, at))
+    }
+
     @Test fun showsTheUrgentFirstAndForgetsOldEnds() {
         val runs = listOf(
             run(Agents.DONE, 1 * hour, session = "fini"),

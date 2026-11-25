@@ -249,7 +249,9 @@ def main():
         "p_session": session,
         "p_state": state,
         "p_title": title or None,
-        "p_project": opts["project"] or project_of(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR")),
+        # An explicit --project "" means no project (Hermes); without the option, the folder's repository.
+        "p_project": opts["project"] if opts["project"] is not None
+        else project_of(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR")),
         "p_link": opts["link"] or (cloud_link() if remote else None),
         "p_location": location if location in ("local", "cloud") else None,
     }
