@@ -417,7 +417,7 @@ Nothing is written as long as the Mac cannot reach the robot. In order:
 
 - **Back to the previous Toque version** (an update does not suit you): the robot never installs an
   older version. Republish the code that worked under a higher number instead, for example 1.0.11
-  as 1.0.13: a branch from the `v1.0.11` tag, only `versionCode` and `versionName` changed in
+  as 1.0.14 (1.0.13 is taken): a branch from the `v1.0.11` tag, only `versionCode` and `versionName` changed in
   `app/build.gradle.kts`, merged into `main`, and the release publishes itself. Then on the robot:
   Settings › Updates (one tap). If Toque no longer starts: from the Mac,
   `bash tools/setup/toque-setup.sh update --ip <robot IP>` (cable and the `wifi` step first if

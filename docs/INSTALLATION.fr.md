@@ -428,7 +428,7 @@ Rien n'est écrit tant que le Mac ne joint pas le robot. Dans l'ordre :
 
 - **Revenir à la version précédente de Toque** (une mise à jour ne convient pas) : le robot
   n'installe jamais une version plus ancienne. On republie donc le code de la version qui
-  marchait sous un numéro plus grand, par exemple la 1.0.11 sous le nom 1.0.13 : branche partie de
+  marchait sous un numéro plus grand, par exemple la 1.0.11 sous le nom 1.0.14 (la 1.0.13 est prise) : branche partie de
   l'étiquette `v1.0.11`, seuls `versionCode` et `versionName` changent dans
   `app/build.gradle.kts`, fusion dans `main`, et la publication part toute seule. Ensuite, sur le
   robot : Réglages › Mises à jour (un toucher). Si Toque ne démarre plus : depuis le Mac,
