@@ -551,7 +551,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                     release = r
                     upd = if (updater.isNewer(r)) Upd.AVAILABLE else Upd.UP_TO_DATE
                     renderUpdate()
-                    if (upd == Upd.AVAILABLE) installUpdate()
+                    // La fenêtre d'installation seulement si Réglages est encore à l'écran (sinon
+                    // la carte « Mises à jour » la propose au retour).
+                    if (upd == Upd.AVAILABLE && a.current === this) installUpdate()
                 }
             } catch (e: Updater.Failure) {
                 post { upd = Upd.ERROR; updMessage = e.message ?: tr("Erreur"); renderUpdate() }

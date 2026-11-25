@@ -190,13 +190,14 @@ class SpeedBars(c: Context) : View(c) {
             val h = height * (0.3f + 0.07f * (i - 1))
             val x = (i - 1) * (w + gap)
             r.set(x, height - h, x + w, height.toFloat())
-            paint.color = when {
-                actual >= 0 && i <= actual -> Ui.ACCENT
-                actual >= 0 && i <= speed -> Ui.ACCENT_DIM
-                actual < 0 && i <= speed -> Ui.ACCENT
-                else -> Ui.SURFACE3
+            // Consigne pas encore atteinte : l'accent à moitié transparent (même rendu dans les deux thèmes).
+            val pending = actual >= 0 && i > actual && i <= speed
+            paint.color = if (i <= speed) Ui.ACCENT else Ui.SURFACE3
+            paint.alpha = when {
+                pending -> 90
+                i > max -> 110
+                else -> 255
             }
-            paint.alpha = if (i > max) 110 else 255
             canvas.drawRoundRect(r, Ui.uf(3f), Ui.uf(3f), paint)
         }
         paint.alpha = 255

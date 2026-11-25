@@ -87,8 +87,8 @@ class RecipesScreen(a: MainActivity, private val focusSearch: Boolean = false, f
                 override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c1: Int) {}
                 override fun afterTextChanged(s: Editable?) {
                     query = s?.toString() ?: ""
-                    removeCallbacks(runSearch)
-                    postDelayed(runSearch, 120)
+                    this@RecipesScreen.removeCallbacks(runSearch)
+                    this@RecipesScreen.postDelayed(runSearch, 120)
                 }
             })
             setOnEditorActionListener { _, _, _ -> a.hideKeyboard(); true }

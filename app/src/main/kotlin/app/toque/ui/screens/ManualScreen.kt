@@ -32,6 +32,8 @@ import app.toque.ui.shown
  * chauffe, en sens inverse ou avec le fouet) plutôt que refusés au démarrage.
  */
 class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? = null) : Screen(a) {
+    /** Ouverte avec les réglages d'une étape (« Ajuster à la main ») : ce sont eux qui comptent. */
+    private val fromPreset = preset != null
     override val title = JobKind.MANUAL.label
     // Ouverte depuis une étape de recette (« Ajuster à la main ») : écran de détail, pas la section.
     override val section: Section? = if (preset == null) Section.MANUAL else null
@@ -301,17 +303,19 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
     override fun onSnapshot(s: Snapshot) {
         weight.shown = if (s.hasSample) "${s.weightG} g" else "—"
         val manualJob = s.kind?.name == "MANUAL" && (s.state == JobState.RUNNING || s.state == JobState.STARTING || s.state == JobState.PAUSED)
-        // Écran ouvert sur une cuisson manuelle déjà lancée (« Voir », l'accueil) : il reprend ses
-        // réglages, pour qu'un ajustement ne renvoie pas ceux par défaut à la cuisson en cours.
-        if (manualJob && !syncedFromJob && !pendingEdit) {
+        // Écran ouvert sans réglages sur une cuisson manuelle déjà lancée (« Voir », la section) : il
+        // reprend ceux de la cuisson, à chaque phase, pour qu'un ajustement ne renvoie pas ceux par
+        // défaut. Ouvert depuis une étape (« Ajuster à la main »), il garde les réglages de l'étape.
+        if (!fromPreset && manualJob && (syncedPhase != s.phaseIndex || !syncedFromJob) && !pendingEdit) {
             syncedFromJob = true
+            syncedPhase = s.phaseIndex
             tempLevel = s.jobTempLevel
             if (s.jobSpeed > 0) speed = s.jobSpeed.coerceIn(1, 10)
             reverse = s.jobReverse
             accessory = try { Accessory.valueOf(s.accessory) } catch (_: Exception) { accessory }
             refresh()
         }
-        if (!manualJob) syncedFromJob = false
+        if (!manualJob) { syncedFromJob = false; syncedPhase = -1 }
         live = manualJob && s.state != JobState.PAUSED
         bars.setActual(if (live) s.speedLevel else -1)
         tempCard.repeatEnabled = !live
@@ -349,6 +353,7 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
     private var lastSample = false
     private var lastTemp = -1
     private var syncedFromJob = false
+    private var syncedPhase = -1
 
     private fun refreshHintOnly() {
         val v = SafetyPolicy.checkJob(spec(), if (a.snapshot.hasSample) a.snapshot.actualTempC else null)
