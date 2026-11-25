@@ -1,5 +1,3 @@
-attendu à l'écran : Crêpes de la Chandeleur
-introuvable à l'écran : Crêpes de la Chandeleur
 introuvable à l'écran : Œufs
 introuvable à l'écran : Cuisiner
 introuvable à l'écran : Lancer
@@ -8,7 +6,5 @@ introuvable à l'écran : Arrêter
 introuvable à l'écran : Prélaver
 introuvable à l'écran : Démarrer
 introuvable à l'écran : Arrêter
-attendu à l'écran : Crêpes de la Chandeleur
-introuvable à l'écran : Crêpes de la Chandeleur
 introuvable à l'écran : Œufs
 introuvable à l'écran : Cuisiner
