@@ -67,6 +67,13 @@ object Knob {
 class FocusRing(c: Context) : View(c) {
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Ui.ACCENT }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Ui.ACCENT_DIM }
+
+    /** Le thème a changé : le cadre prend l'accent du nouveau. */
+    fun restyle() {
+        stroke.color = Ui.ACCENT
+        fill.color = (Ui.ACCENT and 0x00FFFFFF) or 0x29000000
+        invalidate()
+    }
     private val r = RectF()
     private var radius = 0f
     var showing = false
@@ -122,6 +129,12 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
 
     val ring = FocusRing(a)
     private var focus: Target? = null
+
+    /** Une valeur est en train d'être réglée au bouton (le thème attend la fin). */
+    val adjustingNow: Boolean get() = adjusting != null
+
+    /** Le thème a changé : le cadre prend les couleurs du nouveau (il reste au-dessus de l'interface refaite). */
+    fun restyle() = ring.restyle()
     private var adjusting: Target? = null
     private var lastBox: Box? = null
     /** Le bouton est en train de servir : le cadre suit les changements d'écran. */

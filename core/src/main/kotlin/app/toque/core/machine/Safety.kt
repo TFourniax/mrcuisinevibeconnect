@@ -36,9 +36,30 @@ enum class JobKind(private val fr: String) {
     KNEAD(trKey("Pétrir")),
     STEAM(trKey("Vapeur")),
     TOAST(trKey("Rissoler")),
-    TURBO(trKey("Turbo"));
+    TURBO(trKey("Turbo")),
+    // Programmes ajoutés en 1.0.12 (voir ProgramCatalog) : réglages fixes, mêmes règles que la cuisson manuelle.
+    SIMMER(trKey("Mijoter")),
+    RICE(trKey("Cuire du riz")),
+    EGGS(trKey("Œufs")),
+    WATER(trKey("Chauffer l'eau")),
+    BLEND(trKey("Mixer")),
+    SMOOTHIE(trKey("Smoothie")),
+    PREWASH(trKey("Prélaver"));
 
     val label: String get() = tr(fr)
+
+    /** Opération attendue sur le fil pour ce genre de programme. */
+    val operation: Operation
+        get() = when (this) {
+            KNEAD -> Operation.KNEAD
+            STEAM, EGGS -> Operation.STEAM
+            TOAST -> Operation.TOAST
+            TURBO -> Operation.TURBO
+            MANUAL, SIMMER, RICE, WATER, BLEND, SMOOTHIE, PREWASH -> Operation.STANDARD
+        }
+
+    /** Réglage libre (cuisson manuelle) ou programme aux règles de la cuisson manuelle. */
+    val manualRules: Boolean get() = operation == Operation.STANDARD
 }
 
 data class Phase(val setting: Setting, val durationMs: Long)
@@ -55,6 +76,11 @@ data class JobSpec(
     val cyclic: Boolean,
     val accessory: Accessory = Accessory.BLADE,
     val hotBlendConfirmed: Boolean = false,
+    /**
+     * Fin dès que le bol atteint cette température (°C, mesurée par la base), avant la fin du
+     * minuteur qui reste la limite (0 : à la fin du minuteur seulement). « Chauffer l'eau ».
+     */
+    val untilTempC: Int = 0,
 )
 
 /** Raison précise d'un refus, affichable telle quelle. */
@@ -70,6 +96,8 @@ object Limits {
     const val MAX_MS_KNEAD = 120_000L
     const val MAX_MS_TOAST = 840_000L
     const val MAX_MS_TURBO_PRESS = 3_000L
+    /** Chauffer l'eau s'arrête à la température ; au plus ce délai si elle n'est jamais atteinte. */
+    const val MAX_MS_WATER = 15 * 60_000L
     const val MIN_MS = 1_000L
 }
 
@@ -93,17 +121,12 @@ object SafetyPolicy {
         if (v.isNotEmpty()) return v
         if (setting.isRest) return v
 
-        val expectedOp = when (kind) {
-            JobKind.MANUAL -> Operation.STANDARD
-            JobKind.KNEAD -> Operation.KNEAD
-            JobKind.STEAM -> Operation.STEAM
-            JobKind.TOAST -> Operation.TOAST
-            JobKind.TURBO -> Operation.TURBO
-        }
-        if (setting.operation != expectedOp) v += Violation("operation", tr("Opération incohérente avec le programme"))
+        if (setting.operation != kind.operation) v += Violation("operation", tr("Opération incohérente avec le programme"))
 
         when (kind) {
-            JobKind.MANUAL -> {
+            JobKind.MANUAL, JobKind.SIMMER, JobKind.RICE, JobKind.WATER, JobKind.BLEND, JobKind.SMOOTHIE, JobKind.PREWASH -> {
+                if ((kind == JobKind.BLEND || kind == JobKind.SMOOTHIE) && setting.heated)
+                    v += Violation("blend_heat", tr("Pas de chauffe pour ce programme"))
                 if (setting.speed < 1) v += Violation("speed_min", tr("Vitesse minimale : 1"))
                 if (setting.heated && setting.speed > Limits.MAX_SPEED_HEATED)
                     v += Violation("heated_speed", tr("En chauffe, vitesse %d maximum", Limits.MAX_SPEED_HEATED))
@@ -118,7 +141,7 @@ object SafetyPolicy {
                 if (setting.speed > 1) v += Violation("toast_speed", tr("Rissoler : vitesse 1 maximum"))
                 if (setting.direction != Direction.COUNTER_CLOCKWISE) v += Violation("toast_dir", tr("Rissoler se fait en sens inverse"))
             }
-            JobKind.STEAM -> {
+            JobKind.STEAM, JobKind.EGGS -> {
                 if (setting.speed > 1) v += Violation("steam_speed", tr("Vapeur : vitesse 1 maximum"))
             }
             JobKind.TURBO -> {
@@ -147,6 +170,7 @@ object SafetyPolicy {
             JobKind.KNEAD -> minOf(base, Limits.MAX_MS_KNEAD)
             JobKind.TOAST -> minOf(base, Limits.MAX_MS_TOAST)
             JobKind.TURBO -> Limits.MAX_MS_TURBO_PRESS
+            JobKind.WATER -> minOf(base, Limits.MAX_MS_WATER)
             else -> base
         }
     }
@@ -158,6 +182,8 @@ object SafetyPolicy {
         if (spec.totalMs < Limits.MIN_MS) v += Violation("too_short", tr("Durée trop courte"))
         val max = maxDurationMs(spec)
         if (spec.totalMs > max) v += Violation("too_long", tr("Durée maximale : %s", formatDuration(max)))
+        if (spec.untilTempC < 0 || spec.untilTempC > Mcc.celsiusForLevel(19))
+            v += Violation("until_temp", tr("Température d'arrêt hors table"))
         for (p in spec.phases) {
             if (p.durationMs <= 0) v += Violation("phase_duration", tr("Phase de durée nulle"))
             for (x in checkSetting(p.setting, spec.kind, spec.accessory, actualTemperatureC, spec.hotBlendConfirmed))
@@ -196,8 +222,8 @@ object Programs {
         hotBlendConfirmed = hotBlendConfirmed,
     )
 
-    /** Pétrir : 15 s inverse, repos, puis sens normal, vitesse 4. 45 s par défaut, 2 min max. */
-    fun knead(durationMs: Long = 45_000L) = JobSpec(
+    /** Pétrir : 15 s inverse, repos, puis sens normal, vitesse 4. 1 min 30 par défaut, 2 min max. */
+    fun knead(durationMs: Long = 90_000L) = JobSpec(
         kind = JobKind.KNEAD,
         label = JobKind.KNEAD.label,
         phases = listOf(
@@ -234,4 +260,70 @@ object Programs {
     )
 
     fun turboSetting() = Setting(Operation.TURBO, 10, 0, CW)
+
+    private fun level(celsius: Int): Int = Mcc.levelForCelsius(celsius).also { require(it > 0) { "$celsius °C hors table" } }
+
+    private fun single(kind: JobKind, setting: Setting, durationMs: Long, untilTempC: Int = 0) = JobSpec(
+        kind = kind,
+        label = kind.label,
+        phases = listOf(Phase(setting, durationMs)),
+        totalMs = durationMs,
+        cyclic = false,
+        untilTempC = untilTempC,
+    )
+
+    /** Mijoter : 95 °C, vitesse 1, sens inverse (les morceaux restent entiers). */
+    fun simmer(durationMs: Long = 30 * 60_000L) = single(JobKind.SIMMER, Setting(Operation.STANDARD, 1, level(95), CCW), durationMs)
+
+    /** Riz dans le panier, dans 1,5 L d'eau : 100 °C, vitesse 1 (l'eau circule, la lame ne touche pas le riz). */
+    fun rice(durationMs: Long = 30 * 60_000L) = single(JobKind.RICE, Setting(Operation.STANDARD, 1, level(100), CW), durationMs)
+
+    /** Œufs dans le panier, au-dessus de 500 ml d'eau : vapeur 120 °C, lame immobile (comme [steam]). */
+    fun eggs(durationMs: Long = 9 * 60_000L) = single(JobKind.EGGS, Setting(Operation.STEAM, 0, 17, CW), durationMs)
+
+    /**
+     * Chauffer l'eau à [celsius] (70, 80, 90 ou 100) : vitesse 1, fin dès que la sonde l'atteint
+     * (97 °C pour l'ébullition, que la sonde n'affiche pas toujours), 15 min au plus.
+     */
+    fun water(celsius: Int) = single(
+        JobKind.WATER, Setting(Operation.STANDARD, 1, level(celsius), CW), Limits.MAX_MS_WATER,
+        untilTempC = if (celsius >= 100) 97 else celsius,
+    )
+
+    /** Mixer : 5 s à vitesse 5, 5 s à 7, puis 10 jusqu'au bout (20 s au moins). */
+    fun blend(durationMs: Long = 60_000L): JobSpec {
+        val total = durationMs.coerceAtLeast(20_000L)
+        return JobSpec(
+            kind = JobKind.BLEND, label = JobKind.BLEND.label,
+            phases = listOf(
+                Phase(Setting(Operation.STANDARD, 5, 0, CW), 5_000L),
+                Phase(Setting(Operation.STANDARD, 7, 0, CW), 5_000L),
+                Phase(Setting(Operation.STANDARD, 10, 0, CW), total - 10_000L),
+            ),
+            totalMs = total, cyclic = false,
+        )
+    }
+
+    /** Smoothie : 5 s à vitesse 5, puis 10 (à froid ; 15 s au moins). */
+    fun smoothie(durationMs: Long = 60_000L): JobSpec {
+        val total = durationMs.coerceAtLeast(15_000L)
+        return JobSpec(
+            kind = JobKind.SMOOTHIE, label = JobKind.SMOOTHIE.label,
+            phases = listOf(
+                Phase(Setting(Operation.STANDARD, 5, 0, CW), 5_000L),
+                Phase(Setting(Operation.STANDARD, 10, 0, CW), total - 5_000L),
+            ),
+            totalMs = total, cyclic = false,
+        )
+    }
+
+    /** Prélaver le bol (1 L d'eau, une goutte de liquide vaisselle) : 2 min à 50 °C vitesse 2, puis 40 s à vitesse 5 sans chauffe. */
+    fun prewash(): JobSpec = JobSpec(
+        kind = JobKind.PREWASH, label = JobKind.PREWASH.label,
+        phases = listOf(
+            Phase(Setting(Operation.STANDARD, 2, level(50), CW), 120_000L),
+            Phase(Setting(Operation.STANDARD, 5, 0, CW), 40_000L),
+        ),
+        totalMs = 160_000L, cyclic = false,
+    )
 }

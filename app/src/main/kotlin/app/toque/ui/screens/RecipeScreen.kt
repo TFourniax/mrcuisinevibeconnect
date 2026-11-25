@@ -29,7 +29,7 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
 
     override fun build(): View {
         val root = Ui.horizontal(c, Gravity.TOP)
-        root.setPadding(Ui.u(24), Ui.u(6), Ui.u(24), Ui.u(18))
+        root.setPadding(Ui.u(24), Ui.u(4), Ui.u(24), Ui.u(6))
 
         // ---- colonne gauche
         val left = Ui.vertical(c)
@@ -44,7 +44,7 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
                 outline.setRoundRect(0, 0, view.width, view.height, Ui.uf(24f))
         }
         ImageLoader.load(img, a.app.recipes.imageFile(recipe.image), Ui.u(420))
-        left.addView(header, LinearLayout.LayoutParams(Ui.MATCH, Ui.u(170)))
+        left.addView(header, LinearLayout.LayoutParams(Ui.MATCH, Ui.u(160)))
 
         val meta = Ui.horizontal(c)
         if (recipe.totalMinutes > 0) meta.addView(Ui.chip(c, "${recipe.totalMinutes} min", Icon.Kind.CLOCK), Ui.lp(Ui.WRAP, Ui.WRAP, r = 8))
@@ -57,18 +57,18 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         if (recipe.author.isNotBlank()) byline += tr("Par %s", authorName(recipe.author))
         if (recipe.ratingCount > 0) byline += "★ " + tr("%s/5 · %d notes", rating(recipe.rating), recipe.ratingCount)
         if (byline.isNotEmpty()) {
-            left.addView(Ui.ellipsize(Ui.text(c, byline.joinToString("   "), 16f, Ui.TEXT2)), Ui.lp(t = 10))
+            left.addView(Ui.ellipsize(Ui.text(c, byline.joinToString("   "), 14f, Ui.TEXT2)), Ui.lp(t = 10))
         }
 
         val actions = Ui.horizontal(c)
-        val cook = Ui.button(c, tr("Cuisiner"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 66, textSize = 22f) {
+        val cook = Ui.button(c, tr("Cuisiner"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 60, textSize = 20f) {
             a.push(CookScreen(a, recipe, 0))
         }
         cookBtn = cook
         actions.addView(cook, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(12) })
-        val fav = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.STAR, height = 66) { toggleFavorite() }
+        val fav = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.STAR, height = 60) { toggleFavorite() }
         favIcon = fav.getChildAt(0) as Icon
-        favLabel = Ui.text(c, "", 18f, Ui.TEXT, Ui.MEDIUM)
+        favLabel = Ui.text(c, "", 17f, Ui.TEXT, Ui.SEMIBOLD)
         fav.addView(favLabel, LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP).apply { leftMargin = Ui.u(8) })
         actions.addView(fav)
         left.addView(actions, Ui.lp(t = 14))
@@ -76,12 +76,12 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         // La vidéo d'origine (un réel) : la revoir ici, ou sur un téléphone.
         val video = Ui.horizontal(c)
         if (recipe.video.isNotEmpty()) {
-            val watch = Ui.button(c, tr("Revoir la vidéo"), Ui.Style.SECONDARY, Icon.Kind.PLAY, height = 58, textSize = 17f) { a.openVideo(recipe) }
+            val watch = Ui.button(c, tr("Revoir la vidéo"), Ui.Style.GHOST, Icon.Kind.VIDEO, height = 52, textSize = 15f) { a.openVideo(recipe) }
             Ui.fitWords(watch.getChildAt(1) as TextView, 13f)
             video.addView(watch, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(10) })
         }
         if (PhoneLink.available(a, recipe)) {
-            val phone = Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.LINK, height = 58, textSize = 17f) { b -> PhoneLink.send(a, recipe, b) }
+            val phone = Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.PHONE, height = 52, textSize = 15f) { b -> PhoneLink.send(a, recipe, b) }
             Ui.fitWords(phone.getChildAt(1) as TextView, 13f)
             video.addView(phone, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         }
@@ -90,11 +90,11 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         val ing = Ui.vertical(c)
         ing.addView(section(tr("Ingrédients")))
         for (g in recipe.ingredients) {
-            if (g.title.isNotBlank()) ing.addView(Ui.text(c, g.title, 17f, Ui.ACCENT, Ui.MEDIUM), Ui.lp(t = 12, b = 2))
+            if (g.title.isNotBlank()) ing.addView(Ui.text(c, g.title, 16f, Ui.ACCENT, Ui.SEMIBOLD), Ui.lp(t = 12, b = 2))
             for (i in g.items) {
                 val row = Ui.horizontal(c, Gravity.TOP)
                 row.addView(Ui.text(c, "•", 18f, Ui.TEXT3), Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
-                row.addView(Ui.text(c, i.display, 18f, Ui.TEXT).apply { setLineSpacing(0f, 1.1f) }, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+                row.addView(Ui.text(c, i.display, 16f, Ui.TEXT).apply { setLineSpacing(0f, 1.15f) }, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
                 ing.addView(row, Ui.lp(t = 8))
             }
         }
@@ -114,7 +114,8 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
             loadReviews(apiId, 1)
         }
         val stepsBox = Ui.vertical(c)
-        stepsBox.background = Ui.round(Ui.SURFACE, 24f)
+        stepsBox.background = Ui.cardBg(24f)
+        Ui.lift(stepsBox)
         stepsBox.setPadding(Ui.u(22), Ui.u(10), Ui.u(22), Ui.u(18))
         stepsBox.addView(Ui.scroll(c, steps), Ui.lp(Ui.MATCH, Ui.MATCH))
         root.addView(stepsBox, LinearLayout.LayoutParams(0, Ui.MATCH, 0.58f))
@@ -172,7 +173,7 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
 
     private fun reviewRow(r: McOnline.Review): View {
         val box = Ui.vertical(c)
-        box.background = Ui.round(Ui.SURFACE2, 16f)
+        box.background = Ui.round(Ui.SURFACE2, 16f, Ui.STROKE, 1f)
         box.setPadding(Ui.u(16), Ui.u(12), Ui.u(16), Ui.u(12))
         val head = Ui.horizontal(c)
         head.addView(Ui.text(c, "★".repeat(r.rating) + "☆".repeat(5 - r.rating), 17f, Ui.ACCENT), Ui.lp(Ui.WRAP, Ui.WRAP, r = 12))
@@ -195,15 +196,15 @@ class RecipeScreen(a: MainActivity, private val recipe: Recipe) : Screen(a) {
         if (name.equals("Monsieur Cuisine Official", ignoreCase = true)) tr("Monsieur Cuisine (recette officielle)") else name
 
     private fun section(t: String): TextView =
-        Ui.text(c, t.uppercase(), 15f, Ui.TEXT2, Ui.MEDIUM).apply { letterSpacing = 0.08f; setPadding(0, Ui.u(10), 0, 0) }
+        Ui.overline(c, t).apply { setPadding(0, Ui.u(10), 0, 0) }
 
     private fun stepRow(i: Int, s: Step): View {
         val row = Ui.horizontal(c, Gravity.TOP)
-        val num = Ui.text(c, "${i + 1}", 17f, Ui.ACCENT, Ui.MEDIUM).apply { gravity = Gravity.CENTER }
+        val num = Ui.text(c, "${i + 1}", 15f, Ui.ACCENT, Ui.SEMIBOLD).apply { gravity = Gravity.CENTER }
         num.background = Ui.round(Ui.ACCENT_DIM, 18f)
         row.addView(num, LinearLayout.LayoutParams(Ui.u(36), Ui.u(36)).apply { rightMargin = Ui.u(14) })
         val col = Ui.vertical(c)
-        if (s.text.isNotBlank()) col.addView(Ui.text(c, s.text, 18f, Ui.TEXT).apply { setLineSpacing(0f, 1.15f) })
+        if (s.text.isNotBlank()) col.addView(Ui.text(c, s.text, 16f, Ui.TEXT).apply { setLineSpacing(0f, 1.2f) })
         val chips = Ui.horizontal(c)
         s.weigh?.let { chips.addView(Ui.chip(c, tr("Peser %d g", it.grams), Icon.Kind.SCALE, Ui.TEXT2, size = 15f), Ui.lp(Ui.WRAP, Ui.WRAP, r = 8)) }
         s.machine?.let { m ->

@@ -46,7 +46,7 @@ class ReturnBubble : Service() {
         v.orientation = LinearLayout.HORIZONTAL
         v.setGravity(Gravity.CENTER_VERTICAL)
         v.setPadding(Ui.u(18), Ui.u(12), Ui.u(22), Ui.u(12))
-        v.background = Ui.round(Ui.ACCENT, 32f, 0x66000000, 2f)
+        v.background = Ui.round(BUBBLE, 32f, 0x66000000, 2f)
         v.elevation = Ui.uf(8f)
         v.addView(Icon(this, Icon.Kind.BACK, DARK), LinearLayout.LayoutParams(Ui.u(26), Ui.u(26)).apply { rightMargin = Ui.u(8) })
         v.addView(Ui.text(this, tr("Retour à Toque"), 19f, DARK, Ui.MEDIUM))
@@ -124,7 +124,9 @@ class ReturnBubble : Service() {
 
     companion object {
         private const val POSITION = "bulle"
-        private const val DARK = Ui.ON_ACCENT
+        /** Couleurs fixes (terre cuite du soir) : la bulle se pose sur une autre appli, quel que soit le thème. */
+        private const val BUBBLE = 0xFFE79363.toInt()
+        private const val DARK = 0xFF1E130E.toInt()
         /** WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY (API 26), valeur fixe pour compiler en API 23. */
         private const val TYPE_APPLICATION_OVERLAY = 2038
 

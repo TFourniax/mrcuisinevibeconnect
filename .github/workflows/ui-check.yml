@@ -1,0 +1,77 @@
+# Vérification de l'interface sur un vrai Android 6 (émulateur API 23, écran 1024×600 comme le
+# Monsieur Cuisine Connect) : parcours de tous les écrans en clair et en sombre, un programme et
+# une recette lancés, mis en pause et arrêtés (base simulée), la cloche, le bouton rotatif, l'écran
+# de veille. Échoue si Toque plante. Se lance sur une branche de travail quand le message du commit
+# contient [ui-check] (quelques minutes d'émulateur), ou à la main.
+#
+# Les captures sont gardées en artefact et, pour les relire sans téléchargement, déposées sur la
+# même branche dans docs/ui-check/ (commit « [skip ci] » : il ne relance rien).
+name: UI check
+
+on:
+  push:
+    branches: ['claude/**']
+  workflow_dispatch:
+
+concurrency:
+  group: ui-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  ui:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ui-check]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Debug APK (débogable : les données de démonstration s'y posent)
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: KVM pour l'émulateur
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Parcours sur Android 6
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 23
+          target: default
+          arch: x86
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash tools/ui-check/run.sh ui-check-out
+
+      - name: Garder les captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-check
+          path: ui-check-out
+          retention-days: 14
+
+      - name: Déposer les captures sur la branche
+        if: always() && github.event_name == 'push'
+        run: |
+          [ -d ui-check-out ] || exit 0
+          rm -rf docs/ui-check && mkdir -p docs/ui-check
+          cp ui-check-out/* docs/ui-check/
+          git config user.name "toque-ui-check"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ui-check
+          git commit -m "UI check: captures for ${GITHUB_SHA::7} [skip ci]" || exit 0
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break
+            sleep 5
+          done

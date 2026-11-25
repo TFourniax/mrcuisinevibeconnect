@@ -131,10 +131,12 @@ private class SaverView(private val a: MainActivity, private val config: Screens
     private var lastDrift = 0L
 
     private val clockBlock = Ui.vertical(a, Gravity.CENTER_HORIZONTAL)
-    private val time = Ui.text(a, "", 128f, Ui.TEXT2, Ui.THIN).apply { gravity = Gravity.CENTER; includeFontPadding = false }
-    private val date = Ui.text(a, "", 28f, Ui.TEXT3, Ui.LIGHT).apply { gravity = Gravity.CENTER }
-    private val plan = Ui.text(a, "", 24f, Ui.ACCENT, Ui.LIGHT).apply { gravity = Gravity.CENTER; alpha = 0.8f }
-    private val corner = Ui.text(a, "", 26f, Ui.TEXT2, Ui.LIGHT).apply {
+    // Toujours les couleurs du soir : l'écran de veille est noir, quel que soit le thème.
+    private val night = Ui.DARK_PALETTE
+    private val time = Ui.text(a, "", 128f, night.text2, Ui.THIN).apply { gravity = Gravity.CENTER; includeFontPadding = false }
+    private val date = Ui.text(a, "", 28f, night.text3, Ui.LIGHT).apply { gravity = Gravity.CENTER }
+    private val plan = Ui.text(a, "", 24f, night.accent, Ui.LIGHT).apply { gravity = Gravity.CENTER; alpha = 0.8f }
+    private val corner = Ui.text(a, "", 26f, night.text2, Ui.LIGHT).apply {
         alpha = 0.7f
         setShadowLayer(8f, 0f, 0f, Color.BLACK)
     }

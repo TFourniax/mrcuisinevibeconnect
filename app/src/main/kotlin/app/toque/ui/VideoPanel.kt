@@ -35,7 +35,8 @@ class VideoPanel(private val a: MainActivity, val recipe: Recipe) {
     private val stage = FrameLayout(a)
     private val videoView = VideoView(a)
     private val poster = ImageView(a)
-    private val info: TextView = Ui.text(a, tr("Chargement de la vidéo…"), 19f, Ui.TEXT2).apply {
+    // Posé sur l'image (noire) : toujours clair, quel que soit le thème.
+    private val info: TextView = Ui.text(a, tr("Chargement de la vidéo…"), 19f, Ui.DARK_PALETTE.text2).apply {
         gravity = Gravity.CENTER
         setLineSpacing(0f, 1.15f)
     }
@@ -61,7 +62,8 @@ class VideoPanel(private val a: MainActivity, val recipe: Recipe) {
 
     init {
         val card = Ui.vertical(a)
-        card.background = Ui.round(Color.BLACK, 24f, Ui.STROKE, 1f)
+        card.background = Ui.cardBg(24f)
+        Ui.lift(card, 8f)
         card.clipToOutline = true
         card.isClickable = true
 
@@ -76,6 +78,7 @@ class VideoPanel(private val a: MainActivity, val recipe: Recipe) {
         card.addView(head, Ui.lp())
 
         // ---- image : la vidéo, sinon la couverture et un message
+        stage.setBackgroundColor(Color.BLACK)
         poster.scaleType = ImageView.ScaleType.FIT_CENTER
         stage.addView(poster, Ui.flp())
         stage.addView(videoView, Ui.flp(Ui.MATCH, Ui.MATCH, Gravity.CENTER))

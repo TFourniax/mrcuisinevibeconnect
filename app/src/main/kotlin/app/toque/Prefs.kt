@@ -343,4 +343,64 @@ class Prefs(context: Context) {
         set(v) {
             p.edit().putString("updateAvailable", v).commit()
         }
+
+    // ------------------------------------------------------------------ apparence (1.0.12)
+
+    /** Thème : « auto » (clair de 7 h à 20 h, sombre ensuite), « light » ou « dark ». */
+    var themeMode: String
+        get() = p.getString("themeMode", "auto") ?: "auto"
+        set(v) {
+            p.edit().putString("themeMode", v).commit()
+        }
+
+    /** Choix fait à la lune ou au soleil en automatique : « dark », « light » ou "" (aucun). */
+    var themeOverride: String
+        get() = p.getString("themeOverride", "") ?: ""
+        set(v) {
+            p.edit().putString("themeOverride", v).commit()
+        }
+
+    /** Jusqu'à quand le choix fait à la lune tient (heure murale, ms). */
+    var themeOverrideUntil: Long
+        get() = p.getLong("themeOverrideUntil", 0)
+        set(v) {
+            p.edit().putLong("themeOverrideUntil", v).commit()
+        }
+
+    // ------------------------------------------------------------------ « À savoir » (1.0.12)
+
+    /** Évènements signalés sous la cloche (JSON, NoticeLog). */
+    var noticeLog: String
+        get() = p.getString("noticeLog", "") ?: ""
+        set(v) {
+            p.edit().putString("noticeLog", v).commit()
+        }
+
+    /** Clés des messages d'état déjà vus (mise à jour proposée…), séparées par des retours à la ligne. */
+    var noticeRead: String
+        get() = p.getString("noticeRead", "") ?: ""
+        set(v) {
+            p.edit().putString("noticeRead", v).commit()
+        }
+
+    /** Recettes du foyer déjà connues (identifiants, un par ligne) : les autres sont « nouvelles ». */
+    var noticeRecipes: String
+        get() = p.getString("noticeRecipes", "") ?: ""
+        set(v) {
+            p.edit().putString("noticeRecipes", v).commit()
+        }
+
+    /** Repas prévus déjà vus (même format que foyerPlans). */
+    var noticePlans: String
+        get() = p.getString("noticePlans", "") ?: ""
+        set(v) {
+            p.edit().putString("noticePlans", v).commit()
+        }
+
+    /** Nombre d'animations de l'écran de veille déjà vues. */
+    var noticeSaverItems: Int
+        get() = p.getInt("noticeSaverItems", -1)
+        set(v) {
+            p.edit().putInt("noticeSaverItems", v).commit()
+        }
 }

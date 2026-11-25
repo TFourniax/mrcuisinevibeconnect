@@ -20,6 +20,7 @@ import app.toque.core.i18n.tr
 import app.toque.core.machine.RootShell
 import app.toque.core.machine.Snapshot
 import app.toque.core.time.ZoneLookup
+import app.toque.core.ui.ThemeMode
 import app.toque.core.update.Release
 import app.toque.foyer.Foyer
 import app.toque.recipes.LidlSync
@@ -106,6 +107,15 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         safety.addView(Ui.text(c, tr("Les réglages qui se suivent sans geste à faire entre eux partent ensemble d'un seul appui sur Lancer : la lame passe directement à la vitesse et à la température suivantes."),
             15f, Ui.TEXT3).apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = 6))
         safety.addView(toggle(tr("Sons"), a.prefs.sound) { a.prefs.sound = it }, Ui.lp(t = 10))
+
+        // ---- Apparence : clair le jour, sombre le soir (la lune de la barre du haut passe de l'un à l'autre)
+        val look = section(right, tr("Apparence"), Icon.Kind.SUN)
+        val mode = ThemeMode.of(a.prefs.themeMode)
+        look.addView(Ui.segmented(c, listOf(tr("Automatique"), tr("Clair"), tr("Sombre")), mode.ordinal, 50) { i ->
+            a.setThemeMode(ThemeMode.values()[i])
+        }, Ui.lp(Ui.MATCH, Ui.u(50), t = 4))
+        look.addView(Ui.text(c, tr("Automatique : clair de 7 h à 20 h, sombre le soir. La lune (ou le soleil) en haut de l'écran passe à l'autre thème jusqu'au prochain changement."),
+            15f, Ui.TEXT2).apply { setLineSpacing(0f, 1.2f) }, Ui.lp(t = 10))
 
         // ---- Foyer (appli du foyer) : liaison durable, recettes partagées, état du robot
         val foyer = section(right, tr("Foyer"), Icon.Kind.LINK)
@@ -202,10 +212,11 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
 
     private fun section(parent: LinearLayout, title: String, icon: Icon.Kind): LinearLayout {
         val card = Ui.card(c, 24f)
+        Ui.lift(card)
         val head = Ui.horizontal(c)
-        head.addView(Icon(c, icon, Ui.ACCENT), LinearLayout.LayoutParams(Ui.u(24), Ui.u(24)).apply { rightMargin = Ui.u(10) })
-        head.addView(Ui.text(c, title, 21f, Ui.TEXT, Ui.MEDIUM))
-        card.addView(head, Ui.lp(b = 10))
+        head.addView(Ui.iconCircle(c, icon, 36, 18), LinearLayout.LayoutParams(Ui.u(36), Ui.u(36)).apply { rightMargin = Ui.u(12) })
+        head.addView(Ui.text(c, title, 19f, Ui.TEXT, Ui.SEMIBOLD))
+        card.addView(head, Ui.lp(b = 12))
         parent.addView(card, Ui.lp(b = 16))
         return card
     }
@@ -223,9 +234,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
 
     private fun toggle(label: String, initial: Boolean, onChange: (Boolean) -> Unit): LinearLayout {
         val row = Ui.horizontal(c)
-        row.addView(Ui.text(c, label, 18f, Ui.TEXT), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        row.addView(Ui.text(c, label, 16f, Ui.TEXT).apply { setLineSpacing(0f, 1.15f) }, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(12) })
         var state = initial
-        val sw = Ui.text(c, "", 16f, Ui.TEXT, Ui.MEDIUM).apply { gravity = Gravity.CENTER }
+        val sw = Ui.text(c, "", 15f, Ui.TEXT, Ui.SEMIBOLD).apply { gravity = Gravity.CENTER }
         fun paint() {
             sw.text = if (state) tr("Oui") else tr("Non")
             sw.setTextColor(if (state) Ui.ON_ACCENT else Ui.TEXT2)
@@ -240,7 +251,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private fun link(label: String, onClick: () -> Unit): LinearLayout {
         val row = Ui.horizontal(c)
         row.setPadding(0, Ui.u(14), 0, Ui.u(14))
-        row.addView(Ui.text(c, label, 18f, Ui.TEXT), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        row.addView(Ui.text(c, label, 16f, Ui.TEXT), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         row.addView(Icon(c, Icon.Kind.CHEVRON, Ui.TEXT3), LinearLayout.LayoutParams(Ui.u(20), Ui.u(20)))
         row.background = Ui.pressable(Ui.round(0, 8f), 8f)
         row.isClickable = true
