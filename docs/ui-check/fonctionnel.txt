@@ -1,0 +1,22 @@
+OK     Filtre Favoris montre la recette favorite
+OK     Retirer un favori depuis la fiche
+OK     Remettre en favori
+OK     Filtre Lidl
+OK     Recette guidée ouverte à l'étape 1
+OK     Étape suivante
+OK     Étape précédente
+OK     « Ajuster à la main » reprend 6 min et 90 °C
+OK     Cuisson manuelle lancée
+ÉCHEC  Vitesse réglée en direct (2 → 3) : capture echec-01, à l'écran : Cuisson manuelle | 37 °C | Démo | 16:39 | 3 | Durée | 00:34 | restant | 30 s | 1 min | 5 min | Température | — | Sans chauffe · bol à 37 °C | sans | 130 °C | Vitesse | 2 | Mélanger | Sens | Normal | Inverse | Accessoire | Lame | Fouet | Balance | 0 g | Tarer | Réglages appliqués en direct | Turbo : maintenir | Cuisson manuelle | vitesse 2 | 00:34 | Accueil | Recettes | Cuisson | Programmes | Balance
+OK     Pause
+OK     Reprise
+OK     Arrêt
+OK     Turbo maintenu puis relâché sans souci
+OK     Œufs à la coque : 7 min
+OK     Programme Œufs lancé
+OK     Chauffer l'eau lancé
+OK     Chauffer l'eau s'arrête seul à la température
+ÉCHEC  Balance : +100 g : capture echec-02, à l'écran : Balance | 75 °C | Démo | 16:41 | 3 | 99 | g | Stable | Tare (remise à zéro) | +100 g | +250 g | Vider | Accueil | Recettes | Cuisson | Programmes | Balance
+OK     Balance : tare
+OK     Réglages › Apparence › Clair
+OK     « Tout marquer comme lu »
