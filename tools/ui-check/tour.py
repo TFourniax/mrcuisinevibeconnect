@@ -136,6 +136,181 @@ def crashed():
     return "FATAL EXCEPTION" in log, log
 
 
+# ---------------------------------------------------------------- molette
+# Les touches du bouton rotatif du Monsieur Cuisine Connect (relevées sur un SKMC 1200 B2) :
+# F7 tourner à gauche, F6 à droite, F5 appuyer. La version de test note au journal (ToqueKnob)
+# chaque position du cadre, chaque appui, chaque réglage.
+KNOB_LEFT, KNOB_RIGHT, KNOB_PRESS = 137, 136, 135
+knob_report = []
+
+
+def turn(n, code=KNOB_RIGHT):
+    while n > 0:
+        k = min(n, 8)
+        sh("input keyevent " + " ".join([str(code)] * k))
+        n -= k
+        wait(0.3)
+
+
+def knob_events():
+    out = []
+    for line in sh("logcat -d -v brief -s ToqueKnob:I").splitlines():
+        if "ToqueKnob" not in line or "|" not in line:
+            continue
+        msg = line.split("): ", 1)[-1]
+        parts = msg.split("|")
+        if len(parts) != 3:
+            continue
+        try:
+            box = tuple(int(x) for x in parts[2].split(","))
+        except ValueError:
+            continue
+        out.append((parts[0], parts[1], box))
+    return out
+
+
+def bounds(n):
+    m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", n.get("bounds", ""))
+    return tuple(map(int, m.groups())) if m else None
+
+
+def node_label(n):
+    if n.get("content-desc"):
+        return n.get("content-desc")
+    for c in n.iter("node"):
+        if c.get("text"):
+            return c.get("text")
+    return n.get("class", "").split(".")[-1]
+
+
+def close(a, b, tol=4):
+    return all(abs(x - y) <= tol for x, y in zip(a, b))
+
+
+def knob_audit(name, steps=45):
+    """Tourne la molette jusqu'au bout dans les deux sens et compare avec tout ce qui se touche."""
+    sh("logcat -c")
+    turn(steps, KNOB_RIGHT)
+    right = [e for e in knob_events() if e[0] == "focus"]
+    turn(steps * 2, KNOB_LEFT)
+    wait(1)
+    every = [e for e in knob_events() if e[0] == "focus"]
+    left = every[len(right):]
+    # Ordre de lecture : le passage vers la gauche, à l'envers (du premier au dernier).
+    order = []
+    for _, lab, box in list(reversed(left)) + right:
+        if not any(close(box, b) and lab == l for l, b in order):
+            order.append((lab, box))
+    lines = ["== %s : %d éléments au bouton" % (name, len(order))]
+    lines += ["   %2d. %s" % (i + 1, lab) for i, (lab, _) in enumerate(order)]
+    root = dump()
+    if root is None:
+        lines.append("   (arbre des vues illisible : comparaison impossible)")
+    else:
+        missed = []
+        for n in root.iter("node"):
+            if n.get("clickable") != "true" or n.get("enabled") != "true" or n.get("package") != PKG:
+                continue
+            b = bounds(n)
+            if not b or b[2] <= b[0] or b[3] <= b[1]:
+                continue
+            lab = node_label(n)
+            if any(close(b, box) for _, box in order) or any(lab == l for l, _ in order):
+                continue
+            missed.append("%s %s" % (lab, b))
+        lines.append("   touchable jamais atteint à la molette : " + ("; ".join(missed) if missed else "aucun"))
+    knob_report.extend(lines)
+    print("\n".join(lines), flush=True)
+    return [(lab, box) for _, lab, box in right]
+
+
+def texts_in(root, box):
+    if root is None:
+        return []
+    out = []
+    for n in root.iter("node"):
+        b = bounds(n)
+        if b and n.get("text") and b[0] >= box[0] - 2 and b[1] >= box[1] - 2 and b[2] <= box[2] + 2 and b[3] <= box[3] + 2:
+            out.append(n.get("text"))
+    return out
+
+
+def knob_adjust(screen, path, match, turns=2):
+    """Écran rouvert : tourner jusqu'à la valeur, appuyer, tourner, appuyer. La valeur doit changer."""
+    idx = next((i for i, (lab, _) in enumerate(path) if match(lab)), None)
+    if idx is None:
+        msg = "molette : valeur à régler introuvable sur %s" % screen
+        problems.append(msg)
+        knob_report.append("== " + msg)
+        return
+    box = path[idx][1]
+    nav("Accueil")
+    nav(screen)
+    before = texts_in(dump(), box)
+    turn(idx + 1)  # le premier tour pose le cadre sur l'élément de départ
+    key(KNOB_PRESS)
+    turn(turns)
+    key(KNOB_PRESS)
+    wait(1)
+    after = texts_in(dump(), box)
+    line = "== réglage à la molette, %s › %s : %s → %s" % (screen, path[idx][0], " ".join(before), " ".join(after))
+    if before == after:
+        problems.append("molette : la valeur n'a pas changé (%s › %s)" % (screen, path[idx][0]))
+        line += "  !! inchangé"
+    knob_report.append(line)
+    print(line, flush=True)
+
+
+def knob_press(screen, path, match, expect_text):
+    """Écran rouvert : tourner jusqu'à l'élément, appuyer ; [expect_text] doit apparaître."""
+    idx = next((i for i, (lab, _) in enumerate(path) if match(lab)), None)
+    if idx is None:
+        problems.append("molette : élément introuvable sur %s" % screen)
+        return
+    nav("Accueil")
+    if screen != "Accueil":
+        nav(screen)
+    turn(idx + 1)
+    key(KNOB_PRESS, pause=2)
+    ok = find(text=expect_text) is not None
+    line = "== appui à la molette, %s › %s : %s" % (screen, path[idx][0], "ouvre « %s »" % expect_text if ok else "!! rien ne s'ouvre")
+    if not ok:
+        problems.append("molette : l'appui sur %s › %s n'a rien ouvert" % (screen, path[idx][0]))
+    knob_report.append(line)
+    print(line, flush=True)
+
+
+def knob_tour():
+    nav("Accueil")
+    home = knob_audit("Accueil")
+    knob_press("Accueil", home, lambda l: l == "Recettes", "Toutes")
+    nav("Accueil")
+    tap(desc="À savoir", prefix=True, fallback=(940, 29))
+    knob_audit("À savoir (fenêtre)", steps=20)
+    key(4)
+    nav("Recettes")
+    knob_audit("Recettes")
+    tap(text="Crêpes de la Chandeleur")
+    knob_audit("Fiche recette")
+    nav("Programmes")
+    progs = knob_audit("Programmes")
+    # La durée du programme choisi (« 1 min 30 s », « 9 min »…), réglable au bouton.
+    knob_adjust("Programmes", progs, lambda l: re.match(r"^\d+ min( \d+ s)?$", l) is not None)
+    nav("Cuisson")
+    manual = knob_audit("Cuisson manuelle")
+    knob_adjust("Cuisson", manual, lambda l: l == "Durée")
+    nav("Balance")
+    knob_audit("Balance", steps=20)
+    tap(desc="Réglages", fallback=(988, 29))
+    knob_audit("Réglages", steps=90)
+    nav("Accueil")
+    cook_or_resume()
+    knob_audit("Recette guidée")
+    tap(desc="Retour", fallback=(36, 29))
+    with open(os.path.join(OUT, "molette.txt"), "w") as f:
+        f.write("\n".join(knob_report) + "\n")
+
+
 def cook_or_resume():
     """La grande carte de l'accueil : « Cuisiner » le repas prévu, ou « Reprendre » la recette entamée."""
     if not tap(text="Cuisiner", required=False):
@@ -213,6 +388,7 @@ def main():
         nav("Accueil")
     wait(2)
     shot("12-accueil-en-cours-clair")
+    knob_audit("Accueil pendant une cuisson", steps=25)
     tap(text="Pause", fallback=(113, 460), pause=2.5)
     shot("13-accueil-en-pause-clair")
     tap(text="Arrêter", fallback=(257, 460), pause=2.5)
@@ -224,12 +400,17 @@ def main():
     tap(text="Prélaver")
     tap(text="Démarrer", pause=2)
     # Bol encore chaud après la recette : Toque demande confirmation avant de mixer (sécurité).
+    if find(text="Mixer quand même") is not None:
+        knob_audit("Fenêtre « Contenu chaud »", steps=8)
     tap(text="Mixer quand même", required=False, pause=4)
     shot("15-programme-en-cours-clair")
     nav("Recettes")
     shot("16-barre-en-cours-recettes-clair")
     tap(desc="Arrêter", fallback=(960, 486), pause=2.5)
     tap(text="OK", required=False)
+
+    # La molette, écran par écran : tout ce qui se touche doit se rejoindre au bouton.
+    knob_tour()
 
     # Bouton rotatif : le cadre se pose et avance.
     nav("Accueil")

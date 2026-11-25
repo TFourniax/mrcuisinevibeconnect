@@ -11,6 +11,7 @@ import android.widget.AbsListView
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ScrollView
+import android.widget.TextView
 import app.toque.core.ui.Box
 import app.toque.core.ui.KnobOrder
 import java.util.WeakHashMap
@@ -148,6 +149,28 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
     private val loc = IntArray(2)
     private val layerLoc = IntArray(2)
 
+    /**
+     * Version de test (APK débogable) seulement : chaque position du cadre, chaque appui et chaque
+     * réglage vont au journal (étiquette ToqueKnob), pour que le parcours sur émulateur vérifie que
+     * tout ce qui se touche se rejoint aussi à la molette. Rien dans la version publiée.
+     */
+    private val trace = (a.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    private val traceLoc = IntArray(2)
+
+    private fun trace(what: String, v: View) {
+        if (!trace) return
+        v.getLocationOnScreen(traceLoc)
+        val label = (v.contentDescription?.toString()?.takeIf { it.isNotBlank() } ?: firstText(v) ?: v.javaClass.simpleName)
+            .replace('|', '/').replace('\n', ' ').take(60)
+        android.util.Log.i("ToqueKnob", "$what|$label|${traceLoc[0]},${traceLoc[1]},${traceLoc[0] + v.width},${traceLoc[1] + v.height}")
+    }
+
+    private fun firstText(v: View): String? {
+        if (v is TextView && v.text.isNotBlank()) return v.text.toString()
+        if (v is ViewGroup) for (i in 0 until v.childCount) firstText(v.getChildAt(i))?.let { return it }
+        return null
+    }
+
     init {
         layer.addView(ring, Ui.flp())
         val follow = { if (ring.showing) place() }
@@ -225,9 +248,11 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
         if (adj != null) {
             adjusting = t
             adj.knobBegin()
+            trace("adjust", t.view)
             place()
             return
         }
+        trace("press", t.view)
         click(t)
     }
 
@@ -304,6 +329,7 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
         focus = t
         ensureVisible(t)
         place()
+        trace("focus", t.view)
     }
 
     private fun alive(t: Target): Boolean = t.view.isAttachedToWindow && t.view.isShown
