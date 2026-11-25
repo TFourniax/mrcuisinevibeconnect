@@ -35,24 +35,36 @@ def wait(s=1.5):
     time.sleep(s)
 
 
+last_xml = [""]
+
+
 def shot(name):
     png = adb("exec-out", "screencap", "-p", capture=True)
     with open(os.path.join(OUT, name + ".png"), "wb") as f:
         f.write(png)
     print("capture", name, len(png), "octets", flush=True)
+    # L'arbre des vues de la capture (textes, positions) : pour comprendre un écran sans l'image.
+    if dump() is not None:
+        os.makedirs(os.path.join(OUT, "vues"), exist_ok=True)
+        with open(os.path.join(OUT, "vues", name + ".xml"), "w", encoding="utf-8") as f:
+            f.write(last_xml[0])
 
 
 def dump():
+    out = ""
     for _ in range(4):
         sh("rm -f /sdcard/ui.xml")
-        sh("uiautomator dump /sdcard/ui.xml")
+        out = sh("uiautomator dump /sdcard/ui.xml")
         xml = adb("exec-out", "cat", "/sdcard/ui.xml", capture=True).decode(errors="replace")
         if xml.strip().startswith("<?xml"):
             try:
-                return ET.fromstring(xml)
+                root = ET.fromstring(xml)
+                last_xml[0] = xml
+                return root
             except ET.ParseError:
                 pass
         wait(1)
+    print("!! arbre des vues illisible :", out.strip()[:200], flush=True)
     return None
 
 

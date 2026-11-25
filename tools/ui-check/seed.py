@@ -115,6 +115,7 @@ log = [
 
 strings = {
     "mode": "demo",
+    "language": "fr",
     "themeMode": os.environ.get("THEME", "light"),
     "foyerHousehold": "Maison",
     "foyerRobotName": "Monsieur Cuisine",
