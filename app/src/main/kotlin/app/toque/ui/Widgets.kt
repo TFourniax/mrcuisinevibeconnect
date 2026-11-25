@@ -17,7 +17,7 @@ import android.widget.TextView
  * − / +, un second appui en sort.
  */
 class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), KnobAdjustable {
-    private val valueView = Ui.tabular(Ui.text(c, "", 72f, Ui.TEXT, Ui.LIGHT))
+    private val valueView = Ui.tabular(Ui.text(c, "", 72f, Ui.TEXT, Ui.LIGHT)).apply { includeFontPadding = false }
     private val unitView = Ui.text(c, "", 32f, Ui.TEXT, Ui.LIGHT)
     private val subView = Ui.ellipsize(Ui.text(c, "", 14f, Ui.TEXT2).apply { gravity = Gravity.CENTER })
     private val iconView = Icon(c, icon, Ui.TEXT2)
@@ -47,7 +47,7 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), K
         row.addView(unitView, Ui.lp(Ui.WRAP, Ui.WRAP, l = 4, b = 8))
         addView(row, Ui.lp(Ui.WRAP, Ui.WRAP, t = 10))
         addView(subView, Ui.lp(Ui.MATCH, Ui.WRAP, t = 6))
-        addView(extra, Ui.lp(Ui.MATCH, Ui.WRAP, t = 12))
+        addView(extra, Ui.lp(Ui.MATCH, Ui.WRAP, t = 8))
         addView(Ui.spacer(c, h = 0, weight = 1f))
         val buttons = Ui.horizontal(c)
         minus = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.MINUS, height = 56, textSize = 20f) { onSelect(); onMinus() }

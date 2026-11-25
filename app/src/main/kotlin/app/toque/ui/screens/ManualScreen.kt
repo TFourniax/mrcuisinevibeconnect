@@ -87,7 +87,7 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
         // Température : la jauge et ses repères.
         val tempBox = Ui.vertical(c)
         gauge = TempGauge(c)
-        tempBox.addView(gauge, Ui.lp(Ui.MATCH, Ui.u(26)))
+        tempBox.addView(gauge, Ui.lp(Ui.MATCH, Ui.u(24)))
         val marks = Ui.horizontal(c)
         marks.addView(Ui.text(c, tr("sans"), 13f, Ui.TEXT2), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         marks.addView(Ui.text(c, "130 °C", 13f, Ui.TEXT2))
@@ -125,7 +125,7 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
         actions.addView(hint, Ui.lp(b = 6))
         startBtn = Ui.button(c, tr("Démarrer"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 62, textSize = 20f) { start() }
         actions.addView(startBtn, Ui.lp(Ui.MATCH, Ui.WRAP))
-        turbo = HoldButton(c, "Turbo : " + tr("maintenir"), onDown = {
+        turbo = HoldButton(c, tr("Turbo : maintenir"), onDown = {
             a.machine.turboDown(accessory) { v -> if (!v.ok) a.refusal(v) }
         }, onUp = { a.machine.turboUp() })
         actions.addView(turbo, Ui.lp(Ui.MATCH, Ui.u(48), t = 8))

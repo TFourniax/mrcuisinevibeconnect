@@ -595,7 +595,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
     }
 
     private fun miniCard(e: SearchIndex.Entry): View {
-        val card = Ui.horizontal(c)
+        val card = Ui.horizontal(c, Gravity.CENTER_VERTICAL)
         card.setPadding(Ui.u(10), Ui.u(10), Ui.u(12), Ui.u(10))
         card.background = Ui.pressable(Ui.cardBg(18f), 18f)
         Ui.lift(card, 2f)
@@ -608,7 +608,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         ImageLoader.load(img, a.app.recipes.imageFile(e.image), Ui.u(140))
         card.addView(thumb, LinearLayout.LayoutParams(Ui.u(70), Ui.u(70)).apply { rightMargin = Ui.u(12) })
         val col = Ui.vertical(c)
-        col.addView(Ui.ellipsize(Ui.text(c, e.title, 14f, Ui.TEXT, Ui.SEMIBOLD).apply { setLineSpacing(0f, 1.1f) }, 3))
+        col.addView(Ui.ellipsize(Ui.text(c, e.title, 14f, Ui.TEXT, Ui.SEMIBOLD).apply { setLineSpacing(0f, 1.1f) }, 2))
         val meta = listOfNotNull(
             if (e.totalMinutes > 0) tr("%d min", e.totalMinutes) else null,
             if (e.source != RecipeSource.FOYER && e.ratingCount > 0) "★ " + String.format(I18n.locale, "%.1f", e.rating) else null,
