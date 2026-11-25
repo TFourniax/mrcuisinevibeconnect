@@ -279,12 +279,12 @@ class MainActivity : Activity() {
         navBar.setActive(activeSection())
         // Sans barre du bas, la barre du programme en cours garde une marge sous elle.
         liveBar.setPadding(0, 0, 0, if (s.fullScreen) Ui.u(12) else 0)
-        liveBar.hiddenForHome = s is HomeScreen
         refreshBadge()
         // La vidéo d'une recette reste ouverte de sa fiche à sa cuisson, pas au-delà.
         video?.let { if (it.recipe.id != s.recipeId) closeVideo() else placeVideo() }
         s.onShow()
         s.onSnapshot(snapshot)
+        liveBar.update(snapshot)
         knobNav.reset()
     }
 

@@ -695,6 +695,9 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         removeCallbacks(tick)
     }
 
+    /** La grande carte montre le programme en cours, avec Pause et Arrêter. */
+    override fun showsLive(s: Snapshot): Boolean = true
+
     /** Au bouton rotatif : on arrive sur l'action de la grande carte. */
     override val knobStart: View? get() = null
 }

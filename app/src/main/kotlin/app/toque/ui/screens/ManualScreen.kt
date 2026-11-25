@@ -53,6 +53,8 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
     private lateinit var options: LinearLayout
     private lateinit var weight: TextView
     private lateinit var startBtn: LinearLayout
+    private lateinit var liveRow: LinearLayout
+    private lateinit var pauseBtn: LinearLayout
     private lateinit var hint: TextView
     private lateinit var turbo: HoldButton
     private var live = false
@@ -132,6 +134,15 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
             a.machine.turboDown(accessory) { v -> if (!v.ok) a.refusal(v) }
         }, onUp = { a.machine.turboUp() })
         actions.addView(turbo, Ui.lp(Ui.MATCH, Ui.u(48), t = 8))
+        // Pendant sa propre cuisson, l'écran garde ses cartes entières (− et + au doigt) : Pause et
+        // Arrêter viennent ici, à la place de Démarrer et Turbo, et la barre « en cours » s'efface.
+        liveRow = Ui.horizontal(c)
+        pauseBtn = Ui.button(c, tr("Pause"), Ui.Style.SECONDARY, Icon.Kind.PAUSE, height = 62, textSize = 18f) { a.togglePause() }
+        liveRow.addView(pauseBtn, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(10) })
+        liveRow.addView(Ui.button(c, tr("Arrêter"), Ui.Style.DANGER_SOFT, Icon.Kind.STOP, height = 62, textSize = 18f) { a.machine.stop() },
+            LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        liveRow.visibility = View.GONE
+        actions.addView(liveRow, Ui.lp(Ui.MATCH, Ui.WRAP))
         bottom.addView(actions, LinearLayout.LayoutParams(Ui.u(268), Ui.MATCH))
         root.addView(bottom, Ui.lp(Ui.MATCH, Ui.u(142), t = 16))
         refresh()
@@ -334,10 +345,18 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
         }
         wasLive = live
         val busy = s.busy
-        startBtn.visibility = if (busy && s.state != JobState.PAUSED) View.GONE else View.VISIBLE
-        (startBtn.getChildAt(1) as TextView).shown = if (s.state == JobState.PAUSED && manualJob) tr("Reprendre") else tr("Démarrer")
+        val own = showsLive(s) && !s.turboActive
+        liveRow.visibility = if (own) View.VISIBLE else View.GONE
+        startBtn.visibility = if (own || (busy && s.state != JobState.PAUSED)) View.GONE else View.VISIBLE
+        (startBtn.getChildAt(1) as TextView).shown = tr("Démarrer")
+        turbo.visibility = if (own) View.GONE else View.VISIBLE
         turbo.isEnabled = !busy || s.turboActive
         turbo.alpha = if (turbo.isEnabled) 1f else 0.35f
+        if (own) {
+            val paused = s.state == JobState.PAUSED
+            (pauseBtn.getChildAt(0) as Icon).set(if (paused) Icon.Kind.PLAY else Icon.Kind.PAUSE)
+            (pauseBtn.getChildAt(1) as TextView).shown = if (paused) tr("Reprendre") else tr("Pause")
+        }
         if (live) hint.shown = tr("Réglages appliqués en direct")
         else if (!busy) refreshHintOnly()
         hint.setTextColor(if (live) Ui.OK else Ui.WARN)
@@ -349,6 +368,14 @@ class ManualScreen(a: MainActivity, preset: app.toque.core.recipes.StepMachine? 
             refreshTempCard()
         }
     }
+
+    /**
+     * Sa propre cuisson (manuelle, en marche ou en pause) ou un Turbo : l'écran la montre en entier
+     * et la barre « en cours » s'efface (elle revient pour le OK de fin).
+     */
+    override fun showsLive(s: Snapshot): Boolean = s.turboActive ||
+        (s.kind?.name == "MANUAL" && (s.state == JobState.RUNNING || s.state == JobState.STARTING ||
+            s.state == JobState.PAUSED || s.state == JobState.STOPPING))
 
     private var lastSample = false
     private var lastTemp = -1

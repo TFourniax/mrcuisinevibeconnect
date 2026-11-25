@@ -75,6 +75,13 @@ abstract class Screen(val a: MainActivity) {
     open fun onKnobPress(): Boolean = false
     /** Élément où le cadre du bouton rotatif se pose en arrivant sur l'écran (sinon le premier). */
     open val knobStart: View? get() = null
+
+    /**
+     * L'écran montre lui-même ce qui tourne, avec Pause et Arrêter (l'accueil, la cuisson manuelle
+     * pour sa propre cuisson) : la barre « en cours » s'efface pour lui laisser la place. Une
+     * alerte de sécurité reste affichée partout.
+     */
+    open fun showsLive(s: Snapshot): Boolean = false
     open fun canLeave(): Boolean = true
     /** La recette affichée : le panneau vidéo d'une recette reste ouvert sur ses écrans à elle. */
     open val recipeId: String? get() = null
@@ -495,12 +502,6 @@ class LiveBar(private val a: MainActivity) : FrameLayout(a) {
     private val okBtn: LinearLayout
     private val viewBtn: LinearLayout
     private val faultText = Ui.ellipsize(Ui.text(a, "", 18f, android.graphics.Color.WHITE, Ui.SEMIBOLD), 2)
-    /** L'accueil montre le programme lui-même : la barre se retire (sauf alerte). */
-    var hiddenForHome = false
-        set(v) {
-            field = v
-            last?.let { update(it) }
-        }
     private var last: Snapshot? = null
 
     init {
@@ -545,7 +546,7 @@ class LiveBar(private val a: MainActivity) : FrameLayout(a) {
 
     fun update(s: Snapshot) {
         last = s
-        val showJob = (s.jobActive || s.turboActive) && !hiddenForHome
+        val showJob = (s.jobActive || s.turboActive) && a.current?.showsLive(s) != true
         visibility = if (showJob || s.hasFault) View.VISIBLE else View.GONE
         faultRow.visibility = if (s.hasFault) View.VISIBLE else View.GONE
         jobRow.visibility = if (!s.hasFault && showJob) View.VISIBLE else View.GONE

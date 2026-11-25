@@ -223,7 +223,9 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         fun line(icon: Icon.Kind, label: String, value: String, color: Int = Ui.TEXT) {
             if (grid.childCount > 0) grid.addView(Ui.divider(c))
             val r = Ui.horizontal(c)
-            r.minimumHeight = Ui.u(52)
+            // Lignes et compte à rebours mesurés pour que « Ajuster à la main » reste entier quand la
+            // barre « en cours » prend sa place en bas, pendant la cuisson.
+            r.minimumHeight = Ui.u(46)
             r.addView(Icon(c, icon, Ui.TEXT2), LinearLayout.LayoutParams(Ui.u(20), Ui.u(20)).apply { rightMargin = Ui.u(12) })
             r.addView(Ui.text(c, label, 16f, Ui.TEXT2), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
             r.addView(Ui.tabular(Ui.text(c, value, 24f, color, Ui.SEMIBOLD)))
@@ -257,7 +259,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
                 .apply { setLineSpacing(0f, 1.15f) }, 5), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
             panel.addView(row, Ui.lp(t = 10))
         }
-        bigTime = Ui.tabular(Ui.text(c, "", 64f, Ui.TEXT, Ui.THIN)).apply {
+        bigTime = Ui.tabular(Ui.text(c, "", 56f, Ui.TEXT, Ui.THIN)).apply {
             gravity = Gravity.CENTER
             visibility = View.GONE
         }

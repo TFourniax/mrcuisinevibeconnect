@@ -430,15 +430,17 @@ def functional_checks():
     nav("Cuisson")
     tap(text="Démarrer", pause=3)
     tap(text="Mixer quand même", required=False, pause=3)
-    check("Cuisson manuelle lancée", wait_for(lambda: has_desc("Pause") or has_text("Réglages appliqués en direct"), 10))
+    # Pendant sa cuisson, l'écran garde ses cartes entières et porte lui-même Pause et Arrêter.
+    check("Cuisson manuelle lancée, Pause et Arrêter sur l'écran", wait_for(lambda: has_text("Pause") and has_text("Arrêter"), 10))
     tap_desc_in("Plus", (680, 40, 1010, 470))  # le « + » de la carte Vitesse (à droite)
     check("Vitesse réglée en direct (2 → 3)", wait_for(lambda: text_in("3", (680, 40, 1010, 470)), 8))
-    tap(desc="Pause", pause=2.5)
-    check("Pause", wait_for(lambda: has_text("En pause"), 8))
-    tap(desc="Reprendre", pause=2.5)
-    check("Reprise", wait_for(lambda: has_desc("Pause"), 8))
-    end_job()
-    check("Arrêt", wait_for(lambda: not has_desc("Pause"), 8))
+    tap(text="Pause", pause=2.5)
+    check("Pause", wait_for(lambda: has_text("Reprendre"), 8))
+    tap(text="Reprendre", pause=2.5)
+    check("Reprise", wait_for(lambda: has_text("Pause"), 8))
+    tap(text="Arrêter", pause=2.5)
+    check("Arrêt", wait_for(lambda: not has_text("Pause"), 8))
+    tap(text="OK", required=False)
 
     # Turbo maintenu 2 s (le doigt reste appuyé), puis relâché.
     sh("input swipe 866 474 866 474 2000")
@@ -465,7 +467,8 @@ def functional_checks():
     # Balance : poids de démonstration, puis tare.
     nav("Balance")
     tap(text="+100 g", pause=3)
-    check("Balance : +100 g", wait_for(lambda: has_text("100"), 10))
+    # La base simulée approche le poids par paliers et arrondit vers le bas : 99 à 101 g.
+    check("Balance : +100 g", wait_for(lambda: has_text("99") or has_text("100") or has_text("101"), 10))
     tap(text="Tare (remise à zéro)")
     check("Balance : tare", wait_for(lambda: has_text("0"), 6))
     tap(text="Vider", required=False)
