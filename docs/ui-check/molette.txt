@@ -1,0 +1,221 @@
+== Accueil pendant une cuisson : 13 éléments au bouton
+    1. Passer en thème sombre
+    2. À savoir : 3 nouveaux
+    3. Réglages
+    4. Pause
+    5. Arrêter
+    6. Ouvrir l'étape
+    7. Tout voir
+    8. 2 nouvelles recettes du foyer
+    9. Accueil
+   10. Recettes
+   11. Cuisson
+   12. Programmes
+   13. Balance
+   touchable jamais atteint à la molette : 15:14 (28, 14, 672, 43)
+== Fenêtre « Contenu chaud » : 2 éléments au bouton
+    1. Annuler
+    2. Mixer quand même
+   touchable jamais atteint à la molette : 15:15 (810, 19, 862, 39); Passer en thème sombre (868, 5, 916, 53); À savoir : 3 nouveaux (916, 5, 964, 53); Réglages (964, 5, 1012, 53); Pétrir (24, 62, 137, 280); Vapeur (145, 62, 258, 280); Rissoler (266, 62, 380, 280); Mijoter (388, 62, 502, 280); Cuire du riz (510, 62, 624, 280); Œufs (24, 292, 137, 510); Chauffer l'eau (145, 292, 258, 510); Mixer (266, 292, 380, 510); Smoothie (388, 292, 502, 510); Prélaver (510, 292, 624, 510); Démarrer (670, 378, 978, 436); Turbo : maintenir appuyé (670, 444, 978, 492); Accueil (30, 530, 219, 580); Recettes (223, 530, 412, 580); Cuisson (416, 530, 606, 580); Programmes (610, 530, 800, 580); Balance (804, 530, 994, 580); Contenu chaud (0, 0, 1024, 600); Contenu chaud (172, 150, 852, 449)
+== Accueil : 20 éléments au bouton
+    1. Passer en thème sombre
+    2. À savoir : 3 nouveaux
+    3. Réglages
+    4. CE SOIR · 19 H 30
+    5. Cuisiner
+    6. Reprendre « Crêpes de la Chandeleur » · étape 1 sur 5
+    7. À tester
+    8. Dahl de lentilles corail
+    9. Tarte poireaux et chèvre
+   10. Poulet au curry doux
+   11. Tout voir
+   12. 2 nouvelles recettes du foyer
+   13. Le menu a changé
+   14. Demain
+   15. Lundi
+   16. Accueil
+   17. Recettes
+   18. Cuisson
+   19. Programmes
+   20. Balance
+   touchable jamais atteint à la molette : 15:16 (28, 14, 671, 43)
+== appui à la molette, Accueil › Recettes : ouvre « Toutes »
+== À savoir (fenêtre) : 8 éléments au bouton
+    1. Fermer
+    2. 2 nouvelles recettes du foyer
+    3. Le menu a changé
+    4. Écran de veille
+    5. Toque 1.0.99 est prête
+    6. Installer
+    7. Recettes Lidl
+    8. Tout marquer comme lu
+   touchable jamais atteint à la molette : 15:16 (28, 14, 672, 43); Passer en thème sombre (868, 5, 916, 53); À savoir : 3 nouveaux (916, 5, 964, 53); Réglages (964, 5, 1012, 53); CE SOIR · 19 H 30 (56, 218, 400, 294); Cuisiner (414, 228, 567, 284); Reprendre « Crêpes de la Chandeleur » · étape 1 sur 5 (24, 332, 595, 372); À tester (24, 380, 595, 412); Dahl de lentilles corail (24, 418, 206, 510); Tarte poireaux et chèvre (218, 418, 400, 510); Poulet au curry doux (412, 418, 595, 510); Tout voir (908, 76, 986, 110); Demain (639, 313, 986, 373); Lundi (639, 435, 986, 495); Accueil (30, 530, 219, 580); Recettes (223, 530, 412, 580); Cuisson (416, 530, 606, 580); Programmes (610, 530, 800, 580); Balance (804, 530, 994, 580); À savoir (0, 0, 1024, 600); À savoir (564, 0, 1024, 600)
+== Recettes : 19 éléments au bouton
+    1. À tester
+    2. À tester
+    3. À tester
+    4. À tester
+    5. À tester
+    6. Accueil
+    7. Recettes
+    8. Cuisson
+    9. Programmes
+   10. À tester
+   11. À tester
+   12. À tester
+   13. À tester
+   14. À tester
+   15. À tester
+   16. À tester
+   17. À tester
+   18. À tester
+   19. Balance
+   touchable jamais atteint à la molette : 15:16 (810, 19, 862, 39); Passer en thème sombre (868, 5, 916, 53); À savoir : 3 nouveaux (916, 5, 964, 53); Réglages (964, 5, 1012, 53); Chercher : « risotto », « poulet, curry »… (80, 62, 851, 118); View (851, 66, 899, 114); Toutes (24, 130, 115, 171); Nos recettes · 8 (125, 130, 286, 171); Lidl · 1 (407, 130, 490, 171); Favoris (500, 130, 594, 171); 30 min max (604, 130, 736, 171); Boisson (746, 130, 845, 171); Plat (855, 130, 924, 171); Soupe (934, 130, 1000, 171); Risotto aux champignons (24, 185, 1000, 514)
+== Fiche recette : 14 éléments au bouton
+    1. À tester
+    2. À tester
+    3. À tester
+    4. À tester
+    5. À tester
+    6. Accueil
+    7. Recettes
+    8. Cuisson
+    9. Programmes
+   10. À tester
+   11. À tester
+   12. À tester
+   13. À tester
+   14. Balance
+   touchable jamais atteint à la molette : 15:16 (810, 19, 862, 39); Passer en thème sombre (868, 5, 916, 53); À savoir : 3 nouveaux (916, 5, 964, 53); Réglages (964, 5, 1012, 53); Chercher : « risotto », « poulet, curry »… (80, 62, 851, 118); View (851, 66, 899, 114); Toutes (24, 130, 115, 171); Nos recettes · 8 (125, 130, 286, 171); Lidl · 1 (407, 130, 490, 171); Favoris (500, 130, 594, 171); 30 min max (604, 130, 736, 171); Boisson (746, 130, 845, 171); Plat (855, 130, 924, 171); Soupe (934, 130, 1000, 171); Risotto aux champignons (24, 185, 1000, 514)
+== Programmes : 20 éléments au bouton
+    1. Passer en thème sombre
+    2. À savoir : 3 nouveaux
+    3. Réglages
+    4. Pétrir
+    5. Vapeur
+    6. Rissoler
+    7. Mijoter
+    8. Cuire du riz
+    9. Œufs
+   10. Chauffer l'eau
+   11. Mixer
+   12. Smoothie
+   13. Prélaver
+   14. 1 min 30 s
+   15. Démarrer
+   16. Accueil
+   17. Recettes
+   18. Cuisson
+   19. Programmes
+   20. Balance
+   touchable jamais atteint à la molette : 15:17 (810, 19, 862, 39); Moins (670, 253, 722, 305); Plus (926, 253, 978, 305); Turbo : maintenir appuyé (670, 444, 978, 492)
+== réglage à la molette, Programmes › 1 min 30 s : 1 min 30 s → 1 min 40 s
+== Cuisson manuelle : 17 éléments au bouton
+    1. Passer en thème sombre
+    2. À savoir : 3 nouveaux
+    3. Réglages
+    4. Durée
+    5. Température
+    6. Vitesse
+    7. Normal
+    8. Inverse
+    9. Démarrer
+   10. Lame
+   11. Fouet
+   12. Tarer
+   13. Accueil
+   14. Recettes
+   15. Cuisson
+   16. Programmes
+   17. Balance
+   touchable jamais atteint à la molette : 15:17 (810, 19, 862, 39); 30 s (85, 227, 137, 259); 1 min (143, 227, 205, 259); 5 min (211, 227, 276, 259); LinearLayout (42, 278, 110, 334); LinearLayout (252, 278, 320, 334); LinearLayout (372, 279, 440, 335); LinearLayout (583, 279, 651, 335); LinearLayout (703, 278, 771, 334); LinearLayout (914, 278, 982, 334); Turbo : maintenir (732, 450, 1000, 498)
+== réglage à la molette, Cuisson › Durée : Durée 01:00 99 min au plus 30 s 1 min 5 min → Durée 02:00 99 min au plus 30 s 1 min 5 min
+== Balance : 12 éléments au bouton
+    1. Passer en thème sombre
+    2. À savoir : 3 nouveaux
+    3. Réglages
+    4. Tare (remise à zéro)
+    5. +100 g
+    6. +250 g
+    7. Vider
+    8. Accueil
+    9. Recettes
+   10. Cuisson
+   11. Programmes
+   12. Balance
+   touchable jamais atteint à la molette : 15:18 (810, 19, 862, 39)
+== Réglages : 63 éléments au bouton
+    1. Retour
+    2. Passer en thème sombre
+    3. À savoir : 3 nouveaux
+    4. Démo
+    5. Jumeau (PC)
+    6. Machine réelle
+    7. Appliquer
+    8. Non
+    9. Oui
+   10. Oui
+   11. Oui
+   12. Rechercher une mise à jour
+   13. Non
+   14. Automatique
+   15. Clair
+   16. Sombre
+   17. Non
+   18. Voir l'écran de veille
+   19. Trouver l'anneau
+   20. Réinitialiser l'anneau
+   21. Français
+   22. Automatique (d'après la connexion Internet)
+   23. Mettre à l'heure
+   24. Synchroniser
+   25. Importer de l'appli d'origine
+   26. Ouvrir l'appli d'origine
+   27. Oui
+   28. Diagnostic de la base moteur
+   29. Bouton rotatif
+   30. Anneau lumineux
+   31. Journal
+   32. Paramètres Android
+   33. Revenir à l'appli d'origine
+   34. Accueil
+   35. Recettes
+   36. Cuisson
+   37. Programmes
+   38. Démo
+   39. Jumeau (PC)
+   40. Machine réelle
+   41. Appliquer
+   42. Non
+   43. Oui
+   44. Oui
+   45. Rechercher une mise à jour
+   46. Non
+   47. Non
+   48. Voir l'écran de veille
+   49. Trouver l'anneau
+   50. Réinitialiser l'anneau
+   51. Français
+   52. Automatique (d'après la connexion Internet)
+   53. Mettre à l'heure
+   54. Synchroniser
+   55. Importer de l'appli d'origine
+   56. Ouvrir l'appli d'origine
+   57. Oui
+   58. Diagnostic de la base moteur
+   59. Bouton rotatif
+   60. Anneau lumineux
+   61. Journal
+   62. Paramètres Android
+   63. Balance
+   touchable jamais atteint à la molette : 15:18 (858, 19, 910, 39)
+== Recette guidée : 8 éléments au bouton
+    1. Retour
+    2. Passer en thème sombre
+    3. Tarer
+    4. Revoir la vidéo
+    5. Voir sur le téléphone
+    6. Lancer
+    7. Suivante
+    8. Ajuster à la main
+   touchable jamais atteint à la molette : 15:19 (906, 19, 958, 39)
