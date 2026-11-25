@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Process
 import app.toque.core.i18n.I18n
+import app.toque.foyer.AgentsWatch
 import app.toque.foyer.Foyer
 import app.toque.foyer.FoyerHttp
 import app.toque.machine.MachineClient
@@ -55,6 +56,7 @@ class ToqueApp : Application() {
         FoyerHttp.useAsDefault()
         TimeSync.start(this, prefs, log)
         Foyer.start(this)
+        AgentsWatch.start(this)
     }
 
     private fun isMainProcess(): Boolean {

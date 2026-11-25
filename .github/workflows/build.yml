@@ -26,6 +26,18 @@ jobs:
       - name: Tests and build
         run: ./gradlew --no-daemon :core:test :app:assembleRelease
 
+      # Toque trusts Android 6's own roots plus the bundled ones (assets/certs/foyer-roots.pem). Each
+      # Foyer host must chain to a bundled root by itself (no system store here), whatever Android 6
+      # knows: the site (recipes, status) and its database (agents' status).
+      - name: Bundled roots cover Foyer's hosts
+        run: |
+          for host in foyer-life.netlify.app mhfrnaiurtgkoqraabfg.supabase.co; do
+            out=$(SSL_CERT_FILE=/dev/null SSL_CERT_DIR=/nonexistent openssl s_client -connect "$host:443" -servername "$host" \
+              -CAfile app/src/main/assets/certs/foyer-roots.pem -showcerts </dev/null 2>&1)
+            echo "$out" | grep -E "^ *[0-9]+ s:|^ +i:|Verify return code" | sed "s|^|$host  |"
+            echo "$out" | grep -q "Verify return code: 0 (ok)" || { echo "::error::$host does not chain to a bundled root"; exit 1; }
+          done
+
       # Android 6 on the robot: any newer Java or Android API in the app fails here, not in the kitchen.
       - name: Android 6 API check
         run: ./gradlew --no-daemon :app:lintRelease

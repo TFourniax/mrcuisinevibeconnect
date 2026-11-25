@@ -133,8 +133,25 @@ strings = {
     "updateAvailable": "1.0.99",
     "lastSyncResult": "1 240 recettes Lidl à jour",
 }
+# Statut des agents (dernière réponse de Foyer gardée sur le robot) : un agent t'attend, un tourne,
+# un a fini, un ne donne plus de nouvelles, un a fini plus tôt.
+M = 60_000
+agents = [
+    {"agent": "codex", "session_key": "thread-1", "location": "local", "state": "waiting",
+     "title": "Revue du lecteur de relevés", "project": "life-app", "who": "", "since": now_ms - 4 * M, "updated": now_ms - 4 * M},
+    {"agent": "claude", "session_key": "cse_1", "location": "cloud", "state": "working",
+     "title": "Statut des agents sur le robot", "project": "mrcuisinevibeconnect", "who": "", "since": now_ms - 18 * M, "updated": now_ms - 1 * M},
+    {"agent": "hermes", "session_key": "telegram", "location": "", "state": "done",
+     "title": "Liste de courses de la semaine", "project": "", "who": "", "since": now_ms - 25 * M, "updated": now_ms - 25 * M},
+    {"agent": "harness", "session_key": "photos", "location": "local", "state": "working",
+     "title": "Sauvegarde des photos", "project": "", "who": "", "since": now_ms - 120 * M, "updated": now_ms - 50 * M},
+    {"agent": "claude", "session_key": "local-2", "location": "local", "state": "done",
+     "title": "Correctif du minuteur", "project": "life-app", "who": "", "since": now_ms - 190 * M, "updated": now_ms - 190 * M},
+]
+strings["agentsCache"] = json.dumps(agents, ensure_ascii=False, separators=(",", ":"))
+
 booleans = {"foyerEnabled": False, "welcomeDone": True}
-longs = {"lastSyncMs": now_ms - 8 * 3600_000, "foyerLastSyncMs": now_ms - 600_000}
+longs = {"lastSyncMs": now_ms - 8 * 3600_000, "foyerLastSyncMs": now_ms - 600_000, "agentsLastOkMs": now_ms - 60_000}
 ints = {"noticeSaverItems": 0}
 
 with open(os.path.join(out, "toque.xml"), "w", encoding="utf-8") as f:

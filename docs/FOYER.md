@@ -58,11 +58,40 @@ household. Either way the robot erases the household's recipes and meals and sho
   Global Root G2 and G3, GTS Root R1, USERTrust ECC and RSA, and Sectigo Public Server
   Authentication Root E46 and R46, bundled in `app/src/main/assets/certs/foyer-roots.pem` (taken
   from Mozilla's store, SHA-256 fingerprints listed in the file). Host names are checked as usual.
+  1.0.13 adds GTS Root R3 and R4, ISRG Root X2 and SSL.com TLS ECC/RSA 2022 for Foyer's database
+  (agents' status); `build.yml` checks on every push that Foyer's site and database chain to a
+  bundled root on their own.
   Before 1.0.5 the update check could not reach GitHub from Android 6 ("Connexion sécurisée à
   GitHub impossible"): such a robot is updated once from the Mac (`update` step), then it updates
   itself.
 - Foyer can only add, change or remove recipes whose id starts with `foyer-`: the Lidl catalogue is
   never touched, and the Lidl syncs never touch household recipes (`recettes.db` column `origin`).
+
+## Agents' status (1.0.13)
+
+A small terminal icon in the top bar shows what the household's AI agents are doing (Claude Code,
+Codex, Hermès, a home-made harness…, local or in the cloud), so whoever cooks knows whether one
+waits for an answer or has finished. Hidden when no agent has reported for 36 hours; its dot is
+orange when an agent waits for you (or an error not seen yet), green when one has finished since
+the card was last opened, blue while some run. A tap opens a small card under the icon (one line
+per agent: name, cloud or local, title and project, state, how long; the one waiting first; six at
+most); a tap beside it, its cross, the knob (the cross is its only stop) or Back close it.
+
+- Agents report to Foyer's database, not to the robot (see Foyer's `docs/agents.md`): each session
+  is one row `public.agent_status` (household, agent, session, state working | waiting | done |
+  error | idle, short title, project, optional https link). Only a short title is kept, never the
+  work itself; rows quiet for 36 hours go.
+- Toque reads them straight from Foyer's database (Supabase's Data API, `FoyerHttp.rpc`, not
+  Netlify): `POST /rest/v1/rpc/robot_agents` with the publishable key (public by design, the site
+  gives it to every browser) and the robot's secret in the body (`p_secret`, never in the address).
+  The database checks the secret like the feed does (`app.robot_use`, 60 calls a minute) and gives
+  only that household's agents. `AgentsWatch` asks every 20 s while an agent runs or waits, every
+  minute otherwise (5 min from 23:00 to 6:00), every 10 s while the card is open, 2 min after a
+  failure; nothing until the robot is linked; the last answer is kept (`agentsCache`) and dropped
+  with the link.
+- The debug build answers `am start -n app.toque/.ui.MainActivity --ez app.toque.PROBE_AGENTS true`
+  with one call using a fake secret (log `ToqueAgents probe|200|[]`): the UI tour uses it to check
+  that Android 6 reaches the database over TLS.
 
 ## Reels: on the robot, or on a phone
 

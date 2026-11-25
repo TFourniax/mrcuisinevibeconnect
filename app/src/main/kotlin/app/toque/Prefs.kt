@@ -288,6 +288,27 @@ class Prefs(context: Context) {
             p.edit().putString("screensaver", v).commit()
         }
 
+    /** Statut des agents : dernière liste reçue de Foyer (JSON d'Agents.encode). */
+    var agentsCache: String
+        get() = p.getString("agentsCache", "") ?: ""
+        set(v) {
+            p.edit().putString("agentsCache", v).commit()
+        }
+
+    /** Dernière réponse de Foyer pour les agents (ms). */
+    var agentsLastOkMs: Long
+        get() = p.getLong("agentsLastOkMs", 0L)
+        set(v) {
+            p.edit().putLong("agentsLastOkMs", v).apply()
+        }
+
+    /** Dernière ouverture de la carte des agents (ms) : un « terminé » vu ne colore plus l'icône. */
+    var agentsSeenMs: Long
+        get() = p.getLong("agentsSeenMs", 0L)
+        set(v) {
+            p.edit().putLong("agentsSeenMs", v).commit()
+        }
+
     /** Voyant de /sys/class/leds désigné comme l'anneau du bouton rotatif ("" : pas encore trouvé). */
     var ringLed: String
         get() = p.getString("ringLed", "") ?: ""

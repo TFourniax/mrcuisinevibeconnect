@@ -23,12 +23,20 @@ import javax.net.ssl.X509TrustManager
 
 /**
  * HTTPS vers Foyer. Android 6 ne connaît pas les autorités racines récentes (ISRG Root X1…) :
- * les connexions de Toque vers Foyer et vers les photos des recettes font confiance aux
- * racines du système plus trois racines embarquées (assets/certs/foyer-roots.pem). Le nom
- * du serveur reste vérifié normalement.
+ * les connexions de Toque vers Foyer, sa base (statut des agents) et les photos des recettes
+ * font confiance aux racines du système plus celles embarquées (assets/certs/foyer-roots.pem).
+ * Le nom du serveur reste vérifié normalement.
  */
 object FoyerHttp {
     const val BASE = "https://foyer-life.netlify.app"
+
+    /**
+     * La base de données de Foyer, lue directement pour le statut des agents (sans passer par
+     * Netlify). La clé « publishable » est publique par nature (les pages de Foyer la donnent à
+     * tout navigateur) : ce que le robot obtient, c'est son secret qui le décide, côté base.
+     */
+    const val SUPABASE = "https://mhfrnaiurtgkoqraabfg.supabase.co"
+    private const val SUPABASE_KEY = "sb_publishable_katLBV3zMZefGPURLFmSyw_G-5PUfvz"
 
     class Response(val code: Int, val body: String, val etag: String?)
 
@@ -149,6 +157,33 @@ object FoyerHttp {
             }
             val text = stream?.use { String(readAll(it, 8 * 1024 * 1024), Charsets.UTF_8) }.orEmpty()
             return Response(code, text, c.getHeaderField("ETag"))
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    /**
+     * Une fonction de la base de Foyer ([name] : lettres et « _ »), appelée en POST avec [body]
+     * (JSON). Le secret du robot voyage dans le corps, jamais dans l'adresse. 10 s, 256 Ko.
+     */
+    fun rpc(name: String, body: String, userAgent: String): Response {
+        if (!Regex("[a-z_]{1,40}").matches(name)) throw IOException("fonction inconnue")
+        val c = open("$SUPABASE/rest/v1/rpc/$name")
+        try {
+            c.instanceFollowRedirects = false
+            c.connectTimeout = 10_000
+            c.readTimeout = 10_000
+            c.requestMethod = "POST"
+            c.setRequestProperty("apikey", SUPABASE_KEY)
+            c.setRequestProperty("Accept", "application/json")
+            c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            c.setRequestProperty("User-Agent", userAgent)
+            c.doOutput = true
+            c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            val code = c.responseCode
+            val stream = if (code >= 400) c.errorStream else c.inputStream
+            val text = stream?.use { String(readAll(it, 256 * 1024, System.currentTimeMillis() + 10_000), Charsets.UTF_8) }.orEmpty()
+            return Response(code, text, null)
         } finally {
             c.disconnect()
         }

@@ -17,7 +17,7 @@ class Icon(context: Context, var kind: Kind, color: Int) : View(context) {
         BACK, ARROW_LEFT, SEARCH, PLAY, PAUSE, STOP, THERMO, SPEED, CLOCK, REVERSE, SCALE, BOOK, STAR, STAR_FILLED,
         SETTINGS, PLUS, MINUS, CHECK, CLOSE, KNEAD, STEAM, FLAME, BOLT, SYNC, LID, WARNING, HOME, WHISK,
         CHEVRON, LINK, INFO, POT, TIMER, BELL, MOON, SUN, GRID, EGG, RICE, KETTLE, BLENDER, CUP, DROPLETS, SOUP,
-        PHONE, VIDEO, CALENDAR, SPARKLE, DOWNLOAD, IMAGE, CHAIN, CHEF,
+        PHONE, VIDEO, CALENDAR, SPARKLE, DOWNLOAD, IMAGE, CHAIN, CHEF, AGENT,
     }
 
     var color: Int = color
@@ -181,6 +181,8 @@ class Icon(context: Context, var kind: Kind, color: Int) : View(context) {
                 Kind.DOWNLOAD -> strokes += listOf("M12 3v12", "m7 10 5 5 5-5", "M5 21h14")
                 Kind.IMAGE -> strokes += listOf(r(3f, 4f, 18f, 16f, 2.5f), c(9f, 10f, 2f), "m21 16-4.5-4.5L7 20")
                 Kind.CHAIN -> strokes += listOf("M9 17H7A5 5 0 0 1 7 7h2", "M15 7h2a5 5 0 1 1 0 10h-2", "M8 12h8")
+                // Une invite de terminal : les agents (Claude Code, Codex, Hermès…).
+                Kind.AGENT -> strokes += listOf(r(3f, 4.5f, 18f, 15f, 3f), "m7.5 9.5 3 2.5-3 2.5", "M13 15h3.5")
                 Kind.CHEF -> strokes += listOf(
                     "M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z",
                     "M6 17h12",

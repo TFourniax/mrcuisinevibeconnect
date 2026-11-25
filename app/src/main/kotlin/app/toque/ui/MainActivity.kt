@@ -21,6 +21,8 @@ import app.toque.Prefs
 import app.toque.ToqueApp
 import app.toque.core.i18n.I18n
 import app.toque.core.i18n.tr
+import app.toque.core.foyer.Agents
+import app.toque.foyer.AgentsWatch
 import app.toque.foyer.Foyer
 import app.toque.core.machine.EventType
 import app.toque.core.machine.JobKind
@@ -66,6 +68,11 @@ class MainActivity : Activity() {
     private var unsubscribeEvents: (() -> Unit)? = null
     private var unsubscribeNotices: (() -> Unit)? = null
     private var unsubscribeRecipes: (() -> Unit)? = null
+    private var unsubscribeAgents: (() -> Unit)? = null
+    /** La carte des agents, tant qu'elle est ouverte. */
+    private var agentsCard: AgentsCard? = null
+    /** Appelé quand la carte affichée se ferme (ou est remplacée). */
+    private var overlayClosed: (() -> Unit)? = null
     private var tone: ToneGenerator? = null
     private var toastView: TextView? = null
     private var video: VideoPanel? = null
@@ -120,6 +127,9 @@ class MainActivity : Activity() {
         // « À savoir » : nouveautés du foyer, mise à jour ; la pastille de la cloche suit.
         unsubscribeNotices = Notices.watch(this) { refreshBadge() }
         unsubscribeRecipes = app.recipes.onChange { liveCache = null }
+        // Statut des agents : l'icône de la barre du haut (et la carte ouverte) suivent Foyer.
+        unsubscribeAgents = AgentsWatch.of(app).onChange { refreshAgents() }
+        if (debuggable() && intent?.getBooleanExtra(PROBE_AGENTS, false) == true) AgentsWatch.of(app).probe()
         push(HomeScreen(this))
         if (reopenSettings) {
             reopenSettings = false
@@ -172,6 +182,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         unsubscribeNotices?.invoke()
         unsubscribeRecipes?.invoke()
+        unsubscribeAgents?.invoke()
         tone?.release()
         super.onDestroy()
     }
@@ -301,6 +312,28 @@ class MainActivity : Activity() {
         current?.let { setTopBar(it) }
     }
 
+    /** Icône des agents (et carte ouverte) : nouvelle réponse de Foyer, ou le temps passe. */
+    fun refreshAgents() {
+        if (!::topBar.isInitialized) return
+        val watch = AgentsWatch.of(app)
+        val now = System.currentTimeMillis()
+        val signal = Agents.signal(watch.runs, now, prefs.agentsSeenMs)
+        topBar.setAgents(signal, Agents.iconDescription(signal, Agents.shown(watch.runs, now), now))
+        agentsCard?.update()
+    }
+
+    /** La carte des agents, sous l'icône. */
+    fun openAgents() {
+        val card = AgentsCard(this)
+        card.show()
+        agentsCard = card
+        refreshAgents()
+        // Oubliée ouverte, elle se ferme : l'écran de veille peut revenir et Foyer n'est plus interrogé toutes les 10 s.
+        root.postDelayed({ if (agentsCard === card) closeOverlay() }, 5 * 60_000L)
+    }
+
+    private fun debuggable() = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
     /** Le nombre sur la cloche : messages non lus de « À savoir ». */
     fun refreshBadge() {
         if (::topBar.isInitialized) topBar.setBadge(Notices.unread(this))
@@ -328,6 +361,8 @@ class MainActivity : Activity() {
         }
         liveBar.addOnLayoutChangeListener(follow)
         navBar.addOnLayoutChangeListener(follow)
+        // Nouvelle barre du haut (thème changé) : l'icône des agents tout de suite, pas au prochain tic.
+        if (::app.isInitialized) refreshAgents()
     }
 
     private fun minuteOfDay(): Int {
@@ -713,10 +748,21 @@ class MainActivity : Activity() {
     fun showSheet(sheet: View, width: Int = 460) =
         showOverlay(sheet, Ui.flp(Ui.u(width), Ui.MATCH, Gravity.END), true)
 
-    private fun showOverlay(card: View, lp: FrameLayout.LayoutParams, dismissOnScrim: Boolean) {
+    /** Petite carte sous la barre du haut, à droite (agents), sur un voile léger ; [onClose] à sa fermeture. */
+    fun showPopover(card: View, width: Int, onClose: () -> Unit) {
+        val lp = Ui.flp(Ui.u(width), Ui.WRAP, Gravity.TOP or Gravity.END).apply {
+            topMargin = Ui.u(54)
+            rightMargin = Ui.u(12)
+        }
+        showOverlay(card, lp, true, scrim = (Ui.SCRIM ushr 25 shl 24) or (Ui.SCRIM and 0x00FFFFFF))
+        overlayClosed = onClose
+    }
+
+    private fun showOverlay(card: View, lp: FrameLayout.LayoutParams, dismissOnScrim: Boolean, scrim: Int = Ui.SCRIM) {
         hideKeyboard()
+        endOverlay()
         overlay.removeAllViews()
-        overlay.setBackgroundColor(Ui.SCRIM)
+        overlay.setBackgroundColor(scrim)
         overlay.isClickable = true
         overlay.setOnClickListener { if (dismissOnScrim) closeOverlay() }
         card.isClickable = true
@@ -731,7 +777,16 @@ class MainActivity : Activity() {
         val was = overlay.visibility == View.VISIBLE
         overlay.visibility = View.GONE
         overlay.removeAllViews()
+        endOverlay()
         if (was) knobNav.reset()
+    }
+
+    /** La carte affichée s'en va : celle des agents arrête ses questions rapprochées. */
+    private fun endOverlay() {
+        agentsCard = null
+        val closed = overlayClosed
+        overlayClosed = null
+        closed?.invoke()
     }
 
     /** Dialogue de confirmation. */
@@ -920,8 +975,19 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (debuggable() && intent.getBooleanExtra(PROBE_AGENTS, false)) AgentsWatch.of(app).probe()
+    }
+
     companion object {
         private var reopenSettings = false
+
+        /**
+         * Version de développement : « am start … --ez app.toque.PROBE_AGENTS true » vérifie la
+         * connexion à la base de Foyer (journal « ToqueAgents »). Sans effet dans la version publiée.
+         */
+        const val PROBE_AGENTS = "app.toque.PROBE_AGENTS"
 
         /** MotionEvent.AXIS_SCROLL (API 26), valeur fixe pour Android 6. */
         private const val AXIS_SCROLL = 26

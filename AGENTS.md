@@ -252,8 +252,9 @@ screen in light and dark (`tools/ui-check/tour.py`: a guided step started, pause
 programme, the knob, the screensaver, the ring tool, the video panel), turns the knob with the
 robot's own keys (F7/F6/F5) through every screen and compares it with every clickable element
 (`molette.txt`; the debug APK logs each knob focus under the tag ToqueKnob), runs 23 checks of
-what 1.0.11 did, each with an expected result (`fonctionnel.txt`), and fails on a crash, a
-missing element or a failed check. Captures and view trees are committed to `docs/ui-check/` on that branch (read
+what 1.0.11 did plus the agents' card (opened, closed by a tap beside it, the knob and its cross)
+and one call to Foyer's database from Android 6 (`connexion-foyer.txt`), each with an expected
+result (`fonctionnel.txt`), and fails on a crash, a missing element or a failed check. Captures and view trees are committed to `docs/ui-check/` on that branch (read
 them there: artifact downloads are blocked from cloud sessions); delete that folder before merging.
 Toque is also the HOME app: force-stopped, Android restarts it at once, so the seed is written
 before the first launch.

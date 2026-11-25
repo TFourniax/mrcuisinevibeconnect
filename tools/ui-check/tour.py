@@ -492,8 +492,44 @@ def functional_checks():
     key(4)
     check("« Tout marquer comme lu »", wait_for(lambda: has_desc("À savoir") and not has_desc("À savoir :", prefix=True), 6))
 
+    # Statut des agents : l'icône, la carte, ses façons de se fermer, puis la connexion à la base.
+    nav("Accueil")
+    check("Icône des agents (un agent t'attend)", wait_for(lambda: has_desc("Agents : ", prefix=True), 6))
+    tap(desc="Agents", prefix=True, fallback=(844, 29))
+    check("Carte des agents : Codex t'attend, Hermès a fini", wait_for(lambda: has_text("Codex") and has_text("T'attend") and has_text("Hermès"), 6))
+    tap_xy(300, 470)
+    check("Carte des agents fermée d'un toucher à côté", wait_for(lambda: not has_text("Hermès"), 6))
+    tap(desc="Agents", prefix=True, fallback=(844, 29))
+    turn(1)
+    key(KNOB_PRESS, pause=2)
+    check("Carte des agents fermée au bouton rotatif (sa croix)", wait_for(lambda: not has_text("Hermès"), 6))
+    tap(desc="Agents", prefix=True, fallback=(844, 29))
+    tap(desc="Fermer")
+    check("Carte des agents fermée par la croix", wait_for(lambda: not has_text("Hermès"), 6))
+    agents_probe()
+
     with open(os.path.join(OUT, "fonctionnel.txt"), "w") as f:
         f.write("\n".join(func_report) + "\n")
+
+
+def agents_probe():
+    """
+    Version de test : Toque demande le statut des agents à la base de Foyer avec un faux secret.
+    Une réponse 200 (liste vide) prouve qu'Android 6 accepte le certificat de la base avec les
+    racines embarquées. Le résultat est aussi dans connexion-foyer.txt.
+    """
+    sh("am start -n %s/.ui.MainActivity --ez app.toque.PROBE_AGENTS true" % PKG)
+    line = ""
+    end = time.time() + 45
+    while time.time() < end and not line:
+        found = [l for l in sh("logcat -d -v brief -s ToqueAgents:I").splitlines() if "probe|" in l]
+        if found:
+            line = found[-1].strip()
+        else:
+            wait(2)
+    with open(os.path.join(OUT, "connexion-foyer.txt"), "w") as f:
+        f.write((line or "pas de réponse en 45 s") + "\n")
+    check("Android 6 joint la base de Foyer en https (statut des agents)", "probe|200|" in line, line[-240:])
 
 
 def cook_or_resume():
@@ -535,6 +571,10 @@ def screens(theme):
     """Tous les écrans principaux dans le thème courant."""
     nav("Accueil")
     shot(f"01-accueil-{theme}")
+    # La carte des agents, sous leur icône (fermée au retour).
+    tap(desc="Agents", prefix=True, fallback=(844, 29))
+    shot(f"29-agents-{theme}")
+    key(4)
     tap(desc="À savoir", prefix=True, fallback=(940, 29))
     shot(f"02-a-savoir-{theme}")
     key(4)  # retour : ferme le panneau

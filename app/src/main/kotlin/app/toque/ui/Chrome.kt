@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.toque.Prefs
+import app.toque.core.foyer.Agents
 import app.toque.core.i18n.I18n
 import app.toque.core.i18n.tr
 import app.toque.core.machine.JobKind
@@ -187,6 +188,9 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
     private val stateDot = View(a)
     private val stateText = Ui.text(a, "", 15f, Ui.TEXT2, Ui.MEDIUM)
     private val clock = Ui.tabular(Ui.text(a, "", 17f, Ui.TEXT, Ui.SEMIBOLD))
+    private val agentsIcon = Icon(a, Icon.Kind.AGENT, Ui.TEXT2)
+    private val agentsDot = View(a)
+    private val agentsBtn = FrameLayout(a)
     private val themeIcon = Icon(a, Icon.Kind.MOON, Ui.TEXT2)
     private val themeBtn = FrameLayout(a)
     private val bell = FrameLayout(a)
@@ -199,6 +203,8 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
             // Programmé avant : si le thème change, cette barre est remplacée et son minuteur arrêté.
             handler.postDelayed(this, 10_000)
             a.checkTheme()
+            // « il y a 3 min », un agent qui devient silencieux : l'icône suit l'heure.
+            a.refreshAgents()
         }
     }
     private var adminTaps = 0
@@ -227,6 +233,17 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
         state.addView(stateText)
         addView(state, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
         addView(clock, Ui.lp(Ui.WRAP, Ui.WRAP, l = 4, r = 6))
+
+        // Statut des agents (Claude Code, Codex, Hermès…) : une petite icône, une pastille de couleur
+        // quand quelque chose compte ; absente si aucun agent n'a donné de nouvelles.
+        agentsBtn.background = Ui.pressable(Ui.round(0, 24f), 24f)
+        agentsBtn.addView(agentsIcon, Ui.flp(Ui.u(22), Ui.u(22), Gravity.CENTER))
+        agentsBtn.addView(agentsDot, Ui.flp(Ui.u(12), Ui.u(12), Gravity.TOP or Gravity.END).apply { topMargin = Ui.u(9); rightMargin = Ui.u(8) })
+        agentsBtn.isClickable = true
+        agentsBtn.contentDescription = tr("Agents")
+        agentsBtn.setOnClickListener { a.openAgents() }
+        addView(agentsBtn, LayoutParams(Ui.u(48), Ui.u(48)))
+        agentsBtn.visibility = View.GONE
 
         themeBtn.background = Ui.pressable(Ui.round(0, 24f), 24f)
         themeBtn.addView(themeIcon, Ui.flp(Ui.u(22), Ui.u(22), Gravity.CENTER))
@@ -301,6 +318,24 @@ class TopBar(private val a: MainActivity) : LinearLayout(a) {
         gear.visibility = if (fullScreen || settings) View.GONE else View.VISIBLE
         refreshTheme()
     }
+
+    /** L'icône des agents : cachée sans agent récent ; pastille orange (t'attend), verte (terminé), bleue (en cours). */
+    fun setAgents(signal: Agents.Signal, description: String) {
+        agentsBtn.visibility = if (signal == Agents.Signal.NONE) View.GONE else View.VISIBLE
+        val color = when (signal) {
+            Agents.Signal.NEEDS_YOU -> Ui.WARN
+            Agents.Signal.DONE -> Ui.OK
+            Agents.Signal.WORKING -> Ui.COOL
+            else -> 0
+        }
+        agentsDot.visibility = if (color == 0) View.GONE else View.VISIBLE
+        if (color != 0 && color != agentsDotColor) agentsDot.background = Ui.round(color, 6f, Ui.BG, 2f)
+        agentsDotColor = color
+        agentsIcon.color = if (signal == Agents.Signal.NEEDS_YOU) Ui.TEXT else Ui.TEXT2
+        agentsBtn.contentDescription = description
+    }
+
+    private var agentsDotColor = 0
 
     fun setBadge(count: Int) {
         badge.visibility = if (count > 0) View.VISIBLE else View.GONE

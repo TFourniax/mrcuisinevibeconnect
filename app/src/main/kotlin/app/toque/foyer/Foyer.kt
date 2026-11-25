@@ -295,6 +295,13 @@ class Foyer private constructor(private val app: ToqueApp) {
         return fresh
     }
 
+    /** Le secret du robot s'il existe déjà (jamais créé ici) : pour le statut des agents. Hors du fil de l'écran. */
+    fun existingSecret(): String? = try {
+        if (secretFile.exists()) secretFile.readText().trim().takeIf { it.length >= 40 } else null
+    } catch (_: Exception) {
+        null
+    }
+
     private fun loop() {
         bg.removeCallbacks(loopTask)
         val next = when {
