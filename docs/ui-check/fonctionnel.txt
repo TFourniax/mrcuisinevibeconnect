@@ -1,0 +1,29 @@
+OK     Filtre Favoris montre la recette favorite
+OK     Retirer un favori depuis la fiche
+OK     Remettre en favori
+OK     Filtre Lidl
+OK     Recette guidée ouverte à l'étape 1
+OK     Étape suivante
+OK     Étape précédente
+OK     « Ajuster à la main » reprend 6 min et 90 °C
+OK     Cuisson manuelle lancée, Pause et Arrêter sur l'écran
+OK     Vitesse réglée en direct (2 → 3)
+OK     Pause
+OK     Reprise
+OK     Arrêt
+OK     Turbo maintenu puis relâché sans souci
+OK     Œufs à la coque : 7 min
+OK     Programme Œufs lancé
+OK     Cuisson pendant un programme : − et + visibles
+OK     Chauffer l'eau lancé
+OK     Chauffer l'eau s'arrête seul à la température
+OK     Balance : +100 g
+OK     Balance : tare
+OK     Réglages › Apparence › Clair
+OK     « Tout marquer comme lu »
+OK     Icône des agents (un agent t'attend)
+OK     Carte des agents : Codex t'attend, Hermès a fini
+OK     Carte des agents fermée d'un toucher à côté
+OK     Carte des agents fermée au bouton rotatif (sa croix)
+OK     Carte des agents fermée par la croix
+ÉCHEC  Android 6 joint la base de Foyer en https (statut des agents) : I/ToqueAgents( 2726): probe|error|UnknownHostException|Unable to resolve host "mhfrnaiurtgkoqraabfg.supabase.co": No address associated with hostname|android_getaddrinfo failed: EAI_NODATA (No address associated with hostname) ; capture echec-01, à l'écran : 18:51 | Mercredi 25 novembre | 81 °C | Démo | Prévu dans Foyer | CE SOIR · 19 H 30 | Crêpes de la Chandeleur | 25 min · 4 pers. · 2 étapes au robot | Cuisiner | Reprendre « Crêpes de la Chandeleur » · étape 1 sur 5 | À tester | Nos recettes · 8 | Dahl de lentilles corail | 35 min | Tarte poireaux et chèvre | 50 min | Poulet au curry doux | 40 min | Cette semaine | d'après Foyer | Demain | 12 h 30 | Risotto aux champignons | Samedi | 19 h 30 | Velouté de potiron | Lundi | 20 h | Pizza maison | Accueil | Recettes | Cuisson | Programmes | Balance
