@@ -20,6 +20,7 @@ import app.toque.core.i18n.tr
 import app.toque.core.machine.RootShell
 import app.toque.core.machine.Snapshot
 import app.toque.core.time.ZoneLookup
+import app.toque.core.ui.ThemeMode
 import app.toque.core.update.Release
 import app.toque.foyer.Foyer
 import app.toque.recipes.LidlSync
@@ -106,6 +107,15 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         safety.addView(Ui.text(c, tr("Les réglages qui se suivent sans geste à faire entre eux partent ensemble d'un seul appui sur Lancer : la lame passe directement à la vitesse et à la température suivantes."),
             15f, Ui.TEXT3).apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = 6))
         safety.addView(toggle(tr("Sons"), a.prefs.sound) { a.prefs.sound = it }, Ui.lp(t = 10))
+
+        // ---- Apparence : clair le jour, sombre le soir (la lune de la barre du haut passe de l'un à l'autre)
+        val look = section(right, tr("Apparence"), Icon.Kind.SUN)
+        val mode = ThemeMode.of(a.prefs.themeMode)
+        look.addView(Ui.segmented(c, listOf(tr("Automatique"), tr("Clair"), tr("Sombre")), mode.ordinal, 50) { i ->
+            a.setThemeMode(ThemeMode.values()[i])
+        }, Ui.lp(Ui.MATCH, Ui.u(50), t = 4))
+        look.addView(Ui.text(c, tr("Automatique : clair de 7 h à 20 h, sombre le soir. La lune (ou le soleil) en haut de l'écran passe à l'autre thème jusqu'au prochain changement."),
+            15f, Ui.TEXT2).apply { setLineSpacing(0f, 1.2f) }, Ui.lp(t = 10))
 
         // ---- Foyer (appli du foyer) : liaison durable, recettes partagées, état du robot
         val foyer = section(right, tr("Foyer"), Icon.Kind.LINK)
@@ -202,10 +212,11 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
 
     private fun section(parent: LinearLayout, title: String, icon: Icon.Kind): LinearLayout {
         val card = Ui.card(c, 24f)
+        Ui.lift(card)
         val head = Ui.horizontal(c)
-        head.addView(Icon(c, icon, Ui.ACCENT), LinearLayout.LayoutParams(Ui.u(24), Ui.u(24)).apply { rightMargin = Ui.u(10) })
-        head.addView(Ui.text(c, title, 21f, Ui.TEXT, Ui.MEDIUM))
-        card.addView(head, Ui.lp(b = 10))
+        head.addView(Ui.iconCircle(c, icon, 36, 18), LinearLayout.LayoutParams(Ui.u(36), Ui.u(36)).apply { rightMargin = Ui.u(12) })
+        head.addView(Ui.text(c, title, 19f, Ui.TEXT, Ui.SEMIBOLD))
+        card.addView(head, Ui.lp(b = 12))
         parent.addView(card, Ui.lp(b = 16))
         return card
     }
@@ -223,9 +234,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
 
     private fun toggle(label: String, initial: Boolean, onChange: (Boolean) -> Unit): LinearLayout {
         val row = Ui.horizontal(c)
-        row.addView(Ui.text(c, label, 18f, Ui.TEXT), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        row.addView(Ui.text(c, label, 16f, Ui.TEXT).apply { setLineSpacing(0f, 1.15f) }, LinearLayout.LayoutParams(0, Ui.WRAP, 1f).apply { rightMargin = Ui.u(12) })
         var state = initial
-        val sw = Ui.text(c, "", 16f, Ui.TEXT, Ui.MEDIUM).apply { gravity = Gravity.CENTER }
+        val sw = Ui.text(c, "", 15f, Ui.TEXT, Ui.SEMIBOLD).apply { gravity = Gravity.CENTER }
         fun paint() {
             sw.text = if (state) tr("Oui") else tr("Non")
             sw.setTextColor(if (state) Ui.ON_ACCENT else Ui.TEXT2)
@@ -240,7 +251,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
     private fun link(label: String, onClick: () -> Unit): LinearLayout {
         val row = Ui.horizontal(c)
         row.setPadding(0, Ui.u(14), 0, Ui.u(14))
-        row.addView(Ui.text(c, label, 18f, Ui.TEXT), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        row.addView(Ui.text(c, label, 16f, Ui.TEXT), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         row.addView(Icon(c, Icon.Kind.CHEVRON, Ui.TEXT3), LinearLayout.LayoutParams(Ui.u(20), Ui.u(20)))
         row.background = Ui.pressable(Ui.round(0, 8f), 8f)
         row.isClickable = true
@@ -366,7 +377,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                     problems += tr("impossible de couper l'appli d'origine du moteur")
                 sync.forceStop()
             }
-            view.post {
+            post {
                 if (problems.isNotEmpty()) {
                     a.confirm(tr("Machine réelle indisponible"), problems.joinToString("\n") { "• $it" }, "OK", tr("Fermer")) {}
                 } else save()
@@ -388,7 +399,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                     val sync = LidlSync(a, a.prefs, a.app.recipes, a.app.log)
                     sync.setVendorHardware(true)
                     val launch = sync.components().launch
-                    view.post {
+                    post {
                         if (launch != null) a.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         else a.toast(tr("Appli d'origine introuvable"), Ui.WARN)
                     }
@@ -406,9 +417,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         syncing = true
         syncText.text = tr("Synchronisation en cours… (quelques minutes)")
         Thread {
-            val r = if (online) OnlineSync(a, a.prefs, a.app.recipes, a.app.log).sync { msg -> view.post { syncText.text = msg } }
-            else LidlSync(a, a.prefs, a.app.recipes, a.app.log).importNow { msg -> view.post { syncText.text = msg } }
-            view.post {
+            val r = if (online) OnlineSync(a, a.prefs, a.app.recipes, a.app.log).sync { msg -> post { syncText.text = msg } }
+            else LidlSync(a, a.prefs, a.app.recipes, a.app.log).importNow { msg -> post { syncText.text = msg } }
+            post {
                 syncing = false
                 refreshSync()
                 a.toast(r.message, if (r.ok) Ui.OK else Ui.WARN)
@@ -536,17 +547,19 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         Thread {
             try {
                 val r = updater.latest()
-                view.post {
+                post {
                     release = r
                     upd = if (updater.isNewer(r)) Upd.AVAILABLE else Upd.UP_TO_DATE
                     renderUpdate()
-                    if (upd == Upd.AVAILABLE) installUpdate()
+                    // La fenêtre d'installation seulement si Réglages est encore à l'écran (sinon
+                    // la carte « Mises à jour » la propose au retour).
+                    if (upd == Upd.AVAILABLE && a.current === this) installUpdate()
                 }
             } catch (e: Updater.Failure) {
-                view.post { upd = Upd.ERROR; updMessage = e.message ?: tr("Erreur"); renderUpdate() }
+                post { upd = Upd.ERROR; updMessage = e.message ?: tr("Erreur"); renderUpdate() }
             } catch (e: Exception) {
                 a.app.log.crash("maj", e)
-                view.post { upd = Upd.ERROR; updMessage = tr("Erreur inattendue : %s", e.message); renderUpdate() }
+                post { upd = Upd.ERROR; updMessage = tr("Erreur inattendue : %s", e.message); renderUpdate() }
             }
         }.start()
     }
@@ -572,14 +585,14 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                 renderUpdate()
                 Thread {
                     try {
-                        val file = updater.download(r) { p -> view.post { updPercent = p; renderUpdate() } }
-                        view.post { upd = Upd.INSTALLING; renderUpdate() }
+                        val file = updater.download(r) { p -> post { updPercent = p; renderUpdate() } }
+                        post { upd = Upd.INSTALLING; renderUpdate() }
                         updater.install(file)
                     } catch (e: Updater.Failure) {
-                        view.post { updateFailed(e.message ?: tr("Erreur")) }
+                        post { updateFailed(e.message ?: tr("Erreur")) }
                     } catch (e: Exception) {
                         a.app.log.crash("maj", e)
-                        view.post { updateFailed(tr("Erreur inattendue : %s", e.message)) }
+                        post { updateFailed(tr("Erreur inattendue : %s", e.message)) }
                     }
                 }.start()
             }
@@ -633,7 +646,8 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             ringBox.addView(Ui.text(c, tr("Toque ne sait pas encore comment la tablette commande l'anneau du bouton. Trouve-le une fois dans Outils › Anneau lumineux."), 16f, Ui.TEXT2)
                 .apply { setLineSpacing(0f, 1.15f) })
             val row = Ui.horizontal(c)
-            row.addView(Ui.button(c, tr("Trouver l'anneau"), Ui.Style.SECONDARY, height = 52) { a.push(RingScreen(a)) }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
+            // Côte à côte dans la colonne : texte en 16 pour que « Réinitialiser l'anneau » tienne sur une ligne.
+            row.addView(Ui.button(c, tr("Trouver l'anneau"), Ui.Style.SECONDARY, height = 52, textSize = 16f) { a.push(RingScreen(a)) }, Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
             row.addView(resetRingButton(), Ui.lp(Ui.WRAP, Ui.WRAP))
             ringBox.addView(row, Ui.lp(t = 10))
             return
@@ -722,7 +736,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         else -> tr("Blanc")
     }
 
-    private fun resetRingButton(): View = Ui.button(c, tr("Réinitialiser l'anneau"), Ui.Style.GHOST, height = 52) {
+    private fun resetRingButton(): View = Ui.button(c, tr("Réinitialiser l'anneau"), Ui.Style.GHOST, height = 52, textSize = 16f) {
         a.ringResetAll { ok ->
             a.toast(if (ok) tr("Anneau réinitialisé : blanc, comme à l'origine.") else tr("L'anneau n'a pas répondu (root ?)"), if (ok) Ui.OK else Ui.WARN)
             renderRing()

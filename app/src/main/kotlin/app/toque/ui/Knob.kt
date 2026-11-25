@@ -11,6 +11,7 @@ import android.widget.AbsListView
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ScrollView
+import android.widget.TextView
 import app.toque.core.ui.Box
 import app.toque.core.ui.KnobOrder
 import java.util.WeakHashMap
@@ -66,7 +67,17 @@ object Knob {
 /** Le cadre lumineux posé sur l'élément choisi au bouton rotatif ; ne capte aucun toucher. */
 class FocusRing(c: Context) : View(c) {
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Ui.ACCENT }
-    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Ui.ACCENT_DIM }
+    // Voile translucide (jamais ACCENT_DIM, opaque en clair) : la valeur réglée reste lisible dessous.
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = veil() }
+
+    private fun veil() = (Ui.ACCENT and 0x00FFFFFF) or 0x29000000
+
+    /** Le thème a changé : le cadre prend l'accent du nouveau. */
+    fun restyle() {
+        stroke.color = Ui.ACCENT
+        fill.color = veil()
+        invalidate()
+    }
     private val r = RectF()
     private var radius = 0f
     var showing = false
@@ -122,6 +133,12 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
 
     val ring = FocusRing(a)
     private var focus: Target? = null
+
+    /** Une valeur est en train d'être réglée au bouton (le thème attend la fin). */
+    val adjustingNow: Boolean get() = adjusting != null
+
+    /** Le thème a changé : le cadre prend les couleurs du nouveau (il reste au-dessus de l'interface refaite). */
+    fun restyle() = ring.restyle()
     private var adjusting: Target? = null
     private var lastBox: Box? = null
     /** Le bouton est en train de servir : le cadre suit les changements d'écran. */
@@ -131,6 +148,29 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
     private var pendingTries = 0
     private val loc = IntArray(2)
     private val layerLoc = IntArray(2)
+
+    /**
+     * Version de test (APK débogable) seulement : chaque position du cadre, chaque appui et chaque
+     * réglage vont au journal (étiquette ToqueKnob), pour que le parcours sur émulateur vérifie que
+     * tout ce qui se touche se rejoint aussi à la molette. Rien dans la version publiée.
+     */
+    private val trace = (a.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    private val traceLoc = IntArray(2)
+
+    private fun trace(what: String, v: View) {
+        if (!trace) return
+        v.getLocationOnScreen(traceLoc)
+        val label = (v.contentDescription?.toString()?.takeIf { it.isNotBlank() } ?: firstText(v) ?: v.javaClass.simpleName)
+            .replace('|', '/').replace('\n', ' ').take(60)
+        android.util.Log.i("ToqueKnob", "$what|$label|${traceLoc[0]},${traceLoc[1]},${traceLoc[0] + v.width},${traceLoc[1] + v.height}")
+    }
+
+    private fun firstText(v: View): String? {
+        if (v.visibility != View.VISIBLE) return null
+        if (v is TextView && v.text.isNotBlank()) return v.text.toString()
+        if (v is ViewGroup) for (i in 0 until v.childCount) firstText(v.getChildAt(i))?.let { return it }
+        return null
+    }
 
     init {
         layer.addView(ring, Ui.flp())
@@ -209,9 +249,11 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
         if (adj != null) {
             adjusting = t
             adj.knobBegin()
+            trace("adjust", t.view)
             place()
             return
         }
+        trace("press", t.view)
         click(t)
     }
 
@@ -288,6 +330,7 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
         focus = t
         ensureVisible(t)
         place()
+        trace("focus", t.view)
     }
 
     private fun alive(t: Target): Boolean = t.view.isAttachedToWindow && t.view.isShown

@@ -72,6 +72,8 @@ data class RecipeFilter(
     val favoritesOnly: Boolean = false,
     val source: RecipeSource? = null,
     val maxMinutes: Int = 0,
+    /** Étiquette exigée (« À tester », étiquette d'une recette du foyer) ; vide : toutes. */
+    val tag: String = "",
 )
 
 /**
@@ -171,6 +173,7 @@ class SearchIndex(recipes: List<Recipe>) {
         if (f.favoritesOnly && !e.favorite) return false
         if (f.source != null && e.source != f.source) return false
         if (f.maxMinutes > 0 && (e.totalMinutes <= 0 || e.totalMinutes > f.maxMinutes)) return false
+        if (f.tag.isNotEmpty() && f.tag !in e.tags) return false
         return true
     }
 

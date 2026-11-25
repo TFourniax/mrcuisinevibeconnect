@@ -43,9 +43,14 @@ screen.
   tonight's planned meal; Foyer shows what the robot is doing and tells the phones when a dish is
   ready. A recipe saved from a reel can be watched again on the robot or sent to a phone. The link
   is made once with a 6-digit code and never needs redoing.
-- **Dark interface in Foyer's colours**, designed for the robot's 7" screen and rotary knob, and
-  smooth on its original tablet (1 GB RAM, Android 6): no heavy libraries, downsampled images,
-  recycled views.
+- **Interface in Foyer's colours**, light by day (cream and terracotta) and dark in the evening,
+  automatically (7 am–8 pm) or by choice: the moon at the top of the screen switches. Montserrat
+  bundled. A bottom bar with five sections (Home, Recipes, Cooking, Programs, Scale), a home screen
+  built around one large card (the running programme, the recipe to resume, the meal planned in
+  Foyer), "Good to know" under the bell (new household recipes, menu changes, updates), and the
+  running programme recalled at the bottom of every screen with Pause and Stop. Designed for the
+  robot's 7" screen and rotary knob, and smooth on its original tablet (1 GB RAM, Android 6): no
+  heavy libraries, downsampled images, recycled views.
 - **The rotary knob works everywhere**, like on the stock app: turning moves a highlight from one
   button to the next (lists scroll along), pressing taps it; on a value (time, temperature,
   speed, a program's duration, a setting's choice), a press lets you change it by turning and a
@@ -77,7 +82,9 @@ screen.
   weighing, resume after a power cut. Settings that follow each other with nothing to do in
   between (rinsing, blending at several speeds…) start together with a single tap: the blade goes
   straight from one speed and temperature to the next without stopping.
-- **Manual cooking**, **Knead / Steam / Sauté** programs, **Turbo**, **scale**.
+- **Manual cooking**, **ten programs** (Knead, Steam, Sauté, Simmer, Cook rice, Eggs, Heat water,
+  Blend, Smoothie, Pre-rinse; "Heat water" stops as soon as the water is at temperature),
+  **Turbo**, **scale**. All go through the same safety rules.
 - **Offline**: everything works without a network (no more "server unreachable" at startup).
 - **Always the right time**: the time zone comes from the Internet connection and the time from
   the network (the robot has no clock battery); can be set by hand in *Settings › Date and time*.
@@ -193,7 +200,8 @@ stock app. From Windows, use the original repository's guide.
 - Protocol: [Monsieur Cuisine Developer SDK](https://github.com/antrea/monsieur-cuisine-developer-sdk) (MIT).
 - Robot access: [Monsieur-Cuisine-Connect-Hack](https://github.com/EliasKotlyar/Monsieur-Cuisine-Connect-Hack).
 - MediaTek download mode on macOS: [mtkclient](https://github.com/bkerler/mtkclient) (GPLv3, downloaded by `prepare`, not included; `prepare` applies the macOS serial fixes in `tools/setup/mtkclient-macos-serial.patch`).
-- Dish icons on recipes without a photo (`app/src/main/res/drawable/dish_*.xml`): [Lucide](https://lucide.dev) (ISC, licence in `tools/icons/LUCIDE-LICENSE.txt`), converted by `tools/icons/lucide-to-vector.mjs`.
+- Dish icons on recipes without a photo (`app/src/main/res/drawable/dish_*.xml`): [Lucide](https://lucide.dev) (ISC, licence in `tools/icons/LUCIDE-LICENSE.txt`), converted by `tools/icons/lucide-to-vector.mjs`; the interface icons (`ui/Icon.kt`) reuse their paths.
+- Font: [Montserrat](https://github.com/JulietaUla/Montserrat) (SIL Open Font License 1.1, `app/src/main/assets/fonts/OFL.txt`), subset to Latin characters.
 
 MIT License. This repository contains no Lidl recipes, images or code: each robot downloads the
 recipes itself from monsieur-cuisine.com, for its owner's personal use.

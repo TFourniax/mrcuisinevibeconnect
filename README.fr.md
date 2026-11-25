@@ -33,9 +33,14 @@ l'écran du robot.
 
 ## Ce que fait Toque
 
-- **Interface sombre**, pensée pour l'écran 7" et le bouton rotatif du robot, fluide sur sa
-  tablette d'origine (1 Go de RAM, Android 6) : pas de bibliothèque lourde, images
-  sous-échantillonnées, vues recyclées.
+- **Interface aux couleurs de Foyer**, claire le jour (crème et terre cuite) et sombre le soir,
+  toute seule (7 h–20 h) ou au choix : la lune en haut de l'écran passe de l'une à l'autre. Police
+  Montserrat embarquée. Une barre du bas à cinq sections (Accueil, Recettes, Cuisson, Programmes,
+  Balance), un accueil à une seule grande carte (le programme en cours, la recette à reprendre, le
+  repas prévu dans Foyer), « À savoir » sous la cloche (nouvelles recettes du foyer, menu changé,
+  mise à jour), et le programme en cours rappelé en bas de chaque écran avec Pause et Arrêter.
+  Pensée pour l'écran 7" et le bouton rotatif du robot, fluide sur sa tablette d'origine (1 Go de
+  RAM, Android 6) : pas de bibliothèque lourde, images sous-échantillonnées, vues recyclées.
 - **Le bouton rotatif sert partout**, comme sur l'appli d'origine : tourner déplace un cadre d'un
   bouton à l'autre (les listes défilent avec), appuyer le touche ; sur une valeur (durée,
   température, vitesse, durée d'un programme, choix d'un réglage), un appui permet de la régler en
@@ -69,7 +74,9 @@ l'écran du robot.
   seule, pesée intégrée, reprise après coupure. Les réglages qui se suivent sans geste à faire
   entre eux (rinçage, mixages en plusieurs vitesses…) partent ensemble d'un seul appui : la lame
   passe directement d'une vitesse et d'une température à l'autre, sans s'arrêter.
-- **Cuisson manuelle**, programmes **Pétrir / Vapeur / Rissoler**, **Turbo**, **balance**.
+- **Cuisson manuelle**, **dix programmes** (Pétrir, Vapeur, Rissoler, Mijoter, Cuire du riz, Œufs,
+  Chauffer l'eau, Mixer, Smoothie, Prélaver ; « Chauffer l'eau » s'arrête dès que l'eau est à la
+  température), **Turbo**, **balance**. Tous passent par les mêmes règles de sécurité.
 - **Hors ligne** : tout fonctionne sans réseau (plus de « serveur injoignable » au démarrage).
 - **Heure toujours juste** : le fuseau horaire est trouvé d'après la connexion Internet et l'heure
   vient du réseau (le robot n'a pas de pile d'horloge) ; réglable à la main dans Réglages › Date et heure.
@@ -184,7 +191,8 @@ d'origine.
 - Protocole : [Monsieur Cuisine Developer SDK](https://github.com/antrea/monsieur-cuisine-developer-sdk) (MIT).
 - Accès au robot : [Monsieur-Cuisine-Connect-Hack](https://github.com/EliasKotlyar/Monsieur-Cuisine-Connect-Hack).
 - Mode téléchargement MediaTek sous macOS : [mtkclient](https://github.com/bkerler/mtkclient) (GPLv3, téléchargé par `prepare`, non inclus ; `prepare` applique les corrections pour le pilote série de macOS de `tools/setup/mtkclient-macos-serial.patch`).
-- Icônes des plats sans photo (`app/src/main/res/drawable/dish_*.xml`) : [Lucide](https://lucide.dev) (ISC, licence dans `tools/icons/LUCIDE-LICENSE.txt`), converties par `tools/icons/lucide-to-vector.mjs`.
+- Icônes des plats sans photo (`app/src/main/res/drawable/dish_*.xml`) : [Lucide](https://lucide.dev) (ISC, licence dans `tools/icons/LUCIDE-LICENSE.txt`), converties par `tools/icons/lucide-to-vector.mjs` ; les icônes de l'interface (`ui/Icon.kt`) reprennent leurs tracés.
+- Police : [Montserrat](https://github.com/JulietaUla/Montserrat) (SIL Open Font License 1.1, `app/src/main/assets/fonts/OFL.txt`), réduite aux caractères latins.
 
 Licence MIT. Ce dépôt ne contient aucune recette, image ni code de Lidl : chaque robot télécharge
 lui-même les recettes sur monsieur-cuisine.com, pour l'usage personnel de son propriétaire.

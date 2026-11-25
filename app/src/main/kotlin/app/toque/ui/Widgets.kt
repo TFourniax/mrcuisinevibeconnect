@@ -7,19 +7,24 @@ import android.graphics.RectF
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.toque.core.i18n.tr
 
 /**
- * Carte de réglage : libellé, grande valeur, boutons − / +. Au bouton rotatif, un appui sur la
- * carte entre dans le réglage, tourner fait − / +, un second appui en sort.
+ * Carte de réglage : libellé, grande valeur, ligne d'aide, une jauge facultative ([extra]) et les
+ * boutons − / +. Au bouton rotatif, un appui sur la carte entre dans le réglage, tourner fait
+ * − / +, un second appui en sort.
  */
 class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), KnobAdjustable {
-    private val valueView = Ui.text(c, "", 64f, Ui.TEXT, Ui.LIGHT)
-    private val unitView = Ui.text(c, "", 22f, Ui.TEXT2, Ui.LIGHT)
-    private val subView = Ui.ellipsize(Ui.text(c, "", 16f, Ui.TEXT3))
+    private val valueView = Ui.tabular(Ui.text(c, "", 72f, Ui.TEXT, Ui.LIGHT)).apply { includeFontPadding = false }
+    private val unitView = Ui.text(c, "", 32f, Ui.TEXT, Ui.LIGHT)
+    private val subView = Ui.ellipsize(Ui.text(c, "", 14f, Ui.TEXT2).apply { gravity = Gravity.CENTER })
     private val iconView = Icon(c, icon, Ui.TEXT2)
+    private val labelView = Ui.text(c, label, 15f, Ui.TEXT2, Ui.SEMIBOLD)
+    /** Jauge ou raccourcis propres à la carte (posés sous la valeur). */
+    val extra: FrameLayout = FrameLayout(c)
     private val minus: View
     private val plus: View
     var onMinus: () -> Unit = {}
@@ -32,35 +37,51 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), K
 
     init {
         orientation = VERTICAL
-        setPadding(Ui.u(20), Ui.u(18), Ui.u(20), Ui.u(16))
+        setGravity(Gravity.CENTER_HORIZONTAL)
+        setPadding(Ui.u(18), Ui.u(16), Ui.u(18), Ui.u(18))
         val head = Ui.horizontal(c)
-        head.addView(iconView, LayoutParams(Ui.u(24), Ui.u(24)).apply { rightMargin = Ui.u(8) })
-        head.addView(Ui.text(c, label.uppercase(), 15f, Ui.TEXT2, Ui.MEDIUM).apply { letterSpacing = 0.08f })
-        addView(head)
+        head.addView(iconView, LayoutParams(Ui.u(18), Ui.u(18)).apply { rightMargin = Ui.u(8) })
+        head.addView(labelView)
+        addView(head, Ui.lp(Ui.MATCH, Ui.WRAP))
         val row = Ui.horizontal(c, Gravity.BOTTOM)
         row.addView(valueView)
-        row.addView(unitView, Ui.lp(Ui.WRAP, Ui.WRAP, l = 6, b = 10))
-        addView(row, Ui.lp(t = 10))
-        addView(subView, Ui.lp(t = 2))
+        row.addView(unitView, Ui.lp(Ui.WRAP, Ui.WRAP, l = 4, b = 8))
+        addView(row, Ui.lp(Ui.WRAP, Ui.WRAP, t = 10))
+        addView(subView, Ui.lp(Ui.MATCH, Ui.WRAP, t = 6))
+        addView(extra, Ui.lp(Ui.MATCH, Ui.WRAP, t = 8))
         addView(Ui.spacer(c, h = 0, weight = 1f))
         val buttons = Ui.horizontal(c)
-        minus = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.MINUS, height = 60) { onSelect(); onMinus() }
-        plus = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.PLUS, height = 60) { onSelect(); onPlus() }
+        minus = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.MINUS, height = 56, textSize = 20f) { onSelect(); onMinus() }
+        plus = Ui.button(c, "", Ui.Style.SECONDARY, Icon.Kind.PLUS, height = 56, textSize = 20f) { onSelect(); onPlus() }
+        minus.contentDescription = tr("Moins")
+        plus.contentDescription = tr("Plus")
         repeatOnHold(minus, { repeatEnabled }) { onMinus() }
         repeatOnHold(plus, { repeatEnabled }) { onPlus() }
-        buttons.addView(minus, LayoutParams(0, Ui.u(60), 1f).apply { rightMargin = Ui.u(10) })
-        buttons.addView(plus, LayoutParams(0, Ui.u(60), 1f))
-        addView(buttons, Ui.lp(t = 14))
+        buttons.addView(minus, LayoutParams(Ui.u(68), Ui.u(56)))
+        buttons.addView(Ui.spacer(c, weight = 1f), LayoutParams(0, 1, 1f))
+        buttons.addView(plus, LayoutParams(Ui.u(68), Ui.u(56)))
+        addView(buttons, Ui.lp(Ui.MATCH, Ui.WRAP, t = 10))
         isClickable = true
         setOnClickListener { onSelect() }
         refreshBg()
     }
 
+    /**
+     * Carte serrée (la barre « en cours » d'un autre programme prend la hauteur) : la valeur et
+     * ses − et + restent, la jauge ou les raccourcis et la ligne d'aide s'effacent.
+     */
+    fun compact(on: Boolean) {
+        val v = if (on) View.GONE else View.VISIBLE
+        if (extra.visibility != v) extra.visibility = v
+        if (subView.visibility != v) subView.visibility = v
+    }
+
     fun set(value: String, unit: String = "", sub: String = "", color: Int = Ui.TEXT) {
-        valueView.text = value
+        valueView.shown = value
         valueView.setTextColor(color)
-        unitView.text = unit
-        subView.text = sub
+        unitView.shown = unit
+        unitView.setTextColor(color)
+        subView.shown = sub
     }
 
     fun select(sel: Boolean) {
@@ -85,8 +106,10 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), K
     }
 
     private fun refreshBg() {
-        background = Ui.round(Ui.SURFACE, 26f, if (isSel) Ui.ACCENT else Ui.STROKE, if (isSel) 2.5f else 1f)
+        background = Ui.round(Ui.SURFACE, 24f, if (isSel) Ui.ACCENT else Ui.STROKE, if (isSel) 2.5f else 1f)
+        Ui.lift(this)
         iconView.color = if (isSel) Ui.ACCENT else Ui.TEXT2
+        labelView.setTextColor(if (isSel) Ui.ACCENT else Ui.TEXT2)
     }
 
     companion object {
@@ -119,98 +142,117 @@ class ValueCard(c: Context, label: String, icon: Icon.Kind) : LinearLayout(c), K
     }
 }
 
-/** Anneau de température : valeur mesurée au centre, arc proportionnel, repère de consigne. */
-class TempRing(c: Context) : View(c) {
-    var actual = 0
-    var target = 0
-    var rpmLevel = 0
-    private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
+/** Jauge de température : un dégradé du froid au chaud, et un repère sur la consigne (0 : sans chauffe). */
+class TempGauge(c: Context) : View(c) {
+    /** Position du repère, de 0 (sans chauffe) à 1 (130 °C). */
+    var position = 0f
+        set(v) {
+            field = v.coerceIn(0f, 1f)
+            invalidate()
+        }
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val r = RectF()
 
-    fun set(actual: Int, target: Int, rpmLevel: Int) {
-        if (actual == this.actual && target == this.target && rpmLevel == this.rpmLevel) return
-        this.actual = actual
-        this.target = target
-        this.rpmLevel = rpmLevel
+    override fun onDraw(canvas: Canvas) {
+        val bar = Ui.uf(10f)
+        val knob = Ui.uf(12f)
+        val cy = height / 2f
+        r.set(knob, cy - bar / 2, width - knob, cy + bar / 2)
+        paint.shader = android.graphics.LinearGradient(r.left, 0f, r.right, 0f,
+            intArrayOf(Ui.COOL, Ui.WARN, Ui.ACCENT, Ui.DANGER), floatArrayOf(0f, 0.45f, 0.75f, 1f), android.graphics.Shader.TileMode.CLAMP)
+        canvas.drawRoundRect(r, bar / 2, bar / 2, paint)
+        paint.shader = null
+        val x = r.left + (r.right - r.left) * position
+        paint.color = Ui.SURFACE
+        canvas.drawCircle(x, cy, knob, paint)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = Ui.uf(3f)
+        paint.color = if (position > 0f) Ui.ACCENT else Ui.TEXT3
+        canvas.drawCircle(x, cy, knob - Ui.uf(1.5f), paint)
+        paint.style = Paint.Style.FILL
+    }
+}
+
+/** Les dix vitesses en barres montantes : remplies jusqu'à la vitesse, pâles au-delà de la limite permise. */
+class SpeedBars(c: Context) : View(c) {
+    private var speed = 0
+    private var max = 10
+    /** Vitesse réelle du moteur pendant une cuisson (-1 : à l'arrêt, seule la consigne compte). */
+    private var actual = -1
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val r = RectF()
+
+    fun set(speed: Int, max: Int) {
+        if (speed == this.speed && max == this.max) return
+        this.speed = speed
+        this.max = max
+        invalidate()
+    }
+
+    /** En marche : les barres pleines suivent le moteur, la consigne pas encore atteinte reste pâle. */
+    fun setActual(level: Int) {
+        if (level == actual) return
+        actual = level
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
-        val size = minOf(width, height).toFloat()
-        val sw = size * 0.07f
-        val cx = width / 2f
-        val cy = height / 2f
-        val rad = size / 2f - sw
-        r.set(cx - rad, cy - rad, cx + rad, cy + rad)
-        arc.strokeWidth = sw
-        arc.color = Ui.SURFACE3
-        canvas.drawArc(r, 135f, 270f, false, arc)
-        val frac = (actual / 130f).coerceIn(0f, 1f)
-        arc.color = Ui.tempColor(actual)
-        if (frac > 0f) canvas.drawArc(r, 135f, 270f * frac, false, arc)
-        if (target > 0) {
-            val a = Math.toRadians((135 + 270 * (target / 130f).coerceIn(0f, 1f)).toDouble())
-            arc.strokeWidth = sw * 0.35f
-            arc.color = Ui.TEXT
-            val r1 = rad - sw * 0.9f
-            val r2 = rad + sw * 0.9f
-            canvas.drawLine(cx + (r1 * Math.cos(a)).toFloat(), cy + (r1 * Math.sin(a)).toFloat(),
-                cx + (r2 * Math.cos(a)).toFloat(), cy + (r2 * Math.sin(a)).toFloat(), arc)
-        }
-        text.typeface = Ui.THIN
-        text.color = Ui.TEXT
-        text.textSize = size * 0.30f
-        canvas.drawText("$actual°", cx + size * 0.03f, cy + size * 0.08f, text)
-        text.typeface = Ui.REGULAR
-        text.color = Ui.TEXT2
-        text.textSize = size * 0.075f
-        canvas.drawText(if (target > 0) tr("consigne %d °C", target) else tr("mesuré"), cx, cy + size * 0.22f, text)
-        // barres de vitesse réelle
-        val bw = size * 0.035f
-        val gap = size * 0.018f
-        val total = 10 * bw + 9 * gap
-        var x = cx - total / 2
-        val base = cy + size * 0.40f
+        val gap = Ui.uf(5f)
+        val w = (width - 9 * gap) / 10f
         for (i in 1..10) {
-            arc.style = Paint.Style.FILL
-            arc.color = if (i <= rpmLevel) Ui.COOL else Ui.SURFACE3
-            val h = size * (0.03f + 0.006f * i)
-            r.set(x, base - h, x + bw, base)
-            canvas.drawRoundRect(r, bw / 3, bw / 3, arc)
-            x += bw + gap
+            val h = height * (0.3f + 0.07f * (i - 1))
+            val x = (i - 1) * (w + gap)
+            r.set(x, height - h, x + w, height.toFloat())
+            // Consigne pas encore atteinte : l'accent à moitié transparent (même rendu dans les deux thèmes).
+            val pending = actual >= 0 && i > actual && i <= speed
+            paint.color = if (i <= speed) Ui.ACCENT else Ui.SURFACE3
+            paint.alpha = when {
+                pending -> 90
+                i > max -> 110
+                else -> 255
+            }
+            canvas.drawRoundRect(r, Ui.uf(3f), Ui.uf(3f), paint)
         }
-        arc.style = Paint.Style.STROKE
+        paint.alpha = 255
     }
 }
 
-/** Bouton « maintenir pour Turbo ». */
+/** Bouton « maintenir pour Turbo » : bordé au repos, ambre tant qu'on appuie. */
 class HoldButton(c: Context, label: String, private val onDown: () -> Unit, private val onUp: () -> Unit) : LinearLayout(c) {
     private val text: TextView
+    private val icon: Icon
 
     init {
         orientation = HORIZONTAL
         setGravity(Gravity.CENTER)
-        setPadding(Ui.u(22), 0, Ui.u(22), 0)
-        minimumHeight = Ui.u(64)
-        background = Ui.round(Ui.SURFACE3, 32f)
-        addView(Icon(c, Icon.Kind.BOLT, Ui.WARN), LayoutParams(Ui.u(26), Ui.u(26)).apply { rightMargin = Ui.u(10) })
-        text = Ui.text(c, label, 20f, Ui.TEXT, Ui.MEDIUM)
+        setPadding(Ui.u(20), 0, Ui.u(20), 0)
+        minimumHeight = Ui.u(48)
+        icon = Icon(c, Icon.Kind.BOLT, Ui.WARN)
+        addView(icon, LayoutParams(Ui.u(20), Ui.u(20)).apply { rightMargin = Ui.u(8) })
+        text = Ui.fitWords(Ui.text(c, label, 16f, Ui.TEXT, Ui.MEDIUM), 12f)
         addView(text)
         isClickable = true
+        rest()
+    }
+
+    private fun rest() {
+        background = Ui.round(Ui.SURFACE, 30f, Ui.STROKE, 1.5f)
+        text.setTextColor(Ui.TEXT)
+        icon.color = Ui.WARN
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (!isEnabled) return false
         when (e.action) {
             MotionEvent.ACTION_DOWN -> {
-                background = Ui.round(Ui.WARN, 32f)
-                text.setTextColor(0xFF1A1405.toInt())
+                background = Ui.round(Ui.WARN, 30f)
+                val on = if (Ui.isDark) 0xFF1A1405.toInt() else android.graphics.Color.WHITE
+                text.setTextColor(on)
+                icon.color = on
                 onDown()
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                background = Ui.round(Ui.SURFACE3, 32f)
-                text.setTextColor(Ui.TEXT)
+                rest()
                 onUp()
             }
         }

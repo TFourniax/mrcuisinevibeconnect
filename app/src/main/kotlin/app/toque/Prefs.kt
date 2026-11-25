@@ -288,6 +288,27 @@ class Prefs(context: Context) {
             p.edit().putString("screensaver", v).commit()
         }
 
+    /** Statut des agents : dernière liste reçue de Foyer (JSON d'Agents.encode). */
+    var agentsCache: String
+        get() = p.getString("agentsCache", "") ?: ""
+        set(v) {
+            p.edit().putString("agentsCache", v).commit()
+        }
+
+    /** Dernière réponse de Foyer pour les agents (ms). */
+    var agentsLastOkMs: Long
+        get() = p.getLong("agentsLastOkMs", 0L)
+        set(v) {
+            p.edit().putLong("agentsLastOkMs", v).apply()
+        }
+
+    /** Dernière ouverture de la carte des agents (ms) : un « terminé » vu ne colore plus l'icône. */
+    var agentsSeenMs: Long
+        get() = p.getLong("agentsSeenMs", 0L)
+        set(v) {
+            p.edit().putLong("agentsSeenMs", v).commit()
+        }
+
     /** Voyant de /sys/class/leds désigné comme l'anneau du bouton rotatif ("" : pas encore trouvé). */
     var ringLed: String
         get() = p.getString("ringLed", "") ?: ""
@@ -342,5 +363,65 @@ class Prefs(context: Context) {
         get() = p.getString("updateAvailable", "") ?: ""
         set(v) {
             p.edit().putString("updateAvailable", v).commit()
+        }
+
+    // ------------------------------------------------------------------ apparence (1.0.12)
+
+    /** Thème : « auto » (clair de 7 h à 20 h, sombre ensuite), « light » ou « dark ». */
+    var themeMode: String
+        get() = p.getString("themeMode", "auto") ?: "auto"
+        set(v) {
+            p.edit().putString("themeMode", v).commit()
+        }
+
+    /** Choix fait à la lune ou au soleil en automatique : « dark », « light » ou "" (aucun). */
+    var themeOverride: String
+        get() = p.getString("themeOverride", "") ?: ""
+        set(v) {
+            p.edit().putString("themeOverride", v).commit()
+        }
+
+    /** Jusqu'à quand le choix fait à la lune tient (heure murale, ms). */
+    var themeOverrideUntil: Long
+        get() = p.getLong("themeOverrideUntil", 0)
+        set(v) {
+            p.edit().putLong("themeOverrideUntil", v).commit()
+        }
+
+    // ------------------------------------------------------------------ « À savoir » (1.0.12)
+
+    /** Évènements signalés sous la cloche (JSON, NoticeLog). */
+    var noticeLog: String
+        get() = p.getString("noticeLog", "") ?: ""
+        set(v) {
+            p.edit().putString("noticeLog", v).commit()
+        }
+
+    /** Clés des messages d'état déjà vus (mise à jour proposée…), séparées par des retours à la ligne. */
+    var noticeRead: String
+        get() = p.getString("noticeRead", "") ?: ""
+        set(v) {
+            p.edit().putString("noticeRead", v).commit()
+        }
+
+    /** Recettes du foyer déjà connues (identifiants, un par ligne) : les autres sont « nouvelles ». */
+    var noticeRecipes: String
+        get() = p.getString("noticeRecipes", "") ?: ""
+        set(v) {
+            p.edit().putString("noticeRecipes", v).commit()
+        }
+
+    /** Repas prévus déjà vus (même format que foyerPlans). */
+    var noticePlans: String
+        get() = p.getString("noticePlans", "") ?: ""
+        set(v) {
+            p.edit().putString("noticePlans", v).commit()
+        }
+
+    /** Nombre d'animations de l'écran de veille déjà vues. */
+    var noticeSaverItems: Int
+        get() = p.getInt("noticeSaverItems", -1)
+        set(v) {
+            p.edit().putInt("noticeSaverItems", v).commit()
         }
 }

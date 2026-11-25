@@ -10,11 +10,14 @@ import app.toque.core.machine.Snapshot
 import app.toque.ui.Icon
 import app.toque.ui.MainActivity
 import app.toque.ui.Screen
+import app.toque.ui.Section
 import app.toque.ui.Ui
+import app.toque.ui.shown
 
 /** Balance intégrée : grand affichage, tare au doigt ou par appui sur le bouton rotatif. */
 class ScaleScreen(a: MainActivity) : Screen(a) {
     override val title = tr("Balance")
+    override val section: Section get() = Section.SCALE
     private lateinit var value: TextView
     private lateinit var state: LinearLayout
     private var simulated = 0
@@ -25,7 +28,7 @@ class ScaleScreen(a: MainActivity) : Screen(a) {
         root.setPadding(Ui.u(24), Ui.u(10), Ui.u(24), Ui.u(24))
         root.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
         val row = Ui.horizontal(c, Gravity.BOTTOM)
-        value = Ui.text(c, "—", 200f, Ui.TEXT, Ui.THIN)
+        value = Ui.tabular(Ui.text(c, "—", 190f, Ui.TEXT, Ui.THIN))
         row.addView(value)
         row.addView(Ui.text(c, "g", 60f, Ui.TEXT2, Ui.THIN), Ui.lp(Ui.WRAP, Ui.WRAP, l = 12, b = 34))
         root.addView(row, Ui.lp(Ui.WRAP, Ui.WRAP))
@@ -33,7 +36,7 @@ class ScaleScreen(a: MainActivity) : Screen(a) {
         root.addView(state, Ui.lp(Ui.WRAP, Ui.WRAP, t = 6))
         root.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
         val buttons = Ui.horizontal(c, Gravity.CENTER)
-        val tare = Ui.button(c, tr("Tare (remise à zéro)"), Ui.Style.PRIMARY, Icon.Kind.SCALE, height = 76, textSize = 23f) {
+        val tare = Ui.button(c, tr("Tare (remise à zéro)"), Ui.Style.PRIMARY, Icon.Kind.SCALE, height = 68, textSize = 21f) {
             a.machine.tare()
         }
         tareBtn = tare
@@ -57,17 +60,17 @@ class ScaleScreen(a: MainActivity) : Screen(a) {
 
     override fun onSnapshot(s: Snapshot) {
         if (!s.hasSample) {
-            value.text = "—"
-            Ui.chipText(state).text = tr("Base non connectée")
+            value.shown = "—"
+            Ui.chipText(state).shown = tr("Base non connectée")
             return
         }
-        value.text = s.weightG.toString()
+        value.shown = s.weightG.toString()
         val (txt, col) = when {
             s.scaleState == "overload" -> tr("Surcharge") to Ui.DANGER
             s.scaleStable -> tr("Stable") to Ui.OK
             else -> tr("Mesure…") to Ui.TEXT2
         }
-        Ui.chipText(state).text = txt
+        Ui.chipText(state).shown = txt
         Ui.chipText(state).setTextColor(col)
         (state.getChildAt(0) as Icon).color = col
     }

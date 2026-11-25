@@ -476,6 +476,17 @@ class MachineController(
         }
     }
 
+    /**
+     * « Chauffer l'eau » : la température voulue est atteinte, d'après un échantillon frais de la
+     * base (et après quelques secondes de marche, le temps que la sonde suive).
+     */
+    private fun reachedTemperature(j: ActiveJob, now: Long): Boolean {
+        val until = j.spec.untilTempC
+        if (until <= 0 || j.totalElapsed < 3_000) return false
+        val t = latest ?: return false
+        return fresh(now) && t.actualTemperature >= until
+    }
+
     private fun barrierMet(b: Barrier, now: Long): Boolean {
         val t = latest ?: return false
         return seq > b.afterSeq && fresh(now) && t.motorStopped
@@ -513,7 +524,7 @@ class MachineController(
                 } else {
                     j.phaseElapsed += dt
                 }
-                if (j.totalElapsed >= j.spec.totalMs) {
+                if (j.totalElapsed >= j.spec.totalMs || reachedTemperature(j, now)) {
                     j.state = JobState.STOPPING
                     j.barrier = Barrier(seq, now)
                     return

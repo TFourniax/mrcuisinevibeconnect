@@ -24,7 +24,9 @@ import app.toque.ui.MainActivity
 import app.toque.ui.PhoneLink
 import app.toque.ui.ProgressLine
 import app.toque.ui.Screen
+import app.toque.ui.StepSegments
 import app.toque.ui.Ui
+import app.toque.ui.shown
 
 /**
  * Cuisine pas à pas. Chaque étape « machine » se lance d'un appui ; à la fin du programme,
@@ -37,7 +39,11 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     override val recipeId: String get() = recipe.id
     // La vidéo se met à la place du texte de l'étape : le panneau machine et les boutons du bas restent libres.
     override val videoSide: Int get() = Gravity.START
-    override val videoBottomSpace: Int get() = 96
+    // Le panneau s'arrête au-dessus de « Revoir la vidéo / Voir sur le téléphone » et des boutons
+    // d'étape (136 px de bas de colonne) : on peut envoyer la recette au téléphone pendant la vidéo.
+    override val videoBottomSpace: Int get() = 136
+    /** Cuisine pas à pas : plein écran, sans barre du bas (comme le mode magasin de Foyer). */
+    override val fullScreen: Boolean get() = true
     private var index = startStep.coerceIn(0, maxOf(0, recipe.steps.size - 1))
     private val reviewed = HashSet<Int>()
     private val done = HashSet<Int>()
@@ -51,7 +57,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     /** Message fixe de l'étape (vérification, refus), réaffiché hors cuisson. */
     private var panelInfo = ""
 
-    private lateinit var segments: LinearLayout
+    private lateinit var segments: StepSegments
     private lateinit var counter: TextView
     private lateinit var text: TextView
     private lateinit var weighBox: LinearLayout
@@ -65,55 +71,63 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
 
     override fun build(): View {
         val root = Ui.vertical(c)
-        root.setPadding(Ui.u(24), Ui.u(4), Ui.u(24), Ui.u(18))
-        segments = Ui.horizontal(c)
-        root.addView(segments, Ui.lp(Ui.MATCH, Ui.u(6), b = 14))
+        root.setPadding(Ui.u(28), Ui.u(2), Ui.u(24), Ui.u(14))
+        segments = StepSegments(c)
+        root.addView(segments, Ui.lp(Ui.MATCH, Ui.u(6), b = 16))
 
         val body = Ui.horizontal(c, Gravity.TOP)
         val left = Ui.vertical(c)
-        counter = Ui.text(c, "", 17f, Ui.TEXT2, Ui.MEDIUM).apply { letterSpacing = 0.06f }
+        counter = Ui.overline(c, "", Ui.ACCENT, 14f)
         left.addView(counter)
-        text = Ui.text(c, "", 31f, Ui.TEXT, Ui.LIGHT).apply { setLineSpacing(0f, 1.18f) }
-        left.addView(Ui.scroll(c, text), LinearLayout.LayoutParams(Ui.MATCH, 0, 1f).apply { topMargin = Ui.u(12) })
+        text = Ui.text(c, "", 28f, Ui.TEXT, Ui.MEDIUM).apply { setLineSpacing(0f, 1.25f); letterSpacing = -0.01f }
+        left.addView(Ui.scroll(c, text), LinearLayout.LayoutParams(Ui.MATCH, 0, 1f).apply { topMargin = Ui.u(10) })
 
-        weighBox = Ui.vertical(c)
-        weighBox.background = Ui.round(Ui.SURFACE, 22f)
-        weighBox.setPadding(Ui.u(20), Ui.u(14), Ui.u(16), Ui.u(14))
-        val wRow = Ui.horizontal(c)
-        wRow.addView(Icon(c, Icon.Kind.SCALE, Ui.COOL), LinearLayout.LayoutParams(Ui.u(28), Ui.u(28)).apply { rightMargin = Ui.u(12) })
-        weighLabel = Ui.ellipsize(Ui.text(c, "", 19f, Ui.TEXT, Ui.MEDIUM))
+        weighBox = Ui.horizontal(c)
+        weighBox.background = Ui.cardBg(20f)
+        Ui.lift(weighBox)
+        weighBox.setPadding(Ui.u(16), Ui.u(14), Ui.u(14), Ui.u(14))
+        weighBox.addView(Ui.iconCircle(c, Icon.Kind.SCALE, 46, 22), LinearLayout.LayoutParams(Ui.u(46), Ui.u(46)).apply { rightMargin = Ui.u(14) })
+        val wCol = Ui.vertical(c)
+        val wRow = Ui.horizontal(c, Gravity.BOTTOM)
+        weighLabel = Ui.ellipsize(Ui.text(c, "", 17f, Ui.TEXT, Ui.SEMIBOLD))
         wRow.addView(weighLabel, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
-        weighValue = Ui.text(c, "", 30f, Ui.TEXT, Ui.LIGHT)
-        wRow.addView(weighValue, Ui.lp(Ui.WRAP, Ui.WRAP, r = 14))
-        wRow.addView(Ui.button(c, tr("Tare"), Ui.Style.SECONDARY, height = 52) { a.machine.tare() })
-        weighBox.addView(wRow)
-        weighBar = ProgressLine(c).apply { color = Ui.COOL }
-        weighBox.addView(weighBar, Ui.lp(Ui.MATCH, Ui.u(8), t = 10))
-        left.addView(weighBox, Ui.lp(t = 12))
-        body.addView(left, LinearLayout.LayoutParams(0, Ui.MATCH, 1f).apply { rightMargin = Ui.u(22) })
+        weighValue = Ui.tabular(Ui.text(c, "", 30f, Ui.TEXT, Ui.LIGHT))
+        wRow.addView(weighValue, Ui.lp(Ui.WRAP, Ui.WRAP, l = 10))
+        wCol.addView(wRow)
+        weighBar = ProgressLine(c).apply { color = Ui.ACCENT }
+        wCol.addView(weighBar, Ui.lp(Ui.MATCH, Ui.u(8), t = 10))
+        weighBox.addView(wCol, LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        weighBox.addView(Ui.button(c, tr("Tarer"), Ui.Style.SECONDARY, height = 48, textSize = 16f) { a.machine.tare() }, Ui.lp(Ui.WRAP, Ui.WRAP, l = 14))
+        left.addView(weighBox, Ui.lp(t = 14))
 
-        panel = Ui.vertical(c)
-        panel.background = Ui.round(Ui.SURFACE, 26f)
-        panel.setPadding(Ui.u(22), Ui.u(20), Ui.u(22), Ui.u(20))
-        body.addView(panel, LinearLayout.LayoutParams(Ui.u(340), Ui.MATCH))
-        root.addView(body, LinearLayout.LayoutParams(Ui.MATCH, 0, 1f))
-
-        val nav = Ui.horizontal(c)
-        prevBtn = Ui.button(c, tr("Précédent"), Ui.Style.GHOST, Icon.Kind.BACK, height = 64) { go(index - 1) }
-        nav.addView(prevBtn)
+        // La vidéo d'origine (un réel) : la revoir ici, ou sur un téléphone.
+        val extras = Ui.horizontal(c)
         if (recipe.video.isNotEmpty()) {
-            nav.addView(Ui.button(c, tr("Revoir la vidéo"), Ui.Style.GHOST, Icon.Kind.PLAY, height = 64) { a.openVideo(recipe) },
-                Ui.lp(Ui.WRAP, Ui.WRAP, l = 12))
+            extras.addView(Ui.button(c, tr("Revoir la vidéo"), Ui.Style.GHOST, Icon.Kind.VIDEO, height = 48, textSize = 15f) { a.openVideo(recipe) },
+                Ui.lp(Ui.WRAP, Ui.WRAP, r = 10))
         }
         if (PhoneLink.available(a, recipe)) {
-            nav.addView(Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.LINK, height = 64) { b -> PhoneLink.send(a, recipe, b) },
-                Ui.lp(Ui.WRAP, Ui.WRAP, l = 12))
+            extras.addView(Ui.button(c, tr("Voir sur le téléphone"), Ui.Style.GHOST, Icon.Kind.PHONE, height = 48, textSize = 15f) { b -> PhoneLink.send(a, recipe, b) })
         }
+        if (extras.childCount > 0) left.addView(extras, Ui.lp(t = 12))
+
+        val nav = Ui.horizontal(c)
+        prevBtn = Ui.button(c, tr("Précédente"), Ui.Style.GHOST, Icon.Kind.BACK, height = 60, textSize = 17f) { go(index - 1) }
+        nav.addView(prevBtn)
         nav.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(0, 1, 1f))
-        nextBtn = Ui.button(c, tr("Suivant"), Ui.Style.SECONDARY, Icon.Kind.CHEVRON, height = 64) { next() }
-        nextLabel = nextBtn.getChildAt(1) as TextView
+        nextBtn = Ui.button(c, tr("Suivante"), Ui.Style.SECONDARY, height = 60, textSize = 17f) { next() }
+        nextBtn.addView(Icon(c, Icon.Kind.CHEVRON, Ui.TEXT), LinearLayout.LayoutParams(Ui.u(22), Ui.u(22)).apply { leftMargin = Ui.u(6) })
+        nextLabel = nextBtn.getChildAt(0) as TextView
         nav.addView(nextBtn)
-        root.addView(nav, Ui.lp(t = 14))
+        left.addView(nav, Ui.lp(t = 14))
+        body.addView(left, LinearLayout.LayoutParams(0, Ui.MATCH, 1f).apply { rightMargin = Ui.u(28) })
+
+        panel = Ui.vertical(c)
+        panel.background = Ui.cardBg(24f)
+        Ui.lift(panel)
+        panel.setPadding(Ui.u(22), Ui.u(18), Ui.u(22), Ui.u(18))
+        body.addView(panel, LinearLayout.LayoutParams(Ui.u(372), Ui.MATCH))
+        root.addView(body, LinearLayout.LayoutParams(Ui.MATCH, 0, 1f))
         render()
         return root
     }
@@ -145,12 +159,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     private fun render() {
         Foyer.of(a.app).guided(recipe, index)
         val n = recipe.steps.size
-        segments.removeAllViews()
-        for (i in 0 until n) {
-            val v = View(c)
-            v.background = Ui.round(if (i < index) Ui.ACCENT else if (i == index) Ui.TEXT else Ui.SURFACE3, 4f)
-            segments.addView(v, LinearLayout.LayoutParams(0, Ui.MATCH, 1f).apply { if (i < n - 1) rightMargin = Ui.u(6) })
-        }
+        segments.set(n, index)
         if (n == 0) {
             counter.text = ""
             text.text = tr("Cette recette ne contient pas d'étapes.")
@@ -165,7 +174,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         weighBox.visibility = if (w != null) View.VISIBLE else View.GONE
         if (w != null) weighLabel.text = tr("Pèse %d g", w.grams) + if (w.label.isNotBlank()) " · ${w.label}" else ""
         Ui.setButtonEnabled(prevBtn, index > 0)
-        nextLabel.text = if (index == n - 1) tr("Terminer") else tr("Suivant")
+        nextLabel.text = if (index == n - 1) tr("Terminer") else tr("Suivante")
         buildPanel()
         onSnapshot(a.snapshot)
     }
@@ -185,16 +194,14 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         val m = recipe.steps[index].machine
         if (m == null) {
             val box = Ui.vertical(c, Gravity.CENTER)
-            box.addView(Icon(c, Icon.Kind.CHECK, Ui.TEXT3), LinearLayout.LayoutParams(Ui.u(48), Ui.u(48)))
-            box.addView(Ui.text(c, tr("Pas de réglage machine pour cette étape"), 18f, Ui.TEXT2).apply { gravity = Gravity.CENTER }, Ui.lp(t = 12))
+            box.addView(Ui.iconCircle(c, Icon.Kind.CHECK, 64, 30, Ui.SURFACE3, Ui.TEXT2), LinearLayout.LayoutParams(Ui.u(64), Ui.u(64)))
+            box.addView(Ui.text(c, tr("Pas de réglage machine pour cette étape"), 17f, Ui.TEXT2).apply { gravity = Gravity.CENTER }, Ui.lp(t = 14))
             panel.addView(box, LinearLayout.LayoutParams(Ui.MATCH, 0, 1f))
-            startBtn = Ui.button(c, tr("Étape suivante"), Ui.Style.SECONDARY, Icon.Kind.CHEVRON, height = 70) { next() }
+            startBtn = Ui.button(c, tr("Étape suivante"), Ui.Style.SECONDARY, Icon.Kind.CHEVRON, height = 64, textSize = 18f) { next() }
             panel.addView(startBtn)
             return
         }
         val head = Ui.horizontal(c)
-        val badge = FrameLayout(c)
-        badge.background = Ui.round(Ui.ACCENT_DIM, 24f)
         val kindIcon = when (m.program) {
             StepProgram.KNEAD -> Icon.Kind.KNEAD
             StepProgram.STEAM -> Icon.Kind.STEAM
@@ -202,24 +209,27 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             StepProgram.TURBO -> Icon.Kind.BOLT
             StepProgram.MANUAL -> Icon.Kind.POT
         }
-        badge.addView(Icon(c, kindIcon, Ui.ACCENT), Ui.flp(Ui.u(28), Ui.u(28), Gravity.CENTER))
-        head.addView(badge, LinearLayout.LayoutParams(Ui.u(48), Ui.u(48)).apply { rightMargin = Ui.u(12) })
-        head.addView(Ui.text(c, when (m.program) {
+        head.addView(Ui.iconCircle(c, kindIcon, 40, 20), LinearLayout.LayoutParams(Ui.u(40), Ui.u(40)).apply { rightMargin = Ui.u(12) })
+        head.addView(Ui.overline(c, when (m.program) {
             StepProgram.MANUAL -> tr("Réglage machine")
             StepProgram.KNEAD -> JobKind.KNEAD.label
             StepProgram.STEAM -> JobKind.STEAM.label
             StepProgram.TOAST -> JobKind.TOAST.label
             StepProgram.TURBO -> JobKind.TURBO.label
-        }, 22f, Ui.TEXT, Ui.MEDIUM))
+        }), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         panel.addView(head)
 
         val grid = Ui.vertical(c)
         fun line(icon: Icon.Kind, label: String, value: String, color: Int = Ui.TEXT) {
+            if (grid.childCount > 0) grid.addView(Ui.divider(c))
             val r = Ui.horizontal(c)
-            r.addView(Icon(c, icon, Ui.TEXT2), LinearLayout.LayoutParams(Ui.u(22), Ui.u(22)).apply { rightMargin = Ui.u(10) })
-            r.addView(Ui.text(c, label, 17f, Ui.TEXT2), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
-            r.addView(Ui.text(c, value, 24f, color, Ui.LIGHT))
-            grid.addView(r, Ui.lp(t = 10))
+            // Lignes et compte à rebours mesurés pour que « Ajuster à la main » reste entier quand la
+            // barre « en cours » prend sa place en bas, pendant la cuisson.
+            r.minimumHeight = Ui.u(46)
+            r.addView(Icon(c, icon, Ui.TEXT2), LinearLayout.LayoutParams(Ui.u(20), Ui.u(20)).apply { rightMargin = Ui.u(12) })
+            r.addView(Ui.text(c, label, 16f, Ui.TEXT2), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+            r.addView(Ui.tabular(Ui.text(c, value, 24f, color, Ui.SEMIBOLD)))
+            grid.addView(r, Ui.lp(Ui.MATCH, Ui.WRAP))
         }
         if (m.program == StepProgram.TURBO) {
             line(Icon.Kind.BOLT, tr("Impulsions"), if (m.pulses > 0) "× ${m.pulses}" else tr("au besoin"))
@@ -229,26 +239,33 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
                 line(Icon.Kind.THERMO, tr("Température"), if (m.tempC > 0) "${Mcc.celsiusForLevel(m.temperatureLevel)} °C" else "—",
                     if (m.tempC > 0) Ui.tempColor(m.tempC) else Ui.TEXT2)
                 line(Icon.Kind.SPEED, tr("Vitesse"), "${m.speed}")
-                if (m.reverse) line(Icon.Kind.REVERSE, tr("Sens"), tr("Inverse"), Ui.COOL)
-                if (m.accessory == Accessory.WHISK) line(Icon.Kind.WHISK, tr("Accessoire"), Accessory.WHISK.label, Ui.WARN)
             }
         }
         panel.addView(grid, Ui.lp(t = 6))
+        if (m.program == StepProgram.MANUAL && (m.reverse || m.accessory == Accessory.WHISK)) {
+            val chips = Ui.horizontal(c)
+            if (m.reverse) chips.addView(Ui.chip(c, tr("Sens inverse"), Icon.Kind.REVERSE, Ui.COOL, size = 14f), Ui.lp(Ui.WRAP, Ui.WRAP, r = 8))
+            if (m.accessory == Accessory.WHISK) chips.addView(Ui.chip(c, Accessory.WHISK.label, Icon.Kind.WHISK, Ui.WARN, Ui.WARN_DIM, 14f))
+            panel.addView(chips, Ui.lp(t = 8))
+        }
         val chained = if (a.prefs.chainSteps) chainLength(index) else 0
         if (chained > 0) {
             val next = (index + 1..index + chained).map { recipe.steps[it].machine!!.summary }
             val list = next.take(4).joinToString("\n") { "• $it" } +
                 if (next.size > 4) "\n" + tr("… et %d autres", next.size - 4) else ""
-            panel.addView(Ui.text(c, tr("Puis, enchaînés automatiquement :") + "\n" + list, 15f, Ui.TEXT2)
-                .apply { setLineSpacing(0f, 1.1f) }, Ui.lp(t = 10))
+            val row = Ui.horizontal(c, Gravity.TOP)
+            row.addView(Icon(c, Icon.Kind.CHAIN, Ui.TEXT2), LinearLayout.LayoutParams(Ui.u(16), Ui.u(16)).apply { rightMargin = Ui.u(8); topMargin = Ui.u(1) })
+            row.addView(Ui.ellipsize(Ui.text(c, tr("Puis, enchaînés automatiquement :") + "\n" + list, 14f, Ui.TEXT2)
+                .apply { setLineSpacing(0f, 1.15f) }, 5), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+            panel.addView(row, Ui.lp(t = 10))
         }
-        bigTime = Ui.text(c, "", 78f, Ui.TEXT, Ui.THIN).apply {
-            fontFeatureSettings = "tnum"
+        bigTime = Ui.tabular(Ui.text(c, "", 56f, Ui.TEXT, Ui.THIN)).apply {
+            gravity = Gravity.CENTER
             visibility = View.GONE
         }
-        panel.addView(bigTime, Ui.lp(t = 8))
-        panelState = Ui.text(c, "", 16f, Ui.WARN).apply { setLineSpacing(0f, 1.1f) }
-        panel.addView(panelState, Ui.lp(t = 12))
+        panel.addView(bigTime, Ui.lp(Ui.MATCH, Ui.WRAP, t = 6))
+        panelState = Ui.text(c, "", 15f, Ui.WARN, Ui.MEDIUM).apply { setLineSpacing(0f, 1.15f) }
+        panel.addView(panelState, Ui.lp(t = 8))
         panel.addView(Ui.spacer(c, weight = 1f), LinearLayout.LayoutParams(1, 0, 1f))
 
         val violations = m.violations()
@@ -258,7 +275,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             panelInfo = tr("Réglage refusé par la sécurité : %s. Utilise la cuisson manuelle.", violations.first().message)
         }
         if (step.needsReview && index !in reviewed && violations.isEmpty()) {
-            val rb = Ui.button(c, tr("J'ai vérifié ce réglage"), Ui.Style.GHOST, Icon.Kind.CHECK, height = 56, textSize = 17f) {
+            val rb = Ui.button(c, tr("J'ai vérifié ce réglage"), Ui.Style.GHOST, Icon.Kind.CHECK, height = 52, textSize = 16f) {
                 reviewed += index
                 buildPanel()
                 onSnapshot(a.snapshot)
@@ -274,15 +291,18 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             }, onUp = { a.machine.turboUp() })
             turboBtn = t
             startBtn = t
-            panel.addView(t, Ui.lp(Ui.MATCH, Ui.u(70)))
+            panel.addView(t, Ui.lp(Ui.MATCH, Ui.u(64)))
         } else {
-            startBtn = Ui.button(c, tr("Lancer"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 74, textSize = 23f) { launch() }
+            startBtn = Ui.button(c, tr("Lancer"), Ui.Style.PRIMARY, Icon.Kind.PLAY, height = 70, textSize = 22f) { launch() }
             panel.addView(startBtn)
         }
         if (m.program == StepProgram.MANUAL) {
-            panel.addView(Ui.button(c, tr("Ajuster à la main"), Ui.Style.GHOST, height = 50, textSize = 16f) {
-                a.push(ManualScreen(a, m))
-            }, Ui.lp(t = 8))
+            val adjust = Ui.text(c, tr("Ajuster à la main"), 15f, Ui.TEXT2, Ui.MEDIUM).apply { gravity = Gravity.CENTER }
+            adjust.setPadding(0, Ui.u(12), 0, Ui.u(12))
+            adjust.background = Ui.pressable(Ui.round(0, 22f), 22f)
+            adjust.isClickable = true
+            adjust.setOnClickListener { a.push(ManualScreen(a, m)) }
+            panel.addView(adjust, Ui.lp(t = 4))
         }
         val blocked = violations.isNotEmpty() || (step.needsReview && index !in reviewed)
         Ui.setButtonEnabled(startBtn, !blocked)
@@ -351,9 +371,9 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
     override fun onSnapshot(s: Snapshot) {
         val w = recipe.steps.getOrNull(index)?.weigh
         if (w != null) {
-            weighValue.text = if (s.hasSample) "${s.weightG} g" else "—"
+            weighValue.shown = if (s.hasSample) "${s.weightG} g" else "—"
             weighBar.progress = if (w.grams > 0) s.weightG.toFloat() / w.grams else 0f
-            weighBar.color = if (s.weightG > w.grams * 1.05f) Ui.WARN else Ui.COOL
+            weighBar.color = if (s.weightG > w.grams * 1.05f) Ui.WARN else Ui.ACCENT
         }
         val running = launchedStep >= 0 && s.jobActive
         if (running && launchedCount > 1 && s.phaseIndex != seenPhase &&
@@ -379,20 +399,20 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
         bigTime?.let { t ->
             val counting = mine && (s.state == JobState.RUNNING || s.state == JobState.STARTING || s.state == JobState.PAUSED)
             t.visibility = if (counting) View.VISIBLE else View.GONE
-            if (counting) t.text = Ui.clock(s.remainingMs)
+            if (counting) t.shown = Ui.clock(s.remainingMs)
         }
         if (!mine && ps != null) {
             if (index in done) {
                 ps.setTextColor(Ui.OK)
-                ps.text = tr("Étape terminée")
+                ps.shown = tr("Étape terminée")
             } else {
                 ps.setTextColor(Ui.WARN)
-                ps.text = panelInfo
+                ps.shown = panelInfo
             }
         }
         if (mine && ps != null) {
             ps.setTextColor(Ui.TEXT2)
-            ps.text = when (s.state) {
+            ps.shown = when (s.state) {
                 JobState.RUNNING, JobState.STARTING -> tr("En cours… reste %s", Ui.clock(s.remainingMs))
                 JobState.STOPPING -> tr("Arrêt du moteur…")
                 JobState.PAUSED -> tr("En pause")
@@ -416,7 +436,7 @@ class CookScreen(a: MainActivity, private val recipe: Recipe, startStep: Int) : 
             if (index != finished) go(finished)
             // Étapes non réunissables en un programme (vapeur puis réglage…) : la suivante part seule.
             val chain = a.prefs.chainSteps && continues(finished + 1)
-            view.postDelayed({
+            postDelayed({
                 if (index == finished) {
                     a.machine.clearFinished()
                     if (index < recipe.steps.size - 1) {
