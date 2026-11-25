@@ -144,12 +144,13 @@ KNOB_LEFT, KNOB_RIGHT, KNOB_PRESS = 137, 136, 135
 knob_report = []
 
 
-def turn(n, code=KNOB_RIGHT):
+def turn(n, code=KNOB_RIGHT, slow=False):
+    # Par paquets (rapide) ou cran par cran, à vitesse de main (les listes défilent entre deux crans).
     while n > 0:
-        k = min(n, 8)
+        k = 1 if slow else min(n, 8)
         sh("input keyevent " + " ".join([str(code)] * k))
         n -= k
-        wait(0.3)
+        wait(0.45 if slow else 0.3)
 
 
 def knob_events():
@@ -187,12 +188,12 @@ def close(a, b, tol=4):
     return all(abs(x - y) <= tol for x, y in zip(a, b))
 
 
-def knob_audit(name, steps=45):
+def knob_audit(name, steps=45, slow=False):
     """Tourne la molette jusqu'au bout dans les deux sens et compare avec tout ce qui se touche."""
     sh("logcat -c")
-    turn(steps, KNOB_RIGHT)
+    turn(steps, KNOB_RIGHT, slow)
     right = [e for e in knob_events() if e[0] == "focus"]
-    turn(steps * 2, KNOB_LEFT)
+    turn(steps * 2, KNOB_LEFT, slow)
     wait(1)
     every = [e for e in knob_events() if e[0] == "focus"]
     left = every[len(right):]
@@ -289,9 +290,12 @@ def knob_tour():
     knob_audit("À savoir (fenêtre)", steps=20)
     key(4)
     nav("Recettes")
-    knob_audit("Recettes")
+    tap(text="Toutes", required=False)
     tap(text="Crêpes de la Chandeleur")
     knob_audit("Fiche recette")
+    key(4)
+    nav("Recettes")
+    knob_audit("Recettes", steps=30, slow=True)
     nav("Programmes")
     progs = knob_audit("Programmes")
     # La durée du programme choisi (« 1 min 30 s », « 9 min »…), réglable au bouton.

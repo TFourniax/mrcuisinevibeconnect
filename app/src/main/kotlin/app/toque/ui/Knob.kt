@@ -166,6 +166,7 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
     }
 
     private fun firstText(v: View): String? {
+        if (v.visibility != View.VISIBLE) return null
         if (v is TextView && v.text.isNotBlank()) return v.text.toString()
         if (v is ViewGroup) for (i in 0 until v.childCount) firstText(v.getChildAt(i))?.let { return it }
         return null
