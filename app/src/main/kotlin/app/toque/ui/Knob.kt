@@ -381,7 +381,6 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
     }
 
     private fun scrollListTo(list: AbsListView, pos: Int) {
-        if (trace) android.util.Log.i("ToqueKnob", "scroll|$pos (visibles ${list.firstVisiblePosition}..${list.lastVisiblePosition})|0,0,0,0")
         val token = Target(list, list, pos)
         pending = token
         pendingTries = 6
@@ -396,7 +395,6 @@ class KnobNav(private val a: MainActivity, private val layer: FrameLayout) {
                 } else if (--pendingTries > 0) {
                     list.postDelayed(this, 120)
                 } else {
-                    if (trace) android.util.Log.i("ToqueKnob", "scroll-abandon|$pos (visibles ${list.firstVisiblePosition}..${list.lastVisiblePosition})|0,0,0,0")
                     pending = null
                 }
             }

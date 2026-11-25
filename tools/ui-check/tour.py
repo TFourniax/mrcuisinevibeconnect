@@ -297,7 +297,8 @@ def knob_tour():
     knob_audit("Fiche recette")
     key(4)
     nav("Recettes")
-    knob_audit("Recettes", steps=30, slow=True, raw=True)
+    # Voulu : sur Recettes, la molette ne parcourt que les recettes (et la barre du bas).
+    knob_audit("Recettes (la molette ne parcourt que les recettes, voulu)", steps=30, slow=True)
     nav("Programmes")
     progs = knob_audit("Programmes")
     # La durée du programme choisi (« 1 min 30 s », « 9 min »…), réglable au bouton.
@@ -315,6 +316,156 @@ def knob_tour():
     tap(desc="Retour", fallback=(36, 29))
     with open(os.path.join(OUT, "molette.txt"), "w") as f:
         f.write("\n".join(knob_report) + "\n")
+
+
+# ---------------------------------------------------------------- fonctions de la 1.0.11
+# Chaque essai fait vraiment marcher une fonction qui existait avant la refonte, et vérifie un
+# résultat attendu à l'écran. Compte rendu : fonctionnel.txt.
+func_report = []
+
+
+def check(label, ok, detail=""):
+    line = ("OK     " if ok else "ÉCHEC  ") + label + (" : " + detail if detail else "")
+    func_report.append(line)
+    print(line, flush=True)
+    if not ok:
+        problems.append("fonction : " + label)
+
+
+def has_text(t, prefix=False):
+    return find(text=t, prefix=prefix) is not None
+
+
+def has_desc(d, prefix=False):
+    return find(desc=d, prefix=prefix) is not None
+
+
+def text_in(t, box):
+    """Un texte [t] affiché dans le rectangle [box] (gauche, haut, droite, bas)."""
+    root = dump()
+    if root is None:
+        return False
+    for n in root.iter("node"):
+        b = bounds(n)
+        if n.get("text") == t and b and b[0] >= box[0] and b[1] >= box[1] and b[2] <= box[2] and b[3] <= box[3]:
+            return True
+    return False
+
+
+def wait_for(pred, timeout=20, step=2):
+    end = time.time() + timeout
+    while True:
+        if pred():
+            return True
+        if time.time() > end:
+            return False
+        wait(step)
+
+
+def end_job():
+    """Arrêter ce qui tourne (barre « en cours » ou carte de l'accueil), puis OK."""
+    if not tap(desc="Arrêter", required=False, pause=2.5):
+        tap(text="Arrêter", required=False, pause=2.5)
+    tap(text="OK", required=False)
+
+
+def functional_checks():
+    # Favoris et filtres (Recettes). La recherche « carotte » des essais de thème est d'abord effacée.
+    nav("Recettes")
+    tap_xy(883, 89)
+    tap(text="Toutes", required=False)
+    tap(text="Favoris")
+    check("Filtre Favoris montre la recette favorite", wait_for(lambda: has_text("Crêpes de la Chandeleur"), 6))
+    tap(text="Crêpes de la Chandeleur")
+    tap(text="Favori")
+    key(4)
+    nav("Recettes")
+    tap(text="Favoris")
+    check("Retirer un favori depuis la fiche", wait_for(lambda: has_text("Aucun favori pour l'instant.", prefix=True), 6))
+    tap(text="Toutes")
+    tap(text="Crêpes de la Chandeleur")
+    tap(text="Favori")
+    key(4)
+    nav("Recettes")
+    tap(text="Favoris")
+    check("Remettre en favori", wait_for(lambda: has_text("Crêpes de la Chandeleur"), 6))
+    tap(text="Lidl · 1")
+    check("Filtre Lidl", wait_for(lambda: has_text("Soupe de carottes au cumin") and not has_text("Pizza maison"), 6))
+    tap(text="Toutes")
+
+    # Recette guidée : étapes suivante et précédente, « Ajuster à la main » avec les réglages de l'étape.
+    tap(text="Crêpes de la Chandeleur")
+    tap(text="Cuisiner")
+    check("Recette guidée ouverte à l'étape 1", wait_for(lambda: has_text("ÉTAPE 1 SUR 5"), 6))
+    tap(text="Suivante")
+    check("Étape suivante", wait_for(lambda: has_text("ÉTAPE 2 SUR 5"), 6))
+    tap(text="Précédente")
+    check("Étape précédente", wait_for(lambda: has_text("ÉTAPE 1 SUR 5"), 6))
+    tap(text="Ajuster à la main", pause=2.5)
+    check("« Ajuster à la main » reprend 6 min et 90 °C", wait_for(lambda: has_text("06:00") and has_text("90"), 6))
+    key(4)
+    key(4)
+
+    # Cuisson manuelle : lancer, régler la vitesse en direct, pause, reprise, arrêt.
+    nav("Cuisson")
+    tap(text="Démarrer", pause=3)
+    tap(text="Mixer quand même", required=False, pause=3)
+    check("Cuisson manuelle lancée", wait_for(lambda: has_desc("Pause") or has_text("Réglages appliqués en direct"), 10))
+    tap_xy(948, 306, pause=2)  # « + » de la carte Vitesse
+    check("Vitesse réglée en direct (2 → 3)", wait_for(lambda: text_in("3", (686, 62, 1000, 352)), 8))
+    tap(desc="Pause", pause=2.5)
+    check("Pause", wait_for(lambda: has_text("En pause"), 8))
+    tap(desc="Reprendre", pause=2.5)
+    check("Reprise", wait_for(lambda: has_desc("Pause"), 8))
+    end_job()
+    check("Arrêt", wait_for(lambda: not has_desc("Pause"), 8))
+
+    # Turbo maintenu 2 s (le doigt reste appuyé), puis relâché.
+    sh("input swipe 866 474 866 474 2000")
+    wait(2)
+    check("Turbo maintenu puis relâché sans souci", not crashed()[0])
+
+    # Un programme : Œufs à la coque, lancé puis arrêté.
+    nav("Programmes")
+    tap(text="Œufs")
+    tap(text="À la coque")
+    check("Œufs à la coque : 7 min", wait_for(lambda: text_in("7 min", (650, 62, 1000, 510)), 6))
+    tap(text="Démarrer", pause=3)
+    check("Programme Œufs lancé", wait_for(lambda: has_desc("Arrêter"), 10))
+    end_job()
+
+    # Chauffer l'eau à 80 °C : s'arrête tout seul en arrivant à la température.
+    tap(text="Chauffer l'eau")
+    tap(text="80 °C")
+    tap(text="Démarrer", pause=3)
+    check("Chauffer l'eau lancé", wait_for(lambda: has_desc("Arrêter") or has_text("OK"), 10))
+    check("Chauffer l'eau s'arrête seul à la température", wait_for(lambda: has_text("OK") and not has_desc("Pause"), 420, step=10))
+    tap(text="OK", required=False)
+
+    # Balance : poids de démonstration, puis tare.
+    nav("Balance")
+    tap(text="+100 g")
+    check("Balance : +100 g", wait_for(lambda: has_text("100"), 6))
+    tap(text="Tare (remise à zéro)")
+    check("Balance : tare", wait_for(lambda: has_text("0"), 6))
+    tap(text="Vider", required=False)
+
+    # Thème choisi dans les Réglages (Apparence).
+    tap(desc="Réglages", fallback=(988, 29))
+    tap(text="Clair", pause=3)
+    check("Réglages › Apparence › Clair", wait_for(lambda: has_desc("Passer en thème sombre"), 6))
+    tap(text="Automatique", pause=3)
+    tap(desc="Retour", fallback=(36, 29))
+
+    # « À savoir » : tout marquer comme lu, la pastille de la cloche disparaît.
+    nav("Accueil")
+    tap(desc="À savoir", prefix=True, fallback=(940, 29))
+    tap(text="Tout marquer comme lu", pause=2)
+    key(4)
+    check("« Tout marquer comme lu »", wait_for(lambda: has_desc("À savoir") and not has_desc("À savoir :", prefix=True), 6))
+
+    with open(os.path.join(OUT, "fonctionnel.txt"), "w") as f:
+        f.write("\n".join(func_report) + "\n")
 
 
 def cook_or_resume():
@@ -463,6 +614,9 @@ def main():
     # Changer de thème sur des écrans qui gardent un état (la lune refait toute l'interface) :
     # Recettes avec une recherche tapée, une fiche Lidl (avis en ligne), Programmes, Cuisson.
     theme_flips()
+
+    # Les fonctions de la 1.0.11, une par une, avec un résultat attendu.
+    functional_checks()
 
     bad, log = crashed()
     with open(os.path.join(OUT, "logcat-crash.txt"), "w") as f:
