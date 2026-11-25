@@ -259,10 +259,6 @@ def main():
     tap_xy(512, 300, pause=2)
     shot("20-apres-veille")
 
-    # Changer de thème sur des écrans qui gardent un état (la lune refait toute l'interface) :
-    # Recettes avec une recherche tapée, une fiche Lidl (avis en ligne), Programmes, Cuisson.
-    theme_flips()
-
     # L'outil de l'anneau lumineux (le bloc est juste sous l'écran de veille dans les Réglages).
     if tap(text="Trouver l'anneau", required=False, pause=3):
         shot("21-anneau-lumineux")
@@ -276,6 +272,10 @@ def main():
     key(4)
     wait(2)
     shot("23-apres-video")
+
+    # Changer de thème sur des écrans qui gardent un état (la lune refait toute l'interface) :
+    # Recettes avec une recherche tapée, une fiche Lidl (avis en ligne), Programmes, Cuisson.
+    theme_flips()
 
     bad, log = crashed()
     with open(os.path.join(OUT, "logcat-crash.txt"), "w") as f:
