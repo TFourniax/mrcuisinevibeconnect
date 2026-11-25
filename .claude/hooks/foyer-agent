@@ -1,0 +1,283 @@
+#!/usr/bin/env python3
+"""
+foyer-agent: tells Foyer (and the kitchen robot) what an AI agent is doing.
+
+    foyer-agent [STATE] [--agent NAME] [--session KEY] [--title TITLE] [--project PROJECT]
+                [--link https://…] [--location local|cloud]
+    foyer-agent --check            # sends a test report and prints Foyer's answer
+
+STATE: working, waiting (needs the person), done, error, idle (stopped). Without STATE it comes
+from what the agent gives: Claude Code or Codex hooks (hook_event_name on stdin), Codex's notify
+(JSON as the last argument), Hermes hooks when they name their event. Never blocks the agent:
+returns at once, sends from a detached process (5 s at most), never fails, prints nothing
+(Claude Code would add the output to the prompt).
+
+The person's Foyer link (Réglages › Mes raccourcis): FOYER_AGENT_TOKEN, else the file
+~/.config/foyer/agent-token (the whole link or its last part). Without a link nothing is sent,
+unless FOYER_AGENT_REPORT=1: a cloud environment whose proxy adds the x-foyer-agent-token header
+itself (a network secret for the database host).
+
+Only the state, a short title (the session's title, else the first line of the request;
+FOYER_AGENT_TITLES=0 sends none), the project's name and a cloud session's link leave the machine,
+never the work itself. Python 3 only (curl when present), macOS and Linux.
+"""
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+URL = "https://mhfrnaiurtgkoqraabfg.supabase.co/rest/v1/rpc/agent_report"
+# Foyer's publishable key: public by design (Foyer's pages give it to every browser). The
+# person's link is what the database checks.
+KEY = "sb_publishable_katLBV3zMZefGPURLFmSyw_G-5PUfvz"
+
+STATES = ("working", "waiting", "done", "error", "idle")
+
+# Hook events → state. Claude Code and Codex share these names; Hermes' are at the bottom.
+EVENTS = {
+    "UserPromptSubmit": "working",
+    "PreToolUse": "working",
+    "PostToolUse": "working",
+    "PermissionRequest": "waiting",
+    "Stop": "done",
+    "StopFailure": "error",
+    "SessionEnd": "idle",
+    "pre_llm_call": "working",
+    "pre_tool_call": "working",
+    "post_tool_call": "working",
+    "post_llm_call": "done",
+    "on_session_end": "idle",
+}
+# Claude Code notifications that mean "someone has to answer".
+WAITING_NOTIFICATIONS = {"permission_prompt", "elicitation_dialog", "agent_needs_input"}
+
+HEARTBEAT_S = 300
+
+
+def token():
+    t = os.environ.get("FOYER_AGENT_TOKEN", "").strip()
+    if not t:
+        path = os.path.expanduser("~/.config/foyer/agent-token")
+        try:
+            with open(path, encoding="utf-8") as f:
+                t = f.read().strip()
+        except OSError:
+            t = ""
+    # The whole link (…/api/in/<token>) or only its last part.
+    t = t.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
+    return t if 32 <= len(t) <= 200 else ""
+
+
+def args_of(argv):
+    out = {"state": None, "agent": None, "session": None, "title": None, "project": None,
+           "link": None, "location": None, "check": False, "notify": None}
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--check":
+            out["check"] = True
+        elif a.startswith("--") and a[2:] in out and i + 1 < len(argv):
+            out[a[2:]] = argv[i + 1]
+            i += 1
+        elif a.lstrip().startswith("{"):
+            out["notify"] = a  # Codex: notify appends its JSON as the last argument
+        elif a in STATES:
+            out["state"] = a
+        i += 1
+    return out
+
+
+def first_line(text, limit=80):
+    for line in str(text or "").splitlines():
+        line = " ".join(line.split())
+        if line:
+            return line[:limit]
+    return ""
+
+
+def project_of(cwd):
+    cwd = cwd or os.getcwd()
+    try:
+        top = subprocess.run(["git", "-C", cwd, "rev-parse", "--show-toplevel"], capture_output=True,
+                             text=True, timeout=2).stdout.strip()
+    except Exception:
+        top = ""
+    path = (top or cwd).rstrip("/")
+    # An agent started from the home folder (Hermes, a harness) has no project: never the login name.
+    if not path or path == os.path.expanduser("~").rstrip("/"):
+        return ""
+    return os.path.basename(path)[:60]
+
+
+def cloud_link():
+    sid = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID", "")
+    if sid.startswith("cse_"):
+        return "https://claude.ai/code/session_" + sid[4:]
+    return None
+
+
+def cache_dir():
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    path = os.path.join(base, "foyer-agent")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def remembered(agent, session):
+    name = hashlib.sha1(f"{agent}\0{session}".encode()).hexdigest()[:20] + ".json"
+    path = os.path.join(cache_dir(), name)
+    try:
+        with open(path, encoding="utf-8") as f:
+            return path, json.load(f)
+    except Exception:
+        return path, {}
+
+
+def send(body, tok):
+    if tok:
+        body = dict(body, p_token=tok)
+    data = json.dumps(body).encode()
+    if shutil.which("curl"):
+        r = subprocess.run(["curl", "-sS", "-m", "5", "-X", "POST", URL, "-H", "apikey: " + KEY,
+                            "-H", "Content-Type: application/json", "--data-binary", "@-"],
+                           input=data, capture_output=True, timeout=8)
+        return (r.stdout or r.stderr).decode(errors="replace").strip()
+    import urllib.request
+    req = urllib.request.Request(URL, data=data, method="POST",
+                                 headers={"apikey": KEY, "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=5) as res:
+        return res.read().decode(errors="replace").strip()
+
+
+def detach():
+    """The parent returns to the agent at once; a detached grandchild sends."""
+    if os.environ.get("FOYER_AGENT_DEBUG") or not hasattr(os, "fork"):
+        return False
+    pid = os.fork()
+    if pid > 0:
+        os.waitpid(pid, 0)
+        return True
+    os.setsid()
+    if os.fork() > 0:
+        os._exit(0)
+    null = os.open(os.devnull, os.O_RDWR)
+    for fd in (0, 1, 2):
+        os.dup2(null, fd)
+    return False
+
+
+def main():
+    opts = args_of(sys.argv[1:])
+    tok = token()
+    if opts["check"]:
+        if not tok and os.environ.get("FOYER_AGENT_REPORT") != "1":
+            print("Aucun lien : mets-le dans ~/.config/foyer/agent-token (ou FOYER_AGENT_TOKEN).")
+            return
+        print("Foyer répond :", send({"p_agent": "test", "p_session": "check", "p_state": "done",
+                                      "p_title": "Essai de foyer-agent"}, tok))
+        send({"p_agent": "test", "p_session": "check", "p_state": "idle"}, tok)
+        return
+    if not tok and os.environ.get("FOYER_AGENT_REPORT") != "1":
+        return
+
+    # What the agent gives: hook JSON on stdin, or Codex's notify JSON.
+    data = {}
+    if opts["notify"]:
+        try:
+            data = json.loads(opts["notify"])
+        except ValueError:
+            data = {}
+    elif not sys.stdin.isatty():
+        try:
+            raw = sys.stdin.read(1_000_000)
+            data = json.loads(raw) if raw.strip() else {}
+        except Exception:
+            data = {}
+    if not isinstance(data, dict):
+        data = {}
+
+    event = data.get("hook_event_name") or data.get("event") or data.get("hook") or ""
+    state = opts["state"]
+    if not state:
+        if data.get("type") == "agent-turn-complete":
+            state = "done"
+        elif event == "Notification":
+            state = "waiting" if data.get("notification_type") in WAITING_NOTIFICATIONS else None
+        else:
+            state = EVENTS.get(event)
+        # Claude Code: the answer is over but background tasks still run.
+        if event == "Stop" and data.get("background_tasks"):
+            state = "working"
+    if state not in STATES:
+        return
+
+    agent = (opts["agent"] or "claude").strip().lower()
+    session = (opts["session"] or data.get("session_id") or data.get("thread-id") or data.get("thread_id")
+               or os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID") or "main")
+    session = str(session)[:100]
+
+    titles = os.environ.get("FOYER_AGENT_TITLES", "1") != "0"
+    path, memo = remembered(agent, session)
+    title = opts["title"]
+    if not title and titles:
+        title = first_line(data.get("session_title"))
+        if not title and not memo.get("title"):
+            prompt = data.get("prompt") or data.get("user_message")
+            if not prompt and isinstance(data.get("input-messages"), list) and data["input-messages"]:
+                prompt = data["input-messages"][0]
+            line = first_line(prompt)
+            # System messages ("<task-notification>…") and short replies ("ok") make no title.
+            if len(line) >= 12 and not line.startswith("<"):
+                title = line
+    title = title or memo.get("title") or ""
+
+    now = time.time()
+    if (memo.get("state") == state and memo.get("title", "") == title
+            and now - memo.get("at", 0) < HEARTBEAT_S):
+        return
+    if detach():
+        return
+
+    remote = os.environ.get("CLAUDE_CODE_REMOTE") == "true"
+    location = opts["location"] or os.environ.get("FOYER_AGENT_LOCATION") or ("cloud" if remote else "local")
+    body = {
+        "p_agent": agent,
+        "p_session": session,
+        "p_state": state,
+        "p_title": title or None,
+        "p_project": opts["project"] or project_of(data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR")),
+        "p_link": opts["link"] or (cloud_link() if remote else None),
+        "p_location": location if location in ("local", "cloud") else None,
+    }
+    try:
+        answer = send(body, tok)
+    except Exception as e:
+        answer = "error " + type(e).__name__
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"state": state, "title": title, "at": now, "answer": answer[:80]}, f)
+    except OSError:
+        pass
+    if os.environ.get("FOYER_AGENT_DEBUG"):
+        print(state, "→", answer)
+    # Now and then: sessions quiet for 3 days are forgotten.
+    if int(now) % 50 == 0:
+        for name in os.listdir(cache_dir()):
+            p = os.path.join(cache_dir(), name)
+            try:
+                if now - os.path.getmtime(p) > 3 * 86400:
+                    os.remove(p)
+            except OSError:
+                pass
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        pass
+    sys.exit(0)

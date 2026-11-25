@@ -89,6 +89,9 @@ most); a tap beside it, its cross, the knob (the cross is its only stop) or Back
   minute otherwise (5 min from 23:00 to 6:00), every 10 s while the card is open, 2 min after a
   failure; nothing until the robot is linked; the last answer is kept (`agentsCache`) and dropped
   with the link.
+- `.claude/settings.json` and `.claude/hooks/foyer-agent` (a copy of Foyer's reporter) report
+  Claude Code cloud sessions of this repository; they do nothing without the person's Foyer link
+  or `FOYER_AGENT_REPORT=1` in the environment (see Foyer's `docs/agents.md`).
 - The debug build answers `am start -n app.toque/.ui.MainActivity --ez app.toque.PROBE_AGENTS true`
   with one call using a fake secret (log `ToqueAgents probe|200|[]`): the UI tour uses it to check
   that Android 6 reaches the database over TLS.
