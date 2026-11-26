@@ -109,6 +109,10 @@ def project_of(cwd):
                              text=True, timeout=2).stdout.strip()
     except Exception:
         top = ""
+    # A cloud session outside a repository (several repositories, or none): no project, rather
+    # than the name of the folder that holds them.
+    if not top and os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+        return ""
     path = (top or cwd).rstrip("/")
     # An agent started from the home folder (Hermes, a harness) has no project: never the login name.
     if not path or path == os.path.expanduser("~").rstrip("/"):
