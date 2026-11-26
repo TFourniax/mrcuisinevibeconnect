@@ -90,9 +90,11 @@ itself is touch only: the knob passes it by, as in 1.0.12.
   minute otherwise (5 min from 23:00 to 6:00), every 10 s while the card is open, 2 min after a
   failure; nothing until the robot is linked; the last answer is kept (`agentsCache`) and dropped
   with the link.
-- `.claude/settings.json` and `.claude/hooks/foyer-agent` (a copy of Foyer's reporter) report
-  Claude Code cloud sessions of this repository; they do nothing without the person's Foyer link
-  or `FOYER_AGENT_REPORT=1` in the environment (see Foyer's `docs/agents.md`).
+- `.claude/hooks/foyer-agent` is a copy of Foyer's reporter, kept here because this repository is
+  public: the owner's cloud environment downloads it at a pinned commit and wires it for every
+  Claude Code cloud session, whatever the repository (see Foyer's `docs/agents.md`). It does
+  nothing without the person's Foyer link or `FOYER_AGENT_REPORT=1`. `AGENTS.md` asks Codex to
+  run it at the start and end of each task.
 - The debug build answers `am start -n app.toque/.ui.MainActivity --ez app.toque.PROBE_AGENTS true`
   with one call using a fake secret (log `ToqueAgents probe|200|[]`): the UI tour uses it to check
   that Android 6 reaches the database over TLS.
