@@ -5,6 +5,7 @@ foyer-agent: tells Foyer (and the kitchen robot) what an AI agent is doing.
     foyer-agent [STATE] [--agent NAME] [--session KEY] [--title TITLE] [--project PROJECT]
                 [--link https://…] [--location local|cloud]
     foyer-agent --check            # sends a test report and prints Foyer's answer
+    (--session auto: one key per machine or container, for agents without a session id)
 
 STATE: working, waiting (needs the person), done, error, idle (stopped). Without STATE it comes
 from what the agent gives: Claude Code or Codex hooks (hook_event_name on stdin), Codex's notify
@@ -25,9 +26,11 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 URL = "https://mhfrnaiurtgkoqraabfg.supabase.co/rest/v1/rpc/agent_report"
@@ -118,6 +121,26 @@ def cloud_link():
     if sid.startswith("cse_"):
         return "https://claude.ai/code/session_" + sid[4:]
     return None
+
+
+def auto_session():
+    """`--session auto`: one key per machine or container, kept in the temp folder (a Codex cloud
+    task runs in its own container, so its reports stay on one line)."""
+    path = os.path.join(tempfile.gettempdir(), "foyer-agent-session")
+    try:
+        with open(path, encoding="utf-8") as f:
+            key = f.read().strip()
+        if key:
+            return key
+    except OSError:
+        pass
+    key = "task-" + secrets.token_hex(6)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(key)
+    except OSError:
+        pass
+    return key
 
 
 def cache_dir():
@@ -216,9 +239,13 @@ def main():
         return
 
     agent = (opts["agent"] or "claude").strip().lower()
+    # The Codex instruction in AGENTS.md is for Codex: Claude Code (which reads AGENTS.md through
+    # CLAUDE.md) reports through its own hooks, so a Codex line run inside it is ignored.
+    if agent == "codex" and os.environ.get("CLAUDECODE"):
+        return
     session = (opts["session"] or data.get("session_id") or data.get("thread-id") or data.get("thread_id")
                or os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID") or "main")
-    session = str(session)[:100]
+    session = auto_session() if session == "auto" else str(session)[:100]
 
     titles = os.environ.get("FOYER_AGENT_TITLES", "1") != "0"
     path, memo = remembered(agent, session)

@@ -258,3 +258,15 @@ result (`fonctionnel.txt`), and fails on a crash, a missing element or a failed 
 them there: artifact downloads are blocked from cloud sessions); delete that folder before merging.
 Toque is also the HOME app: force-stopped, Android restarts it at once, so the seed is written
 before the first launch.
+
+## Status for Foyer (Codex only)
+
+If you are Codex (not Claude Code: its own hooks already report), tell the owner's Foyer what you
+are doing, so the household's kitchen robot shows it. Run these commands from the repository root
+and ignore their output and any failure; they do nothing without the owner's Foyer link (set up in
+the Codex environment):
+
+- at the start of every task:
+  `python3 .claude/hooks/foyer-agent working --agent codex --session auto --location cloud --title "<the task in a few words>"`
+- when you stop to ask the person something before going on: the same command with `waiting`
+- when the task is finished: the same command with `done` (or `error` if you could not do it)
